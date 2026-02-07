@@ -8,6 +8,7 @@ CREATE TABLE users (
     user_id SERIAL PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
+    phone VARCHAR(20),
     password_hash VARCHAR(255) NOT NULL,
     role VARCHAR(20) CHECK (role IN ('customer', 'manager')) NOT NULL DEFAULT 'customer',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -35,11 +36,11 @@ CREATE TABLE bookings (
 );
 
 -- 5. 插入测试数据
-INSERT INTO users (username, email, password_hash, role) 
-VALUES ('admin', 'admin@scooter.com', 'hashed_pw', 'manager');
+INSERT INTO users (username, email, phone, password_hash, role) 
+VALUES ('student1', 'student1@leeds.ac.uk', '07123456789', '$2a$10$Ew.K.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0', 'customer');
 
-INSERT INTO users (username, email, password_hash, role) 
-VALUES ('test_admin', 'test@scooter.com', 'hashed_pw', 'manager');
+INSERT INTO users (username, email, phone, password_hash, role) 
+VALUES ('test_admin', 'admin@test.com', '07999999999', '$2a$10$Ew.K.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0', 'manager');
 
 INSERT INTO scooters (lat, lng, status) VALUES 
 (53.801277, -1.548567, 'available');
