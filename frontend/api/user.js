@@ -15,7 +15,7 @@ import request from '@/utils/request.js'
  * @returns {Promise} - Returns registration result
  */
 export const register = (data) => {
-  return request.post('/users/register', data)
+  return request.post('/auth/register', data)
 }
 
 /**
@@ -26,7 +26,7 @@ export const register = (data) => {
  * @returns {Promise} - Returns login result including token and user info
  */
 export const login = (data) => {
-  return request.post('/users/login', data)
+  return request.post('/auth/login', data)
 }
 
 /**

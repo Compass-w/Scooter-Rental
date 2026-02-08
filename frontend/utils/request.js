@@ -1,73 +1,73 @@
 /**
- * API请求封装工具
- * 统一处理请求、响应、错误和token
+ * API Request Utility
+ * Unified handling of requests, responses, errors, and tokens
  */
 
-// API基础配置
+// API Base Configuration
 const BASE_URL = 'http://localhost:8080/api'
 const TIMEOUT = 10000
 
 /**
- * 获取存储的token
+ * Get stored token
  */
 const getToken = () => {
   try {
     return uni.getStorageSync('token') || ''
   } catch (e) {
-    console.error('获取token失败:', e)
+    console.error('Failed to get token:', e)
     return ''
   }
 }
 
 /**
- * 保存token到本地存储
+ * Save token to local storage
  */
 const setToken = (token) => {
   try {
     uni.setStorageSync('token', token)
   } catch (e) {
-    console.error('保存token失败:', e)
+    console.error('Failed to save token:', e)
   }
 }
 
 /**
- * 清除token
+ * Clear token
  */
 const clearToken = () => {
   try {
     uni.removeStorageSync('token')
   } catch (e) {
-    console.error('清除token失败:', e)
+    console.error('Failed to clear token:', e)
   }
 }
 
 /**
- * 统一请求封装
- * @param {Object} options - 请求配置
- * @returns {Promise} - 返回Promise对象
+ * Unified request wrapper
+ * @param {Object} options - Request configuration
+ * @returns {Promise} - Returns Promise object
  */
 const request = (options) => {
   return new Promise((resolve, reject) => {
-    // 构建完整URL
+    // Build complete URL
     const url = options.url.startsWith('http') 
       ? options.url 
       : BASE_URL + options.url
 
-    // 获取token
+    // Get token
     const token = getToken()
 
-    // 构建请求头
+    // Build request headers
     const header = {
       'Content-Type': 'application/json',
       ...options.header
     }
 
-    // 如果有token，添加到请求头
+    // Add token to header if exists
     if (token) {
       header['Authorization'] = `Bearer ${token}`
     }
 
-    // 发起请求
+    // Send request
     uni.request({
       url,
       method: options.method || 'GET',
@@ -75,21 +75,21 @@ const request = (options) => {
       header,
       timeout: options.timeout || TIMEOUT,
       success: (res) => {
-        // 根据API文档的标准响应结构处理
+        // Handle based on API standard response structure
         const { code, message, data } = res.data
 
-        // 200表示成功
+        // 200 means success
         if (code === 200) {
           resolve(data)
         } 
-        // 401表示未登录或token过期
+        // 401 means unauthorized or token expired
         else if (code === 401) {
           clearToken()
           uni.showToast({
             title: 'Please login again',
             icon: 'none'
           })
-          // 跳转到登录页
+          // Redirect to login page
           setTimeout(() => {
             uni.reLaunch({
               url: '/pages/login'
@@ -97,7 +97,7 @@ const request = (options) => {
           }, 1500)
           reject(new Error(message || 'Authentication failed'))
         }
-        // 其他错误
+        // Other errors
         else {
           uni.showToast({
             title: message || 'Request failed',
@@ -107,9 +107,9 @@ const request = (options) => {
         }
       },
       fail: (err) => {
-        console.error('请求失败:', err)
+        console.error('Request failed:', err)
         
-        // 网络错误提示
+        // Network error message
         let errorMsg = 'Network error'
         if (err.errMsg) {
           if (err.errMsg.includes('timeout')) {
@@ -131,7 +131,7 @@ const request = (options) => {
 }
 
 /**
- * GET请求
+ * GET Request
  */
 const get = (url, data = {}, options = {}) => {
   return request({
@@ -143,7 +143,7 @@ const get = (url, data = {}, options = {}) => {
 }
 
 /**
- * POST请求
+ * POST Request
  */
 const post = (url, data = {}, options = {}) => {
   return request({
@@ -155,7 +155,7 @@ const post = (url, data = {}, options = {}) => {
 }
 
 /**
- * PUT请求
+ * PUT Request
  */
 const put = (url, data = {}, options = {}) => {
   return request({
@@ -167,7 +167,7 @@ const put = (url, data = {}, options = {}) => {
 }
 
 /**
- * DELETE请求
+ * DELETE Request
  */
 const del = (url, data = {}, options = {}) => {
   return request({

@@ -100,13 +100,16 @@
             </view>
           </view>
 
+          <!-- 修复方案1: 使用 checkbox-group 和正确的事件处理 -->
           <view class="terms-row">
-            <label class="checkbox-container">
-              <checkbox :checked="agreeTerms" @change="toggleTerms" color="#2563EB" style="transform:scale(0.8)" />
-              <text class="checkbox-label">
-                I agree to the <text class="link-text">Terms of Service</text> and <text class="link-text">Privacy Policy</text>
-              </text>
-            </label>
+            <checkbox-group @change="toggleTerms">
+              <label class="checkbox-container">
+                <checkbox value="agree" :checked="agreeTerms" color="#2563EB" style="transform:scale(0.8)" />
+                <text class="checkbox-label">
+                  I agree to the <text class="link-text">Terms of Service</text> and <text class="link-text">Privacy Policy</text>
+                </text>
+              </label>
+            </checkbox-group>
           </view>
 
           <button class="btn-primary-pill" @tap="handleSignup" :disabled="loading">
@@ -156,9 +159,12 @@ const toggleConfirmPassword = () => {
 
 /**
  * Toggle terms and conditions checkbox
+ * 修复：正确处理 checkbox-group 的 change 事件
  */
-const toggleTerms = () => { 
-  agreeTerms.value = !agreeTerms.value 
+const toggleTerms = (e) => { 
+  // e.detail.value 是一个数组，包含所有选中的 checkbox 的 value
+  // 如果数组包含 'agree'，则表示用户同意了条款
+  agreeTerms.value = e.detail.value.includes('agree')
 }
 
 /**

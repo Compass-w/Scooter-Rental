@@ -262,7 +262,7 @@ const goToLogin = () => {
   color: white;
   height: 110rpx;
   line-height: 110rpx;
-  border-radius: 55rpx; /* 药丸样式 */
+  border-radius: 55rpx; 
   font-size: 34rpx;
   font-weight: 600;
   border: none;
