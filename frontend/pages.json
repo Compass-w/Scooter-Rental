@@ -1,0 +1,44 @@
+{
+  "easycom": {
+    "autoscan": true,
+    "custom": {
+      "^uni-(.*)": "@dcloudio/uni-ui/lib/uni-$1/uni-$1.vue"
+    }
+  },
+  "pages": [
+    {
+      "path": "pages/login",
+      "style": {
+        "navigationBarTitleText": "Login",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/signup",
+      "style": {
+        "navigationBarTitleText": "Sign Up",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/forget-password",
+      "style": {
+        "navigationBarTitleText": "Forgot Password",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/reset-password",
+      "style": {
+        "navigationBarTitleText": "Reset Password",
+        "navigationStyle": "custom"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "Logo",
+    "navigationBarBackgroundColor": "#FFFFFF",
+    "backgroundColor": "#F3F4F6"
+  }
+}
