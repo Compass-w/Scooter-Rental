@@ -3,8 +3,11 @@
  * Unified handling of requests, responses, errors, and tokens
  */
 
+// Import API configuration
+import { API_CONFIG } from '@/config/api.config.js'
+
 // API Base Configuration
-const BASE_URL = 'http://127.0.0.1:8080/api'
+const BASE_URL = API_CONFIG.BASE_URL
 const TIMEOUT = 10000
 
 /**

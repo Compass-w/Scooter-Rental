@@ -1,9 +1,7 @@
 <template>
   <BaseLayout nav-type="signup" :show-menu="true" :show-footer="true" :content-padding-top="148">
-    <!-- Main Content -->
     <view class="main-container">
       <view class="signup-card">
-        <!-- Card Header -->
         <view class="card-header">
           <view class="user-icon-bg">
             <uni-icons type="personadd-filled" size="40" color="#fff"></uni-icons>
@@ -15,7 +13,6 @@
           </view>
         </view>
 
-        <!-- Registration Form -->
         <view class="form">
           <view class="form-group">
             <text class="label">Username</text>
@@ -100,7 +97,6 @@
             </view>
           </view>
 
-          <!-- 修复方案1: 使用 checkbox-group 和正确的事件处理 -->
           <view class="terms-row">
             <checkbox-group @change="toggleTerms">
               <label class="checkbox-container">
@@ -143,150 +139,69 @@ const showConfirmPwd = ref(false)
 const agreeTerms = ref(false)
 const loading = ref(false)
 
-/**
- * Toggle password visibility
- */
-const togglePassword = () => { 
-  showPwd.value = !showPwd.value 
-}
+const togglePassword = () => { showPwd.value = !showPwd.value }
+const toggleConfirmPassword = () => { showConfirmPwd.value = !showConfirmPwd.value }
+const toggleTerms = (e) => { agreeTerms.value = e.detail.value.includes('agree') }
 
-/**
- * Toggle confirm password visibility
- */
-const toggleConfirmPassword = () => { 
-  showConfirmPwd.value = !showConfirmPwd.value 
-}
-
-/**
- * Toggle terms and conditions checkbox
- * 修复：正确处理 checkbox-group 的 change 事件
- */
-const toggleTerms = (e) => { 
-  // e.detail.value 是一个数组，包含所有选中的 checkbox 的 value
-  // 如果数组包含 'agree'，则表示用户同意了条款
-  agreeTerms.value = e.detail.value.includes('agree')
-}
-
-/**
- * Validate email format
- * @param {string} email - Email address to validate
- * @returns {boolean} - True if email format is valid
- */
 const validateEmail = (email) => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  return emailRegex.test(email)
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 }
 
-/**
- * Validate UK phone number format
- * @param {string} phone - Phone number to validate
- * @returns {boolean} - True if phone format is valid (UK mobile)
- */
 const validatePhone = (phone) => {
-  const phoneRegex = /^07\d{9}$/
-  return phoneRegex.test(phone)
+  return /^07\d{9}$/.test(phone)
 }
 
 /**
  * Handle user registration
- * Validates all inputs and calls registration API
  */
 const handleSignup = async () => {
-  // Validate all required fields are filled
   if (!username.value || !email.value || !phone.value || !password.value || !confirmPassword.value) {
-    uni.showToast({ 
-      title: 'Please fill in all fields', 
-      icon: 'none',
-      duration: 2000
-    })
+    uni.showToast({ title: 'Please fill in all fields', icon: 'none' })
     return
   }
 
-  // Validate email format
   if (!validateEmail(email.value)) {
-    uni.showToast({ 
-      title: 'Please enter a valid email address', 
-      icon: 'none',
-      duration: 2000
-    })
+    uni.showToast({ title: 'Invalid email address', icon: 'none' })
     return
   }
 
-  // Validate phone number format
   if (!validatePhone(phone.value)) {
-    uni.showToast({ 
-      title: 'Please enter a valid UK mobile number (e.g., 07123456789)', 
-      icon: 'none',
-      duration: 2500
-    })
+    uni.showToast({ title: 'Invalid UK mobile number', icon: 'none' })
     return
   }
 
-  // Validate password length
-  if (password.value.length < 6) {
-    uni.showToast({ 
-      title: 'Password must be at least 6 characters', 
-      icon: 'none',
-      duration: 2000
-    })
-    return
-  }
-
-  // Validate passwords match
   if (password.value !== confirmPassword.value) {
-    uni.showToast({ 
-      title: 'Passwords do not match', 
-      icon: 'none',
-      duration: 2000
-    })
+    uni.showToast({ title: 'Passwords do not match', icon: 'none' })
     return
   }
 
-  // Validate terms agreement
   if (!agreeTerms.value) {
-    uni.showToast({ 
-      title: 'Please agree to Terms of Service', 
-      icon: 'none',
-      duration: 2000
-    })
+    uni.showToast({ title: 'Please agree to terms', icon: 'none' })
     return
   }
 
-  // Start loading state
   loading.value = true
 
   try {
-    // Call registration API
     await registerApi({
       username: username.value,
       email: email.value,
-      phone: phone.value,
-      password: password.value
+      phoneNumber: phone.value, 
+      passwordHash: password.value
     })
 
-    // Show success message
-    uni.showToast({ 
-      title: 'Registration successful!', 
-      icon: 'success',
-      duration: 2000
-    })
-
-    // Navigate to login page after success
+    uni.showToast({ title: 'Registration successful!', icon: 'success' })
     setTimeout(() => {
       uni.reLaunch({ url: '/pages/login' })
     }, 2000)
 
   } catch (error) {
     console.error('Registration failed:', error)
-    // Error message is already handled by request.js
   } finally {
     loading.value = false
   }
 }
 
-/**
- * Navigate to login page
- */
 const goToLogin = () => {
   uni.navigateTo({ url: '/pages/login' })
 }
