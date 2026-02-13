@@ -1,45 +1,78 @@
 package com.scooterrental.backend.controller;
 
+import com.scooterrental.backend.entity.Scooter;
+import com.scooterrental.backend.service.ScooterService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
 
+/**
+ * REST Controller for managing scooters.
+ * Handles requests related to scooter availability, details, and management.
+ */
 @RestController
 @RequestMapping("/api/scooters")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = "*") // Allow Cross-Origin Resource Sharing (CORS) for frontend
 @Tag(name = "Scooter Module", description = "Manage scooter status and location")
 public class ScooterController {
 
-    // 1. 获取滑板车列表 (用户端/地图页使用)
-    @GetMapping("/list")
-    @Operation(summary = "Get Scooter List", description = "Returns a list of available scooters with location")
-    public Map<String, Object> getScooterList() {
-        // --- 模拟假数据 (Mock Data) ---
-        List<Map<String, Object>> scooters = new ArrayList<>();
+    @Autowired
+    private ScooterService scooterService;
 
-        Map<String, Object> s1 = new HashMap<>();
-        s1.put("id", 101);
-        s1.put("lat", 53.801277);
-        s1.put("lng", -1.548567);
-        s1.put("status", "available");
-        s1.put("battery", 85);
-
-        scooters.add(s1);
-        // ---------------------------
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("code", 200);
-        response.put("data", scooters);
-        response.put("msg", "Success");
-        return response;
+    /**
+     * Get a list of available scooters.
+     * Used by the frontend Map interface.
+     *
+     * @param lat Optional user latitude for sorting
+     * @param lng Optional user longitude for sorting
+     * @return List of Scooter objects
+     */
+    @GetMapping("/available")
+    @Operation(summary = "Get Available Scooters", description = "Returns a list of scooters with status 'AVAILABLE', optionally sorted by distance.")
+    public ResponseEntity<List<Scooter>> getAvailableScooters(
+            @RequestParam(required = false) Double lat,
+            @RequestParam(required = false) Double lng) {
+        List<Scooter> scooters = scooterService.getAvailableScooters(lat, lng);
+        return ResponseEntity.ok(scooters);
     }
 
-    // 2. 添加滑板车 (管理员端)
+    /**
+     * Get details of a specific scooter by ID.
+     * Typically used after scanning a QR code.
+     *
+     * @param scooterId The ID of the scooter
+     * @return Scooter object if found, otherwise 404
+     */
+    @GetMapping("/{scooterId}")
+    @Operation(summary = "Get Scooter Details", description = "Retrieve details by ID (e.g., after scanning QR code)")
+    public ResponseEntity<Scooter> getScooterById(@PathVariable Long scooterId) {
+        Scooter scooter = scooterService.getById(scooterId);
+        if (scooter != null) {
+            return ResponseEntity.ok(scooter);
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    /**
+     * Add a new scooter to the fleet (Admin only).
+     *
+     * @param scooter The scooter object to add
+     * @return Response message
+     */
     @PostMapping("/add")
-    @Operation(summary = "Add Scooter", description = "Admin adds a new scooter")
-    public Map<String, Object> addScooter(@RequestBody Map<String, Object> scooterData) {
-        return Map.of("code", 200, "msg", "Scooter added successfully (Mock)");
+    @Operation(summary = "Add Scooter", description = "Admin adds a new scooter to the fleet")
+    public ResponseEntity<?> addScooter(@RequestBody Scooter scooter) {
+        boolean saved = scooterService.save(scooter);
+        if (saved) {
+            return ResponseEntity.ok(Map.of("message", "Scooter added successfully", "id", scooter.getScooterId()));
+        } else {
+            return ResponseEntity.badRequest().body(Map.of("message", "Failed to add scooter"));
+        }
     }
 }
