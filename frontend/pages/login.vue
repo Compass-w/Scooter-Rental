@@ -143,16 +143,18 @@ const handleLogin = async () => {
       password: password.value
     })
 
+    const { token, userId, role } = result.data || result
+
     // Save authentication token
-    if (result.token) {
-      request.setToken(result.token)
+    if (token) {
+      request.setToken(token)
     }
 
     // Save user information
     const userInfo = {
-      userId: result.userId,
+      userId: userId,
       username: username.value,
-      role: result.role
+      role: role
     }
     setUserInfo(userInfo)
 
@@ -172,7 +174,7 @@ const handleLogin = async () => {
 
     // Navigate to appropriate page based on user role
     setTimeout(() => {
-      if (result.role === 'ADMIN') {
+      if (role === 'ADMIN') {
         uni.reLaunch({ url: '/pages/index' })  // Navigate to admin dashboard
       } else {
         uni.reLaunch({ url: '/pages/index' })  // Navigate to user home
