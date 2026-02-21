@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import java.math.BigDecimal;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * Scooter Entity corresponding to the 'scooters' table.
@@ -19,6 +20,7 @@ public class Scooter {
      * The JDBC driver handles the key retrieval automatically.
      */
     @TableId(type = IdType.AUTO)
+    @JsonProperty("id")
     private Long scooterId;
 
     private String model;
