@@ -1,41 +1,41 @@
 /**
- * 滑板车管理相关API
- * 对应API文档的滑板车模块
+ * Scooter API Module
+ * Connects to backend: /api/scooters
  */
-
 import request from '@/utils/request.js'
 
 /**
- * 获取地图上可用的滑板车列表
- * @returns {Promise} - 返回可用滑板车列表
+ * Get all available scooters for map display
+ * GET /api/scooters/available
  */
 export const getAvailableScooters = () => {
   return request.get('/scooters/available')
 }
 
 /**
- * 获取单个滑板车详情
- * @param {number} id - 滑板车ID
- * @returns {Promise} - 返回滑板车详情
+ * Get all scooters (available + in-use) for list display
+ * GET /api/scooters
  */
-export const getScooterDetails = (id) => {
+export const getAllScooters = () => {
+  return request.get('/scooters')
+}
+
+/**
+ * Get scooter detail by ID
+ * GET /api/scooters/{id}
+ */
+export const getScooterById = (id) => {
   return request.get(`/scooters/${id}`)
 }
 
 /**
- * [管理员] 添加新滑板车
- * @param {Object} data - 滑板车数据
- * @returns {Promise} - 返回添加结果
+ * Start a ride
+ * POST /api/bookings/start
  */
-export const addScooter = (data) => {
-  return request.post('/admin/scooters', data)
-}
-
-/**
- * [管理员] 更新滑板车信息
- * @param {Object} data - 滑板车数据（需包含id）
- * @returns {Promise} - 返回更新结果
- */
-export const updateScooter = (data) => {
-  return request.put('/admin/scooters', data)
+export const startRide = (userId, scooterId, planType = 'PAY_AS_YOU_GO') => {
+  return request.post('/bookings/start', {
+    userId,
+    scooterId,
+    planType
+  })
 }

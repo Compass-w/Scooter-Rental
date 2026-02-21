@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Scooter Map</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+    #map { width: 100%; height: 100vh; }
+
+    .marker-available { background: linear-gradient(135deg, #16A34A, #15803d); border: 3px solid #fff; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); box-shadow: 0 4px 12px rgba(22,163,74,0.4); }
+    .marker-inuse     { background: linear-gradient(135deg, #DC2626, #b91c1c); border: 3px solid #fff; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); box-shadow: 0 4px 12px rgba(220,38,38,0.4); }
+    .marker-maintenance { background: linear-gradient(135deg, #D97706, #b45309); border: 3px solid #fff; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); box-shadow: 0 4px 12px rgba(217,119,6,0.4); }
+    .marker-inner { transform: rotate(45deg); display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-size: 16px; }
+
+    .leaflet-popup-content-wrapper { border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.15); padding: 0; overflow: hidden; }
+    .leaflet-popup-content { margin: 0; width: 260px !important; }
+    .leaflet-popup-tip-container { display: none; }
+
+    .popup-card { padding: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    .popup-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+    .popup-avatar { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+    .popup-avatar.available { background: linear-gradient(135deg, #ECFDF5, #D1FAE5); }
+    .popup-avatar.inuse     { background: linear-gradient(135deg, #FFF1F2, #FFE4E6); }
+    .popup-avatar.maintenance { background: linear-gradient(135deg, #FFFBEB, #FEF3C7); }
+    .popup-id { font-size: 16px; font-weight: 700; color: #1F2937; margin-bottom: 4px; }
+    .popup-model { font-size: 12px; color: #9CA3AF; }
+    .popup-status { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-bottom: 12px; }
+    .popup-status.available { background: #ECFDF5; color: #16A34A; }
+    .popup-status.inuse     { background: #FFF1F2; color: #DC2626; }
+    .popup-status.maintenance { background: #FFFBEB; color: #D97706; }
+    .popup-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .popup-meta { display: flex; gap: 12px; margin-bottom: 14px; }
+    .popup-meta-item { font-size: 12px; color: #6B7280; }
+    .popup-btn { width: 100%; padding: 12px; background: linear-gradient(135deg, #2563EB, #1d4ed8); color: white; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(37,99,235,0.3); }
+    .popup-btn:disabled { background: #E5E7EB; color: #9CA3AF; box-shadow: none; cursor: not-allowed; }
+
+    .user-location-marker { position: relative; }
+    .user-dot { width: 16px; height: 16px; background: #2563EB; border: 3px solid #fff; border-radius: 50%; box-shadow: 0 2px 8px rgba(37,99,235,0.5); }
+    .user-pulse { position: absolute; top: -8px; left: -8px; width: 32px; height: 32px; border-radius: 50%; background: rgba(37,99,235,0.2); animation: pulse 2s ease-out infinite; }
+    @keyframes pulse { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(2); opacity: 0; } }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script>
+    const map = L.map('map', { center: [53.8008, -1.5491], zoom: 15, zoomControl: false, attributionControl: false })
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map)
+
+    let markers = {}
+    let userMarker = null
+    let currentFilter = 'ALL'
+
+    function makeIcon(status) {
+      const cls = status === 'AVAILABLE' ? 'marker-available' : status === 'IN_USE' ? 'marker-inuse' : 'marker-maintenance'
+      return L.divIcon({ className: '', html: `<div style="width:32px;height:32px;" class="${cls}"><div class="marker-inner">🛴</div></div>`, iconSize: [32, 32], iconAnchor: [16, 32], popupAnchor: [0, -36] })
+    }
+
+    function buildPopup(s) {
+      const cls  = s.status === 'AVAILABLE' ? 'available' : s.status === 'IN_USE' ? 'inuse' : 'maintenance'
+      const txt  = s.status === 'AVAILABLE' ? '✓ Available' : s.status === 'IN_USE' ? '✗ In Use' : '⚠ Maintenance'
+      const dis  = s.status !== 'AVAILABLE' ? 'disabled' : ''
+      const btn  = s.status === 'AVAILABLE' ? 'Ride Now' : 'Unavailable'
+      return `<div class="popup-card">
+        <div class="popup-header">
+          <div class="popup-avatar ${cls}">🛴</div>
+          <div><div class="popup-id">#${s.id} · ${s.model || 'Scooter'}</div><div class="popup-model">${s.location || ''}</div></div>
+        </div>
+        <div class="popup-status ${cls}"><div class="popup-dot"></div>${txt}</div>
+        <div class="popup-meta">
+          <div class="popup-meta-item">⚡ ${s.batteryLevel ?? '--'}%</div>
+          <div class="popup-meta-item">💰 £${s.basePrice ?? '--'} + £${s.pricePerMin ?? '--'}/min</div>
+        </div>
+        <button class="popup-btn" ${dis} onclick="onRideTap(${s.id})">${btn}</button>
+      </div>`
+    }
+
+    function renderScooters(scooters) {
+      const newIds = new Set(scooters.map(s => s.id))
+      Object.keys(markers).forEach(id => { if (!newIds.has(Number(id))) { map.removeLayer(markers[id]); delete markers[id] } })
+      scooters.forEach(s => {
+        if (!s.latitude || !s.longitude) return
+        const show = currentFilter === 'ALL' || s.status === 'AVAILABLE'
+        if (markers[s.id]) {
+          markers[s.id].setLatLng([s.latitude, s.longitude])
+          markers[s.id].setIcon(makeIcon(s.status))
+          markers[s.id]._scooterData = s
+          show ? (map.hasLayer(markers[s.id]) || markers[s.id].addTo(map)) : map.removeLayer(markers[s.id])
+        } else {
+          const m = L.marker([s.latitude, s.longitude], { icon: makeIcon(s.status) })
+          m._scooterData = s
+          m.bindPopup(buildPopup(s), { maxWidth: 280 })
+          m.on('click', () => { m.setPopupContent(buildPopup(m._scooterData)); postToUniApp('markerTap', m._scooterData) })
+          if (show) m.addTo(map)
+          markers[s.id] = m
+        }
+      })
+    }
+
+    function showUserLocation(lat, lng) {
+      const icon = L.divIcon({ className: '', html: `<div class="user-location-marker"><div class="user-pulse"></div><div class="user-dot"></div></div>`, iconSize: [16, 16], iconAnchor: [8, 8] })
+      if (userMarker) userMarker.setLatLng([lat, lng])
+      else userMarker = L.marker([lat, lng], { icon, zIndexOffset: 1000 }).addTo(map)
+      map.setView([lat, lng], 16)
+    }
+
+    function applyFilter(filter) {
+      currentFilter = filter
+      Object.values(markers).forEach(m => {
+        const show = filter === 'ALL' || m._scooterData.status === 'AVAILABLE'
+        show ? (map.hasLayer(m) || m.addTo(map)) : map.removeLayer(m)
+      })
+    }
+
+    function onRideTap(scooterId) {
+      const m = markers[scooterId]
+      if (m) postToUniApp('rideTap', m._scooterData)
+    }
+
+    function postToUniApp(type, data) {
+      try {
+        if (window.uni) window.uni.postMessage({ data: { type, data } })
+        else window.parent.postMessage(JSON.stringify({ type, data }), '*')
+      } catch(e) {}
+    }
+
+    window.addEventListener('message', (e) => {
+      let payload
+      try { payload = typeof e.data === 'string' ? JSON.parse(e.data) : e.data } catch { return }
+      const { cmd, data } = payload || {}
+      if (cmd === 'updateScooters') renderScooters(data)
+      if (cmd === 'locate')         showUserLocation(data.lat, data.lng)
+      if (cmd === 'filter')         applyFilter(data.filter)
+      if (cmd === 'flyTo')          map.setView([data.lat, data.lng], data.zoom || 16)
+    })
+
+    window.onload = () => postToUniApp('mapReady', {})
+  </script>
+</body>
+</html>

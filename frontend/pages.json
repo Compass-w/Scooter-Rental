@@ -7,6 +7,20 @@
   },
   "pages": [
     {
+      "path": "pages/index",
+      "style": {
+        "navigationBarTitleText": "ScooterGo",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/find-scooter",
+      "style": {
+        "navigationBarTitleText": "Find a Scooter",
+        "navigationStyle": "custom"
+      }
+    },
+    {
       "path": "pages/login",
       "style": {
         "navigationBarTitleText": "Login",
@@ -37,7 +51,7 @@
   ],
   "globalStyle": {
     "navigationBarTextStyle": "black",
-    "navigationBarTitleText": "Logo",
+    "navigationBarTitleText": "ScooterGo",
     "navigationBarBackgroundColor": "#FFFFFF",
     "backgroundColor": "#F3F4F6"
   }
