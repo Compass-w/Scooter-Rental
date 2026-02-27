@@ -14,10 +14,15 @@ export const getAvailableScooters = () => {
 
 /**
  * Get all scooters (available + in-use) for list display
- * GET /api/scooters
+ * Calls /available with optional lat/lng params; falls back gracefully if unsupported.
+ * NOTE: Backend currently exposes GET /api/scooters/available — no root /scooters list endpoint.
+ * GET /api/scooters/available
  */
-export const getAllScooters = () => {
-  return request.get('/scooters')
+export const getAllScooters = (lat, lng) => {
+  const params = {}
+  if (lat != null) params.lat = lat
+  if (lng != null) params.lng = lng
+  return request.get('/scooters/available', { params })
 }
 
 /**

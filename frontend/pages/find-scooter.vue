@@ -290,24 +290,17 @@ const statusLabel = (status) => {
 
 /**
  * Load scooter data from backend API
- * Falls back to available-only endpoint if full list fails
+ * GET /api/scooters/available — the only scooter list endpoint exposed by the backend
  */
 const loadScooters = async () => {
   loading.value  = true
   errorMsg.value = ''
   try {
-    const data = await getAllScooters()
+    const data = await getAvailableScooters()
     scooters.value = Array.isArray(data) ? data : []
     if (mapReady.value) sendToMap('updateScooters', scooters.value)
   } catch (e) {
-    // Fallback: try available scooters only
-    try {
-      const data = await getAvailableScooters()
-      scooters.value = Array.isArray(data) ? data : []
-      if (mapReady.value) sendToMap('updateScooters', scooters.value)
-    } catch (e2) {
-      errorMsg.value = 'Failed to load scooters. Check your connection.'
-    }
+    errorMsg.value = 'Failed to load scooters. Check your connection.'
   } finally {
     loading.value = false
   }
