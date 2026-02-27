@@ -3,25 +3,72 @@
     <!-- Navigation Bar -->
     <view class="navbar" :style="{ paddingTop: statusBarHeight + 'px' }">
       <view class="nav-container">
+        <!-- Left: Logo -->
         <view class="logo-container" @tap="goToHome">
           <view class="logo-icon">
             <svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path d="M12.08,19H7a1,1,0,0,1,0-2h5.08a7,7,0,0,1,5.86-5.91,1,1,0,0,1,.3,2,5,5,0,0,0-4.19,4.22A2,2,0,0,1,12.08,19Z" style="fill: #2563EB;"></path>
-              <path d="M19.56,15.06,18,5h2a1,1,0,0,0,0-2H18a2,2,0,0,0-2,2.3l1.55,10.07a3,3,0,1,0,2-.31ZM19,19a1,1,0,1,1,1-1A1,1,0,0,1,19,19ZM5,15a3,3,0,1,0,3,3A3,3,0,0,0,5,15Zm0,4a1,1,0,1,1,1-1A1,1,0,0,1,5,19Z" style="fill: #000000;"></path>
+              <path d="M19.56,15.06,18,5h2a1,1,0,0,0,0-2H18a2,2,0,0,0-2,2.3l1.55,10.07a3,3,0,1,0,2-.31ZM19,19a1,1,0,1,1,1-1A1,1,0,0,1,19,19ZM5,15a3,3,0,1,0,3,3A3,3,0,0,0,5,15Zm0,4a1,1,0,1,1,1-1A1,1,0,0,1,5,19Z" style="fill: #111827;"></path>
             </svg>
           </view>
           <text class="logo-text">ScooterGo</text>
         </view>
-        <view v-if="showMenu" class="nav-menu">
-          <text class="menu-item">How It Works</text>
-          <text class="menu-item">Pricing</text>
-          <text class="menu-item">Locations</text>
-          <text class="menu-item">Support</text>
+
+        <!-- Center: Quick Nav Links -->
+        <view class="nav-menu">
+          <!-- Find a Scooter: map pin icon -->
+          <view class="menu-item-wrap" :class="{ active: currentPage === 'find-scooter' }" @tap="goToFindScooter">
+            <svg class="menu-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+              <circle cx="12" cy="9" r="2.5" stroke="currentColor" stroke-width="1.8"/>
+            </svg>
+            <text class="menu-label">Find a Scooter</text>
+            <view class="menu-indicator"></view>
+          </view>
+
+          <!-- Book & Details: clipboard / tag icon -->
+          <view class="menu-item-wrap" :class="{ active: currentPage === 'booking' }" @tap="goToBooking">
+            <svg class="menu-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="4" y="4" width="16" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/>
+              <path d="M8 10h8M8 14h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              <path d="M8 6V3M16 6V3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+            <text class="menu-label">Book & Details</text>
+            <view class="menu-indicator"></view>
+          </view>
+
+          <!-- My Ride: steering / ride control icon -->
+          <view class="menu-item-wrap" :class="{ active: currentPage === 'trip' }" @tap="goToTrip">
+            <svg class="menu-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/>
+              <path d="M12 3v4M12 17v4M3 12h4M17 12h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              <circle cx="12" cy="12" r="2.5" stroke="currentColor" stroke-width="1.8"/>
+            </svg>
+            <text class="menu-label">My Ride</text>
+            <view class="menu-indicator"></view>
+          </view>
         </view>
+
+        <!-- Right: Auth area -->
         <view class="nav-right">
-          <button v-if="navType === 'login'" class="nav-pill-btn" @tap="goToSignup">Sign Up</button>
-          <button v-else-if="navType === 'signup'" class="nav-pill-btn-outlined" @tap="goToLogin">Sign In</button>
-          <text v-else-if="navType === 'simple'" class="nav-link" @tap="goToLogin">Back to Sign In</text>
+          <!-- Not logged in: show Login button -->
+          <button v-if="!isLoggedIn" class="nav-pill-btn" @tap="goToLogin">
+            <text class="nav-pill-btn-text">Log In</text>
+          </button>
+
+          <!-- Logged in: show user avatar -->
+          <view v-else class="user-avatar-wrap" @tap="goToProfile">
+            <image
+              v-if="userAvatar"
+              :src="userAvatar"
+              class="user-avatar"
+              mode="aspectFill"
+            />
+            <view v-else class="user-avatar-placeholder">
+              <text class="user-avatar-initial">{{ userInitial }}</text>
+            </view>
+            <view class="avatar-online-dot"></view>
+          </view>
         </view>
       </view>
     </view>
@@ -129,7 +176,7 @@ import { ref, computed, onMounted } from 'vue'
 const props = defineProps({
   navType: {
     type: String,
-    default: 'login' // 'login', 'signup', 'simple'
+    default: 'default' // kept for backward compat
   },
   showMenu: {
     type: Boolean,
@@ -141,22 +188,59 @@ const props = defineProps({
   },
   contentPaddingTop: {
     type: Number,
-    default: 168 // navbarHeight + 80
+    default: 168
+  },
+  currentPage: {
+    type: String,
+    default: '' // 'find-scooter' | 'booking' | 'trip'
   }
 })
 
 const statusBarHeight = ref(0)
 const navbarHeight = ref(88)
 
+// Auth state - read from storage
+const isLoggedIn = ref(false)
+const userAvatar = ref('')
+const userName = ref('')
+
+const userInitial = computed(() => {
+  if (userName.value) return userName.value.charAt(0).toUpperCase()
+  return 'U'
+})
+
 onMounted(() => {
   const info = uni.getSystemInfoSync()
   statusBarHeight.value = info.statusBarHeight || 0
   navbarHeight.value = statusBarHeight.value + 50
+
+  // Check login state from local storage
+  try {
+    const token = uni.getStorageSync('token') || uni.getStorageSync('userToken')
+    const user = uni.getStorageSync('userInfo')
+    if (token) {
+      isLoggedIn.value = true
+      if (user) {
+        const userObj = typeof user === 'string' ? JSON.parse(user) : user
+        userAvatar.value = userObj.avatar || userObj.avatarUrl || ''
+        userName.value = userObj.name || userObj.nickname || userObj.username || ''
+      }
+    }
+  } catch (e) {
+    isLoggedIn.value = false
+  }
 })
 
 const goToHome = () => {
-  // Navigate to home page
-  // uni.reLaunch({ url: '/pages/index' })
+  // Use reLaunch to always return to the index page regardless of navigation stack.
+  // Try the common uni-app index path; adjust if your pages.json uses a different path.
+  uni.reLaunch({
+    url: '/pages/index/index',
+    fail: () => {
+      // Fallback: some projects register index directly under /pages/index
+      uni.reLaunch({ url: '/pages/index' })
+    }
+  })
 }
 
 const goToLogin = () => {
@@ -165,6 +249,22 @@ const goToLogin = () => {
 
 const goToSignup = () => {
   uni.navigateTo({ url: '/pages/signup' })
+}
+
+const goToFindScooter = () => {
+  uni.navigateTo({ url: '/pages/find-scooter' })
+}
+
+const goToBooking = () => {
+  uni.navigateTo({ url: '/pages/booking' })
+}
+
+const goToTrip = () => {
+  uni.navigateTo({ url: '/pages/trip' })
+}
+
+const goToProfile = () => {
+  uni.navigateTo({ url: '/pages/profile' })
 }
 </script>
 
@@ -235,50 +335,150 @@ const goToSignup = () => {
 
 .nav-menu {
   display: flex;
-  gap: 60rpx;
+  gap: 12rpx;
   align-items: center;
   flex: 1;
   justify-content: center;
   margin: 0 40rpx;
 }
 
-.menu-item {
-  font-size: 30rpx;
-  font-weight: 500;
-  color: #4B5563;
+.menu-item-wrap {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 14rpx;
+  padding: 18rpx 36rpx;
+  border-radius: 20rpx;
   cursor: pointer;
-  transition: color 0.3s;
+  position: relative;
+  transition: all 0.25s ease;
+  color: #9CA3AF;
+}
+
+.menu-item-wrap:hover {
+  background: rgba(37, 99, 235, 0.06);
+  color: #2563EB;
+}
+
+.menu-item-wrap.active {
+  background: rgba(37, 99, 235, 0.08);
+  color: #2563EB;
+}
+
+.menu-label {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: currentColor;
   white-space: nowrap;
 }
 
-.menu-item:hover {
-  color: #2563EB;
+.menu-icon {
+  width: 40rpx;
+  height: 40rpx;
+  stroke: currentColor;
+  flex-shrink: 0;
+}
+
+.menu-indicator {
+  position: absolute;
+  bottom: 6rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 4rpx;
+  background: #2563EB;
+  border-radius: 2rpx;
+  transition: width 0.25s ease;
+}
+
+.menu-item-wrap.active .menu-indicator {
+  width: 40rpx;
 }
 
 .nav-right {
   display: flex;
   align-items: center;
   flex-shrink: 0;
+  min-width: 160rpx;
+  justify-content: flex-end;
 }
 
 /* Pill-shaped buttons with reduced height */
 .nav-pill-btn {
   background: linear-gradient(135deg, #2563EB, #1d4ed8);
   color: white;
-  padding: 14rpx 44rpx;
+  padding: 16rpx 48rpx;
   border-radius: 60rpx;
   font-size: 28rpx;
   font-weight: 600;
   border: none;
-  box-shadow: 0 4rpx 12rpx rgba(37, 99, 235, 0.25);
+  box-shadow: 0 4rpx 16rpx rgba(37, 99, 235, 0.3);
   transition: all 0.3s;
   line-height: 2;
+  display: flex;
+  align-items: center;
+}
+
+.nav-pill-btn-text {
+  color: white;
+  font-size: 28rpx;
+  font-weight: 600;
 }
 
 .nav-pill-btn::after {
   border: none;
 }
 
+/* User Avatar */
+.user-avatar-wrap {
+  position: relative;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.user-avatar-wrap:active {
+  transform: scale(0.93);
+}
+
+.user-avatar {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 50%;
+  border: 3rpx solid #2563EB;
+  object-fit: cover;
+  display: block;
+}
+
+.user-avatar-placeholder {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2563EB, #1d4ed8);
+  border: 3rpx solid rgba(37,99,235,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.user-avatar-initial {
+  color: white;
+  font-size: 32rpx;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.avatar-online-dot {
+  position: absolute;
+  bottom: 2rpx;
+  right: 2rpx;
+  width: 18rpx;
+  height: 18rpx;
+  background: #22C55E;
+  border-radius: 50%;
+  border: 3rpx solid white;
+}
+
+/* Legacy styles kept for backward compat */
 .nav-pill-btn-outlined {
   background: white;
   color: #2563EB;

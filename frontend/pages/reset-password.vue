@@ -99,6 +99,11 @@
               <text>Remember your password? </text>
               <text class="link" @tap="goToLogin">Back to Sign In</text>
             </view>
+
+            <view class="find-scooter-hint">
+              <text class="hint-text">Already signed in? </text>
+              <text class="link" @tap="goToFindScooter">Find a Scooter →</text>
+            </view>
           </view>
         </view>
       </view>
@@ -244,6 +249,13 @@ const handleResetPassword = async () => {
   } finally {
     loading.value = false
   }
+}
+
+/**
+ * Navigate to find scooter page
+ */
+const goToFindScooter = () => {
+  uni.reLaunch({ url: '/pages/find-scooter' })
 }
 
 /**
@@ -534,6 +546,21 @@ const goToForget = () => {
 .login-text {
   text-align: center;
   font-size: 30rpx;
+  color: #6B7280;
+  margin-bottom: 24rpx;
+}
+
+.find-scooter-hint {
+  text-align: center;
+  font-size: 28rpx;
+  color: #6B7280;
+  padding: 24rpx;
+  background: rgba(37, 99, 235, 0.04);
+  border-radius: 20rpx;
+  border: 1rpx solid rgba(37, 99, 235, 0.08);
+}
+
+.hint-text {
   color: #6B7280;
 }
 

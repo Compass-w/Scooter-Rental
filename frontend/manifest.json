@@ -1,7 +1,7 @@
 {
-  "name": "Login System",
+  "name": "ScooterGo",
   "appid": "__UNI__XXXXXXX",
-  "description": "uni-app Login System with Vue 3",
+  "description": "ScooterGo - Find and ride scooters near you",
   "versionName": "2.0.0",
   "versionCode": "200",
   "transformPx": false,
@@ -44,7 +44,7 @@
     "usingComponents": true
   },
   "h5": {
-    "title": "Logo",
+    "title": "ScooterGo",
     "router": {
       "mode": "hash",
       "base": "/"
