@@ -238,6 +238,12 @@ const mapSrc = ref('/static/scooter-map.html')
 // Auto-refresh timer reference
 let refreshTimer = null
 
+// Cached iframe contentWindow — populated on first message from the map
+let _mapWindow = null
+
+// Commands queued before the map reports ready
+const _pendingMessages = []
+
 /**
  * Computed: number of available scooters
  */
@@ -313,9 +319,23 @@ const loadScooters = async () => {
  * @param {*} data - Payload to send
  */
 const sendToMap = (cmd, data) => {
-  const frame = document.querySelector('.map-webview iframe') || document.querySelector('iframe')
-  if (frame && frame.contentWindow) {
-    frame.contentWindow.postMessage(JSON.stringify({ cmd, data }), '*')
+  // Use cached window; fall back to DOM query before first message arrives
+  if (!_mapWindow) {
+    const frame =
+      document.querySelector('.map-webview iframe') ||
+      document.querySelector('uni-web-view iframe') ||
+      document.querySelector('iframe')
+    _mapWindow = frame?.contentWindow ?? null
+  }
+  // Map not ready yet — queue for later
+  if (!_mapWindow) {
+    _pendingMessages.push({ cmd, data })
+    return
+  }
+  try {
+    _mapWindow.postMessage(JSON.stringify({ cmd, data }), '*')
+  } catch (e) {
+    console.warn('[sendToMap] postMessage failed:', e)
   }
 }
 
@@ -331,13 +351,36 @@ const onWebViewMessage = (e) => {
   } catch {
     return
   }
+  _handleMapPayload(payload)
+}
 
-  const { type, data } = payload || {}
+// Native window "message" listener — H5 platform only
+// Captures e.source as the reliable iframe contentWindow reference
+const _onWindowMessage = (e) => {
+  if (!e.data) return
+  let payload
+  try {
+    payload = typeof e.data === 'string' ? JSON.parse(e.data) : e.data
+  } catch {
+    return
+  }
+  if (e.source && !_mapWindow) {
+    _mapWindow = e.source
+  }
+  _handleMapPayload(payload)
+}
 
+// Shared logic for handling map payloads from either platform
+const _handleMapPayload = ({ type, data } = {}) => {
   if (type === 'mapReady') {
     mapReady.value = true
     // Push current scooter data once map is ready
     if (scooters.value.length) sendToMap('updateScooters', scooters.value)
+    // Flush any commands that were queued before the map was ready
+    while (_pendingMessages.length) {
+      const { cmd, data: d } = _pendingMessages.shift()
+      sendToMap(cmd, d)
+    }
     // Attempt to locate user immediately
     locateMe()
   }
@@ -470,6 +513,10 @@ const closePopup = () => {
  * Load scooter data and start auto-refresh timer
  */
 onMounted(() => {
+  // Register native message listener for H5 platform (browser iframe)
+  if (typeof window !== 'undefined') {
+    window.addEventListener('message', _onWindowMessage)
+  }
   loadScooters()
   refreshTimer = setInterval(loadScooters, 30000)
 })
@@ -479,7 +526,11 @@ onMounted(() => {
  * Clear auto-refresh timer
  */
 onUnmounted(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('message', _onWindowMessage)
+  }
   if (refreshTimer) clearInterval(refreshTimer)
+  _mapWindow = null
 })
 </script>
 
