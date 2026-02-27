@@ -5,16 +5,12 @@ import com.scooterrental.backend.service.ScooterService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * REST Controller for managing scooters.
- * Handles requests related to scooter availability, details, and management.
- */
 @RestController
 @RequestMapping("/api/scooters")
 @CrossOrigin(origins = "*") // Allow Cross-Origin Resource Sharing (CORS) for frontend
@@ -24,55 +20,60 @@ public class ScooterController {
     @Autowired
     private ScooterService scooterService;
 
-    /**
-     * Get a list of available scooters.
-     * Used by the frontend Map interface.
-     *
-     * @param lat Optional user latitude for sorting
-     * @param lng Optional user longitude for sorting
-     * @return List of Scooter objects
-     */
+    // 1. Get all available scooters (Used for map rendering)
     @GetMapping("/available")
-    @Operation(summary = "Get Available Scooters", description = "Returns a list of scooters with status 'AVAILABLE', optionally sorted by distance.")
-    public ResponseEntity<List<Scooter>> getAvailableScooters(
+    @Operation(summary = "Get Available Scooters", description = "Returns only available scooters from the cloud database")
+    public Map<String, Object> getAvailableScooters(
             @RequestParam(required = false) Double lat,
             @RequestParam(required = false) Double lng) {
+
+        // Retrieve real data from PostgreSQL cloud database
         List<Scooter> scooters = scooterService.getAvailableScooters(lat, lng);
-        return ResponseEntity.ok(scooters);
+
+        // Wrap the response in a standardized JSON format for the frontend
+        Map<String, Object> response = new HashMap<>();
+        response.put("code", 200);
+        response.put("data", scooters);
+        response.put("msg", "Success");
+        return response;
     }
 
-    /**
-     * Get details of a specific scooter by ID.
-     * Typically used after scanning a QR code.
-     *
-     * @param scooterId The ID of the scooter
-     * @return Scooter object if found, otherwise 404
-     */
+    // 2. Get details of a single scooter by ID (Used when scanning a QR code)
     @GetMapping("/{scooterId}")
-    @Operation(summary = "Get Scooter Details", description = "Retrieve details by ID (e.g., after scanning QR code)")
-    public ResponseEntity<Scooter> getScooterById(@PathVariable Long scooterId) {
+    @Operation(summary = "Get Scooter Details", description = "Retrieve scooter details by its ID")
+    public Map<String, Object> getScooterById(@PathVariable Long scooterId) {
         Scooter scooter = scooterService.getById(scooterId);
+
+        Map<String, Object> response = new HashMap<>();
         if (scooter != null) {
-            return ResponseEntity.ok(scooter);
+            response.put("code", 200);
+            response.put("data", scooter);
+            response.put("msg", "Success");
         } else {
-            return ResponseEntity.notFound().build();
+            response.put("code", 404);
+            response.put("data", null);
+            response.put("msg", "Scooter not found");
         }
+        return response;
     }
 
-    /**
-     * Add a new scooter to the fleet (Admin only).
-     *
-     * @param scooter The scooter object to add
-     * @return Response message
-     */
+    // 3. Add a new scooter (Admin functionality)
     @PostMapping("/add")
-    @Operation(summary = "Add Scooter", description = "Admin adds a new scooter to the fleet")
-    public ResponseEntity<?> addScooter(@RequestBody Scooter scooter) {
+    @Operation(summary = "Add Scooter", description = "Admin adds a new scooter to the system")
+    public Map<String, Object> addScooter(@RequestBody Scooter scooter) {
         boolean saved = scooterService.save(scooter);
+
+        Map<String, Object> response = new HashMap<>();
         if (saved) {
-            return ResponseEntity.ok(Map.of("message", "Scooter added successfully", "id", scooter.getScooterId()));
+            response.put("code", 200);
+            // Return the newly generated ID to the frontend
+            response.put("data", Map.of("id", scooter.getScooterId()));
+            response.put("msg", "Scooter added successfully");
         } else {
-            return ResponseEntity.badRequest().body(Map.of("message", "Failed to add scooter"));
+            response.put("code", 400);
+            response.put("data", null);
+            response.put("msg", "Failed to add scooter");
         }
+        return response;
     }
 }
