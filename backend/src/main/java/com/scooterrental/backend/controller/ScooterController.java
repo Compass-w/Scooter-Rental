@@ -20,14 +20,12 @@ public class ScooterController {
     @Autowired
     private ScooterService scooterService;
 
-    // 1. Get all scooters (Maps to frontend /api/scooters)
-    // Combines both branches: uses real DB service but keeps the root path for
-    // frontend compatibility
+    // 1. 获取所有滑板车 (对应前端 /api/scooters)
+    // 综合点：使用了 feature 分支要求的根路径映射，但内部调用 main 分支的数据库逻辑
     @GetMapping
-    @Operation(summary = "Get All Scooters", description = "Returns a list of all scooters")
+    @Operation(summary = "Get All Scooters", description = "Returns a list of all scooters from database")
     public Map<String, Object> getAllScooters() {
         List<Scooter> scooters = scooterService.list();
-
         Map<String, Object> response = new HashMap<>();
         response.put("code", 200);
         response.put("data", scooters);
@@ -35,15 +33,12 @@ public class ScooterController {
         return response;
     }
 
-    // 2. Get available scooters (Maps to frontend /api/scooters/available)
+    // 2. 获取可用滑板车 (对应前端 /api/scooters/available)
     @GetMapping("/available")
-    @Operation(summary = "Get Available Scooters", description = "Returns only available scooters from database")
-    public Map<String, Object> getAvailableScooters(
-            @RequestParam(required = false) Double lat,
-            @RequestParam(required = false) Double lng) {
-
-        // Uses the real business logic from the main branch
-        List<Scooter> scooters = scooterService.getAvailableScooters(lat, lng);
+    @Operation(summary = "Get Available Scooters", description = "Returns only available scooters")
+    public Map<String, Object> getAvailableScooters() {
+        // 调用 main 分支实现的数据库筛选逻辑
+        List<Scooter> scooters = scooterService.getAvailableScooters(null, null);
 
         Map<String, Object> response = new HashMap<>();
         response.put("code", 200);
@@ -52,41 +47,11 @@ public class ScooterController {
         return response;
     }
 
-    // 3. Get scooter details by ID (Used for scanning QR codes)
-    @GetMapping("/{scooterId}")
-    @Operation(summary = "Get Scooter Details", description = "Retrieve scooter details by its ID")
-    public Map<String, Object> getScooterById(@PathVariable Long scooterId) {
-        Scooter scooter = scooterService.getById(scooterId);
-
-        Map<String, Object> response = new HashMap<>();
-        if (scooter != null) {
-            response.put("code", 200);
-            response.put("data", scooter);
-            response.put("msg", "Success");
-        } else {
-            response.put("code", 404);
-            response.put("data", null);
-            response.put("msg", "Scooter not found");
-        }
-        return response;
-    }
-
-    // 4. Add a new scooter (Admin functionality)
+    // 3. 添加滑板车 (管理员端)
     @PostMapping("/add")
-    @Operation(summary = "Add Scooter", description = "Admin adds a new scooter to the system")
+    @Operation(summary = "Add Scooter", description = "Admin adds a new scooter")
     public Map<String, Object> addScooter(@RequestBody Scooter scooter) {
         boolean saved = scooterService.save(scooter);
-
-        Map<String, Object> response = new HashMap<>();
-        if (saved) {
-            response.put("code", 200);
-            response.put("data", Map.of("id", scooter.getScooterId()));
-            response.put("msg", "Scooter added successfully");
-        } else {
-            response.put("code", 400);
-            response.put("data", null);
-            response.put("msg", "Failed to add scooter");
-        }
-        return response;
+        return Map.of("code", saved ? 200 : 400, "msg", saved ? "Success" : "Failed");
     }
 }
