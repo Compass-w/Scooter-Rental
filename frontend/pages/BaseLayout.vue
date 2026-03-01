@@ -1,7 +1,7 @@
 <template>
   <view class="base-layout">
     <!-- Navigation Bar -->
-    <view class="navbar" :style="{ paddingTop: statusBarHeight + 'px' }">
+    <view class="navbar" :style="{ paddingTop: statusBarHeight + 'px' }" id="main-navbar">
       <view class="nav-container">
         <!-- Left: Logo -->
         <view class="logo-container" @tap="goToHome">
@@ -74,7 +74,7 @@
     </view>
 
     <!-- Slot for page content -->
-    <view class="content-wrapper" :style="{ paddingTop: contentPaddingTop + 'px' }">
+    <view class="content-wrapper" :style="{ paddingTop: actualNavbarHeight + 'px' }">
       <slot></slot>
     </view>
 
@@ -198,6 +198,7 @@ const props = defineProps({
 
 const statusBarHeight = ref(0)
 const navbarHeight = ref(88)
+const actualNavbarHeight = ref(88)
 
 // Auth state - read from storage
 const isLoggedIn = ref(false)
@@ -213,6 +214,18 @@ onMounted(() => {
   const info = uni.getSystemInfoSync()
   statusBarHeight.value = info.statusBarHeight || 0
   navbarHeight.value = statusBarHeight.value + 50
+
+  // Measure actual rendered navbar height to avoid gap between navbar and content
+  uni.createSelectorQuery()
+    .select('#main-navbar')
+    .boundingClientRect((rect) => {
+      if (rect && rect.height) {
+        actualNavbarHeight.value = rect.height
+      } else {
+        actualNavbarHeight.value = navbarHeight.value
+      }
+    })
+    .exec()
 
   // Check login state from local storage
   try {
