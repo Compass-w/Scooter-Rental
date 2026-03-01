@@ -290,13 +290,13 @@ const statusLabel = (status) => {
 
 /**
  * Load scooter data from backend API
- * GET /api/scooters/available — the only scooter list endpoint exposed by the backend
+ * GET /api/scooters — returns all scooters (AVAILABLE, IN_USE, MAINTENANCE)
  */
 const loadScooters = async () => {
   loading.value  = true
   errorMsg.value = ''
   try {
-    const data = await getAvailableScooters()
+    const data = await getAllScooters()
     scooters.value = Array.isArray(data) ? data : []
     if (mapReady.value) sendToMap('updateScooters', scooters.value)
   } catch (e) {

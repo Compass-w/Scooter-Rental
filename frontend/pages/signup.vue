@@ -362,7 +362,10 @@ const handleSignup = async () => {
   } catch (error) {
     console.error('Registration failed:', error)
     const code = error?.statusCode || error?.code
-    if (code === 409 || error?.message?.toLowerCase().includes('exist'))
+    const msg  = (error?.message || error?.msg || '').toLowerCase()
+    // Backend returns HTTP 400 with "Username already exists" for duplicates (not 409)
+    // So check message content first, before falling back to generic 400 handler
+    if (code === 409 || msg.includes('exist') || msg.includes('already') || msg.includes('duplicate'))
       globalError.value = 'This email or username is already registered. Try signing in instead.'
     else if (code === 400)
       globalError.value = 'Some information is invalid. Please check your details and try again.'
