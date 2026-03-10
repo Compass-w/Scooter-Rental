@@ -61,7 +61,7 @@
 
     function buildPopup(s) {
       const cls  = s.status === 'AVAILABLE' ? 'available' : s.status === 'IN_USE' ? 'inuse' : 'maintenance'
-      const txt  = s.status === 'AVAILABLE' ? 'âœ“ Available' : s.status === 'IN_USE' ? 'âœ— In Use' : 'âš  Maintenance'
+      const txt  = s.status === 'AVAILABLE' ? 'âœAvailable' : s.status === 'IN_USE' ? 'âœIn Use' : 'âšMaintenance'
       const dis  = s.status !== 'AVAILABLE' ? 'disabled' : ''
       const btn  = s.status === 'AVAILABLE' ? 'Ride Now' : 'Unavailable'
       return `<div class="popup-card">
@@ -71,7 +71,7 @@
         </div>
         <div class="popup-status ${cls}"><div class="popup-dot"></div>${txt}</div>
         <div class="popup-meta">
-          <div class="popup-meta-item">âš¡ ${s.batteryLevel ?? '--'}%</div>
+          <div class="popup-meta-item">âš${s.batteryLevel ?? '--'}%</div>
           <div class="popup-meta-item">ðŸ’° Â£${s.basePrice ?? '--'} + Â£${s.pricePerMin ?? '--'}/min</div>
         </div>
         <button class="popup-btn" ${dis} onclick="onRideTap(${s.id})">${btn}</button>
