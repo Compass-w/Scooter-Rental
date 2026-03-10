@@ -30,4 +30,11 @@ public class User {
 
     @Schema(description = "Registration Time")
     private LocalDateTime createdAt;
+
+    // Add these fields to your existing User class [ID: 22]
+    @Schema(description = "Total riding time in minutes", example = "120")
+    private Integer totalRidingMinutes;
+
+    @Schema(description = "User achievements (comma separated)", example = "Eco-Warrior,First Ride")
+    private String achievements;
 }

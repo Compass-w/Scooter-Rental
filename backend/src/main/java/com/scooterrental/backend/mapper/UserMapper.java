@@ -1,29 +1,30 @@
 package com.scooterrental.backend.mapper;
 
 import com.scooterrental.backend.entity.User;
-import org.apache.ibatis.annotations.Insert;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Options;
-import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.*;
 
 @Mapper
 public interface UserMapper {
 
-    // Login: Find user by username
-    @Select("SELECT user_id AS userId, username, email, phone, password_hash AS passwordHash, role, created_at AS createdAt "
-            +
-            "FROM users WHERE username = #{username}")
-    User findByUsername(@Param("username") String username);
+        // Login: Find user by username
+        @Select("SELECT user_id AS userId, username, email, phone, password_hash AS passwordHash, role, " +
+                        "total_riding_minutes AS totalRidingMinutes, achievements, created_at AS createdAt " +
+                        "FROM users WHERE username = #{username}")
+        User findByUsername(@Param("username") String username);
 
-    // Register: Insert new user
-    @Insert("INSERT INTO users(username, email, phone, password_hash, role) " +
-            "VALUES(#{username}, #{email}, #{phone}, #{passwordHash}, 'customer')")
-    @Options(useGeneratedKeys = true, keyProperty = "userId")
-    void insert(User user);
+        // Register: Insert new user
+        @Insert("INSERT INTO users(username, email, phone, password_hash, role) " +
+                        "VALUES(#{username}, #{email}, #{phone}, #{passwordHash}, 'customer')")
+        @Options(useGeneratedKeys = true, keyProperty = "userId")
+        void insert(User user);
 
-    // --- NEW: For User Profile (Get user by ID) ---
-    @Select("SELECT user_id AS userId, username, email, phone, role, created_at AS createdAt " +
-            "FROM users WHERE user_id = #{userId}")
-    User selectById(@Param("userId") Integer userId);
+        // Get user by ID
+        @Select("SELECT user_id AS userId, username, email, phone, role, " +
+                        "total_riding_minutes AS totalRidingMinutes, achievements, created_at AS createdAt " +
+                        "FROM users WHERE user_id = #{userId}")
+        User selectById(@Param("userId") Integer userId);
+
+        // --- NEW: Update achievements for Gamification [ID: 22] ---
+        @Update("UPDATE users SET achievements = #{achievements} WHERE user_id = #{userId}")
+        void updateAchievements(@Param("userId") Integer userId, @Param("achievements") String achievements);
 }
