@@ -1,18 +1,21 @@
 <template>
-  <BaseLayout nav-type="signup" :show-menu="true" :show-footer="true" :content-padding-top="148">
+  <BaseLayout nav-type="login" :show-menu="true" :show-footer="true" :content-padding-top="168">
+    <!-- Main Content -->
     <view class="main-container">
-      <view class="signup-card">
+      <view class="login-card">
+        <!-- Card Header -->
         <view class="card-header">
-          <view class="user-icon-bg">
-            <uni-icons type="personadd-filled" size="40" color="#fff"></uni-icons>
+          <view class="lock-icon-bg">
+            <uni-icons type="locked-filled" size="40" color="#fff"></uni-icons>
           </view>
-          <text class="title">Join ScooterGo</text>
+          <text class="title">Welcome Back</text>
           <view class="subtitle-box">
             <uni-icons type="checkmarkempty" size="16" color="#2563EB"></uni-icons>
-            <text class="subtitle">Start your eco-friendly journey today</text>
+            <text class="subtitle">Sign in to continue riding</text>
           </view>
         </view>
 
+        <!-- Login Form -->
         <view class="form">
           <view class="form-group">
             <text class="label">Username</text>
@@ -24,40 +27,10 @@
                 class="input-pill" 
                 v-model="username" 
                 type="text" 
-                placeholder="Choose a unique username" 
+                placeholder="Enter your username" 
+                @confirm="handleLogin"
               />
             </view>
-          </view>
-
-          <view class="form-group">
-            <text class="label">Email Address</text>
-            <view class="input-wrapper">
-              <view class="icon-left">
-                <uni-icons type="email" size="24" color="#D1D5DB"></uni-icons>
-              </view>
-              <input 
-                class="input-pill" 
-                v-model="email" 
-                type="text" 
-                placeholder="your.email@example.com" 
-              />
-            </view>
-          </view>
-
-          <view class="form-group">
-            <text class="label">Phone Number</text>
-            <view class="input-wrapper">
-              <view class="icon-left">
-                <uni-icons type="phone" size="24" color="#D1D5DB"></uni-icons>
-              </view>
-              <input 
-                class="input-pill" 
-                v-model="phone" 
-                type="text" 
-                placeholder="07123456789" 
-              />
-            </view>
-            <text class="input-hint">UK mobile number format</text>
           </view>
 
           <view class="form-group">
@@ -70,52 +43,31 @@
                 class="input-pill" 
                 v-model="password" 
                 :type="showPwd ? 'text' : 'password'" 
-                placeholder="Create a strong password" 
+                placeholder="Enter your password" 
+                @confirm="handleLogin"
               />
               <view class="icon-right" @tap="togglePassword">
                 <uni-icons :type="showPwd ? 'eye' : 'eye-slash'" size="24" color="#9CA3AF"></uni-icons>
               </view>
             </view>
-            <text class="input-hint">At least 6 characters</text>
           </view>
 
-          <view class="form-group">
-            <text class="label">Confirm Password</text>
-            <view class="input-wrapper">
-              <view class="icon-left">
-                <uni-icons type="locked" size="24" color="#D1D5DB"></uni-icons>
-              </view>
-              <input 
-                class="input-pill" 
-                v-model="confirmPassword" 
-                :type="showConfirmPwd ? 'text' : 'password'" 
-                placeholder="Re-enter your password" 
-              />
-              <view class="icon-right" @tap="toggleConfirmPassword">
-                <uni-icons :type="showConfirmPwd ? 'eye' : 'eye-slash'" size="24" color="#9CA3AF"></uni-icons>
-              </view>
-            </view>
+          <view class="form-actions">
+            <label class="checkbox-container">
+              <checkbox :checked="remember" @change="toggleRemember" color="#2563EB" style="transform:scale(0.8)" />
+              <text class="checkbox-label">Remember me</text>
+            </label>
+            <text class="link-text" @tap="goToForget">Forgot password?</text>
           </view>
 
-          <view class="terms-row">
-            <checkbox-group @change="toggleTerms">
-              <label class="checkbox-container">
-                <checkbox value="agree" :checked="agreeTerms" color="#2563EB" style="transform:scale(0.8)" />
-                <text class="checkbox-label">
-                  I agree to the <text class="link-text">Terms of Service</text> and <text class="link-text">Privacy Policy</text>
-                </text>
-              </label>
-            </checkbox-group>
-          </view>
-
-          <button class="btn-primary-pill" @tap="handleSignup" :disabled="loading">
-            <text v-if="loading">Creating your account...</text>
-            <text v-else>Create Account</text>
+          <button class="btn-primary-pill" @tap="handleLogin" :disabled="loading">
+            <text v-if="loading">Signing in...</text>
+            <text v-else>Sign In</text>
           </button>
 
           <view class="bottom-tips">
-            <text>Already have an account? </text>
-            <text class="link-text" @tap="goToLogin">Sign in here</text>
+            <text>Don't have an account? </text>
+            <text class="link-text" @tap="goToSignup">Sign up free</text>
           </view>
         </view>
       </view>
@@ -124,86 +76,131 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { register as registerApi } from '@/api/user.js'
+import { ref, onMounted } from 'vue'
+import { login as loginApi, setUserInfo } from '@/api/user.js'
+import request from '@/utils/request.js'
 import BaseLayout from '@/pages/BaseLayout.vue'
 
 // Reactive state variables
 const username = ref('')
-const email = ref('')
-const phone = ref('')
 const password = ref('')
-const confirmPassword = ref('')
 const showPwd = ref(false)
-const showConfirmPwd = ref(false)
-const agreeTerms = ref(false)
+const remember = ref(false)
 const loading = ref(false)
 
-const togglePassword = () => { showPwd.value = !showPwd.value }
-const toggleConfirmPassword = () => { showConfirmPwd.value = !showConfirmPwd.value }
-const toggleTerms = (e) => { agreeTerms.value = e.detail.value.includes('agree') }
+/**
+ * Component mounted lifecycle hook
+ * Load saved credentials
+ */
+onMounted(() => {
+  // Load saved username if "remember me" was checked
+  try {
+    const savedUsername = uni.getStorageSync('savedUsername')
+    if (savedUsername) {
+      username.value = savedUsername
+      remember.value = true
+    }
+  } catch (e) {
+    console.error('Failed to load saved username:', e)
+  }
+})
 
-const validateEmail = (email) => {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-}
-
-const validatePhone = (phone) => {
-  return /^07\d{9}$/.test(phone)
+/**
+ * Toggle password visibility
+ */
+const togglePassword = () => { 
+  showPwd.value = !showPwd.value 
 }
 
 /**
- * Handle user registration
+ * Toggle remember me checkbox
  */
-const handleSignup = async () => {
-  if (!username.value || !email.value || !phone.value || !password.value || !confirmPassword.value) {
-    uni.showToast({ title: 'Please fill in all fields', icon: 'none' })
+const toggleRemember = () => { 
+  remember.value = !remember.value 
+}
+
+/**
+ * Handle user login
+ * Validates input, calls login API, and handles navigation based on user role
+ */
+const handleLogin = async () => {
+  // Validate required fields
+  if (!username.value || !password.value) {
+    uni.showToast({ 
+      title: 'Please fill in all fields', 
+      icon: 'none' 
+    })
     return
   }
 
-  if (!validateEmail(email.value)) {
-    uni.showToast({ title: 'Invalid email address', icon: 'none' })
-    return
-  }
-
-  if (!validatePhone(phone.value)) {
-    uni.showToast({ title: 'Invalid UK mobile number', icon: 'none' })
-    return
-  }
-
-  if (password.value !== confirmPassword.value) {
-    uni.showToast({ title: 'Passwords do not match', icon: 'none' })
-    return
-  }
-
-  if (!agreeTerms.value) {
-    uni.showToast({ title: 'Please agree to terms', icon: 'none' })
-    return
-  }
-
+  // Start loading state
   loading.value = true
 
   try {
-    await registerApi({
+    // Call login API
+    const result = await loginApi({
       username: username.value,
-      email: email.value,
-      phoneNumber: phone.value, 
-      passwordHash: password.value
+      password: password.value
     })
 
-    uni.showToast({ title: 'Registration successful!', icon: 'success' })
+    const { token, userId, role } = result.data || result
+
+    // Save authentication token
+    if (token) {
+      request.setToken(token)
+    }
+
+    // Save user information
+    const userInfo = {
+      userId: userId,
+      username: username.value,
+      role: role
+    }
+    setUserInfo(userInfo)
+
+    // Handle "remember me" functionality
+    if (remember.value) {
+      uni.setStorageSync('savedUsername', username.value)
+    } else {
+      uni.removeStorageSync('savedUsername')
+    }
+
+    // Show success message
+    uni.showToast({ 
+      title: 'Login successful!', 
+      icon: 'success',
+      duration: 1500
+    })
+
+    // Navigate to appropriate page based on user role
     setTimeout(() => {
-      uni.reLaunch({ url: '/pages/find-scooter' })
-    }, 2000)
+      if (role === 'ADMIN') {
+        uni.reLaunch({ url: '/pages/index' })  // Navigate to admin dashboard
+      } else {
+        uni.reLaunch({ url: '/pages/index' })  // Navigate to user home
+      }
+    }, 1500)
 
   } catch (error) {
-    console.error('Registration failed:', error)
+    console.error('Login failed:', error)
+    // Error message is handled by request.js
   } finally {
     loading.value = false
   }
 }
 
-const goToLogin = () => {
-  uni.navigateTo({ url: '/pages/login' })
+/**
+ * Navigate to signup page
+ */
+const goToSignup = () => { 
+  uni.navigateTo({ url: '/pages/signup' }) 
+}
+
+/**
+ * Navigate to forgot password page
+ */
+const goToForget = () => { 
+  uni.navigateTo({ url: '/pages/forget-password' }) 
 }
 </script>
 
@@ -217,8 +214,8 @@ const goToLogin = () => {
   padding: 60rpx 40rpx 80rpx;
 }
 
-/* ========== Signup Card ========== */
-.signup-card {
+/* ========== Login Card ========== */
+.login-card {
   background: rgba(255, 255, 255, 0.95);
   width: 100%;
   max-width: 800rpx;
@@ -233,17 +230,15 @@ const goToLogin = () => {
   margin-bottom: 60rpx;
 }
 
-.user-icon-bg {
+.lock-icon-bg {
   width: 120rpx;
   height: 120rpx;
-  /* 从绿色改为蓝色渐变 */
   background: linear-gradient(135deg, #2563EB, #1d4ed8);
   border-radius: 30rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto 30rpx;
-  /* 阴影颜色也改为蓝色 */
   box-shadow: 0 8rpx 20rpx rgba(37, 99, 235, 0.3);
 }
 
@@ -272,7 +267,7 @@ const goToLogin = () => {
 }
 
 .form-group {
-  margin-bottom: 40rpx;
+  margin-bottom: 48rpx;
 }
 
 .label {
@@ -306,14 +301,6 @@ const goToLogin = () => {
   box-shadow: 0 0 0 4rpx rgba(37, 99, 235, 0.1);
 }
 
-.input-hint {
-  display: block;
-  font-size: 24rpx;
-  color: #9CA3AF;
-  margin-left: 24rpx;
-  margin-top: 8rpx;
-}
-
 .icon-left { 
   position: absolute; 
   left: 38rpx; 
@@ -327,16 +314,18 @@ const goToLogin = () => {
   cursor: pointer;
 }
 
-.terms-row {
-  margin: 30rpx 10rpx 40rpx;
+.form-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 40rpx 10rpx;
 }
 
 .checkbox-container {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   color: #6B7280;
   font-size: 28rpx;
-  line-height: 1.5;
 }
 
 .checkbox-label {
@@ -345,6 +334,7 @@ const goToLogin = () => {
 
 .link-text {
   color: #2563EB;
+  font-size: 28rpx;
   font-weight: 600;
   cursor: pointer;
 }
@@ -354,10 +344,10 @@ const goToLogin = () => {
   color: white;
   height: 110rpx;
   line-height: 110rpx;
-  border-radius: 55rpx; 
+  border-radius: 55rpx;
   font-size: 34rpx;
   font-weight: 600;
-  margin-top: 20rpx;
+  margin-top: 30rpx;
   box-shadow: 0 8rpx 20rpx rgba(37, 99, 235, 0.3);
   transition: all 0.3s;
 }
@@ -372,14 +362,14 @@ const goToLogin = () => {
 
 .bottom-tips {
   text-align: center;
-  margin-top: 45rpx;
+  margin-top: 50rpx;
   font-size: 30rpx;
   color: #6B7280;
 }
 
 /* Responsive adjustments for smaller screens */
 @media (max-width: 750px) {
-  .signup-card {
+  .login-card {
     padding: 60rpx 40rpx;
   }
   
