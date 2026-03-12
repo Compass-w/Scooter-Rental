@@ -3,7 +3,7 @@ package com.scooterrental.backend.controller;
 import com.scooterrental.backend.common.Result;
 import com.scooterrental.backend.entity.User;
 import com.scooterrental.backend.service.UserService;
-import com.scooterrental.backend.service.BookingService; // Assuming this exists from previous turns
+import com.scooterrental.backend.service.BookingService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,15 +25,17 @@ public class UserProfileController {
     @Autowired
     private BookingService bookingService;
 
+    /**
+     * Get user profile details and refresh achievements.
+     */
     @GetMapping("/{id}")
-    @Operation(summary = "Get User Profile", description = "Retrieve user details and refresh achievements")
+    @Operation(summary = "Get User Profile", description = "Retrieve user details and auto-refresh medals")
     public ResponseEntity<Result<User>> getUserProfile(@PathVariable Integer id) {
-        // Refresh achievements before returning
         userService.checkAndAwardAchievements(id);
-
         User user = userService.getUserById(id);
+
         if (user != null) {
-            user.setPasswordHash(null);
+            user.setPasswordHash(null); // Security: remove password hash
             return ResponseEntity.ok(Result.success(user));
         } else {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -41,18 +43,29 @@ public class UserProfileController {
         }
     }
 
-    // --- Added to match frontend: updateUserInfo ---
+    /**
+     * Update user information.
+     * Matches frontend: PUT /api/users/update
+     */
     @PutMapping("/update")
-    @Operation(summary = "Update Profile", description = "Update user email and phone number")
+    @Operation(summary = "Update Profile", description = "Modify user email and phone number")
     public Result<String> updateUserInfo(@RequestBody User user) {
+        if (user.getUserId() == null) {
+            return Result.error(400, "User ID is required");
+        }
+
         if (userService.updateUser(user)) {
             return Result.success("Profile updated successfully");
+        } else {
+            return Result.error(500, "Update failed: User might not exist");
         }
-        return Result.error(400, "Failed to update profile");
     }
 
+    /**
+     * Get riding statistics for chart display [ID: 22].
+     */
     @GetMapping("/{id}/stats")
-    @Operation(summary = "Get Usage Stats", description = "Weekly riding minutes for chart display [ID: 22]")
+    @Operation(summary = "Get Usage Stats", description = "Get weekly riding minutes for charts")
     public Result<List<Map<String, Object>>> getStats(@PathVariable Integer id) {
         return Result.success(bookingService.getStats(id));
     }
