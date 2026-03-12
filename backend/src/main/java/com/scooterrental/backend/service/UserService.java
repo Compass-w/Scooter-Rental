@@ -37,12 +37,18 @@ public class UserService {
         return userMapper.selectById(userId);
     }
 
-    // --- Added for User Profile Update ---
+    /**
+     * Update user email and phone number.
+     * 
+     * @return true if update was successful.
+     */
     public boolean updateUser(User user) {
         return userMapper.updateProfile(user) > 0;
     }
 
-    // --- Added for Gamification [ID: 22] ---
+    /**
+     * Gamification logic: check and award achievements [ID: 22].
+     */
     public void checkAndAwardAchievements(Integer userId) {
         User user = userMapper.selectById(userId);
         if (user == null)
@@ -51,7 +57,7 @@ public class UserService {
         String current = user.getAchievements() != null ? user.getAchievements() : "";
         boolean updated = false;
 
-        // Logic: Award "Eco-Warrior" if riding time > 60 mins
+        // Logic: Award "Eco-Warrior" medal if riding time >= 60 minutes
         if (user.getTotalRidingMinutes() != null && user.getTotalRidingMinutes() >= 60
                 && !current.contains("Eco-Warrior")) {
             current = current.isEmpty() ? "Eco-Warrior" : current + ",Eco-Warrior";
