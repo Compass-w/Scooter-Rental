@@ -172,6 +172,9 @@ const handleLogin = async () => {
       duration: 1500
     })
 
+    // Notify all mounted BaseLayout instances to refresh their navbar auth state
+    uni.$emit('login-success')
+
     // Navigate to appropriate page based on user role
     setTimeout(() => {
       if (role === 'ADMIN') {

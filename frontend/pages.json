@@ -47,7 +47,14 @@
         "navigationBarTitleText": "Reset Password",
         "navigationStyle": "custom"
       }
-    }
+    },
+	{
+	  "path": "pages/profile",
+	  "style": {
+	    "navigationBarTitleText": "My Profile",
+	    "navigationStyle": "custom"
+	  }
+	}
   ],
   "globalStyle": {
     "navigationBarTextStyle": "black",

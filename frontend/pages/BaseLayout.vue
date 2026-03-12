@@ -171,7 +171,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 
 const props = defineProps({
   navType: {
@@ -210,6 +210,31 @@ const userInitial = computed(() => {
   return 'U'
 })
 
+/**
+ * Read auth state from storage and update reactive refs.
+ * Called on mount and whenever a login-success / logout event is received.
+ */
+const refreshAuthState = () => {
+  try {
+    const token = uni.getStorageSync('token') || uni.getStorageSync('userToken')
+    const user = uni.getStorageSync('userInfo')
+    if (token) {
+      isLoggedIn.value = true
+      if (user) {
+        const userObj = typeof user === 'string' ? JSON.parse(user) : user
+        userAvatar.value = userObj.avatar || userObj.avatarUrl || ''
+        userName.value = userObj.name || userObj.nickname || userObj.username || ''
+      }
+    } else {
+      isLoggedIn.value = false
+      userAvatar.value = ''
+      userName.value = ''
+    }
+  } catch (e) {
+    isLoggedIn.value = false
+  }
+}
+
 onMounted(() => {
   const info = uni.getSystemInfoSync()
   statusBarHeight.value = info.statusBarHeight || 0
@@ -227,21 +252,18 @@ onMounted(() => {
     })
     .exec()
 
-  // Check login state from local storage
-  try {
-    const token = uni.getStorageSync('token') || uni.getStorageSync('userToken')
-    const user = uni.getStorageSync('userInfo')
-    if (token) {
-      isLoggedIn.value = true
-      if (user) {
-        const userObj = typeof user === 'string' ? JSON.parse(user) : user
-        userAvatar.value = userObj.avatar || userObj.avatarUrl || ''
-        userName.value = userObj.name || userObj.nickname || userObj.username || ''
-      }
-    }
-  } catch (e) {
-    isLoggedIn.value = false
-  }
+  // Check login state on mount
+  refreshAuthState()
+
+  // Subscribe to login / logout events emitted by login.vue and other pages,
+  // so the navbar updates immediately without needing a full page recreate.
+  uni.$on('login-success', refreshAuthState)
+  uni.$on('user-logout', refreshAuthState)
+})
+
+onUnmounted(() => {
+  uni.$off('login-success', refreshAuthState)
+  uni.$off('user-logout', refreshAuthState)
 })
 
 const goToHome = () => {
