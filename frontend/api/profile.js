@@ -44,7 +44,7 @@ export const getProfile = () => {
  * API: PUT /users/{id}
  */
 export const updateProfile = (data) => {
-  return request.put(`/users/${getUserId()}`, data)
+  return request.put(`/users/update`, data) //
 }
 
 /**

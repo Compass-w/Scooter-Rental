@@ -69,4 +69,21 @@ public class UserProfileController {
     public Result<List<Map<String, Object>>> getStats(@PathVariable Integer id) {
         return Result.success(bookingService.getStats(id));
     }
+
+    /**
+     * get user settings (notification and privacy) [ID: 23].
+     */
+    @GetMapping("/{id}/settings")
+    @Operation(summary = "Get User Settings", description = "Retrieve user notification and privacy settings")
+    public Result<Map<String, Object>> getSettings(@PathVariable Integer id) {
+        // 这里暂时返回模拟数据，实际开发中应从数据库读取
+        Map<String, Object> settings = new java.util.HashMap<>();
+        settings.put("notifications", true);
+        settings.put("emailNotif", false);
+        settings.put("location", true);
+        settings.put("dataShare", true);
+        settings.put("autoTopUp", false);
+
+        return Result.success(settings);
+    }
 }

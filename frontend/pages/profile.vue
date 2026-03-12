@@ -1072,6 +1072,7 @@ const saveInfo = async () => {
   savingInfo.value = true
   try {
     const payload = {
+      userId:   userInfo.value.userId,
       username: editForm.value.name,
       email:    editForm.value.email,
       phone:    editForm.value.phone,
