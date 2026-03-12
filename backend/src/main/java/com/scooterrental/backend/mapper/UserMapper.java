@@ -27,8 +27,8 @@ public interface UserMapper {
         /**
          * Update user profile information (email and phone) [ID: user.js]
          */
-        @Update("UPDATE users SET email = #{email}, phone = #{phone} WHERE user_id = #{userId}")
-        int updateProfile(User user);
+        @Update("UPDATE users SET username = #{username}, email = #{email}, phone = #{phone}, city = #{city} WHERE user_id = #{userId}")
+        int updateUser(User user);
 
         // Update achievements for gamification [ID: 22]
         @Update("UPDATE users SET achievements = #{achievements} WHERE user_id = #{userId}")

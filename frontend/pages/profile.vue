@@ -1078,12 +1078,20 @@ const saveInfo = async () => {
       phone:    editForm.value.phone,
       city:     editForm.value.city,
     }
-    const updated = await updateProfile(payload)
-    userInfo.value = { ...userInfo.value, ...(updated || editForm.value) }
+    const res = await updateProfile(payload)
+    userInfo.value = {
+      ...userInfo.value,
+      name:     editForm.value.name,
+      username: editForm.value.name,
+      email:    editForm.value.email,
+      phone:    editForm.value.phone,
+      city:     editForm.value.city
+    }
     uni.setStorageSync('userInfo', JSON.stringify(userInfo.value))
     editingInfo.value = false
     uni.showToast({ title: 'Profile updated!', icon: 'success' })
-  } catch {
+  } catch (e) {
+    console.error(e)
     uni.showToast({ title: 'Failed to save', icon: 'none' })
   } finally {
     savingInfo.value = false
