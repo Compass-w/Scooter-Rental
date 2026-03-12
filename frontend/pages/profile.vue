@@ -1071,7 +1071,13 @@ const saveInfo = async () => {
   }
   savingInfo.value = true
   try {
-    const updated = await updateProfile({ ...editForm.value })
+    const payload = {
+      username: editForm.value.name,
+      email:    editForm.value.email,
+      phone:    editForm.value.phone,
+      city:     editForm.value.city,
+    }
+    const updated = await updateProfile(payload)
     userInfo.value = { ...userInfo.value, ...(updated || editForm.value) }
     uni.setStorageSync('userInfo', JSON.stringify(userInfo.value))
     editingInfo.value = false
