@@ -17,10 +17,8 @@ public class User {
     @Schema(description = "User Email", example = "student1@leeds.ac.uk")
     private String email;
 
-    // --- 新增字段 ---
     @Schema(description = "Phone Number", example = "07123456789")
     private String phone;
-    // ----------------
 
     @Schema(description = "Encrypted Password", hidden = true)
     private String passwordHash;
@@ -28,13 +26,13 @@ public class User {
     @Schema(description = "User Role", example = "customer", allowableValues = { "customer", "manager" })
     private String role;
 
-    @Schema(description = "Registration Time")
-    private LocalDateTime createdAt;
-
-    // Add these fields to your existing User class [ID: 22]
+    // --- Added for Sprint 1 Distinction Features ---
     @Schema(description = "Total riding time in minutes", example = "120")
     private Integer totalRidingMinutes;
 
     @Schema(description = "User achievements (comma separated)", example = "Eco-Warrior,First Ride")
     private String achievements;
+
+    @Schema(description = "Registration Time")
+    private LocalDateTime createdAt;
 }
