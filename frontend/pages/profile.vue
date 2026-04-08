@@ -893,23 +893,42 @@ const memberSince = computed(() => {
   return new Date(userInfo.value.createdAt).getFullYear()
 })
 
+const readStoredProfileUser = () => {
+  try {
+    const cached = uni.getStorageSync('userInfo')
+    return cached ? (typeof cached === 'string' ? JSON.parse(cached) : cached) : {}
+  } catch (error) {
+    console.error('Failed to read cached user info:', error)
+    return {}
+  }
+}
+
+const normalizeProfileRecord = (data = {}) => {
+  const cachedUser = readStoredProfileUser()
+  const resolvedUserId = data.userId || data.id || cachedUser.userId || cachedUser.id || ''
+  const resolvedUsername = data.username || data.name || cachedUser.username || cachedUser.name || ''
+
+  return {
+    userId:    resolvedUserId,
+    id:        resolvedUserId,
+    username:  resolvedUsername,
+    name:      data.name || resolvedUsername,
+    email:     data.email || '',
+    phone:     data.phone || '',
+    city:      data.city || '',
+    avatar:    data.avatar || data.avatarUrl || '',
+    role:      data.role || cachedUser.role || 'customer',
+    createdAt: data.createdAt || cachedUser.createdAt || ''
+  }
+}
+
 /**
  * Load user profile from API, fallback to local cache on failure
  */
 async function loadProfile() {
   try {
     const data = await getProfile()
-    userInfo.value = {
-      userId:    data.userId    || '',
-      username:  data.username  || '',
-      name:      data.name      || data.username || '',
-      email:     data.email     || '',
-      phone:     data.phone     || '',
-      city:      data.city      || '',
-      avatar:    data.avatar    || data.avatarUrl || '',
-      role:      data.role      || 'customer',
-      createdAt: data.createdAt || ''
-    }
+    userInfo.value = normalizeProfileRecord(data)
     uni.setStorageSync('userInfo', JSON.stringify(userInfo.value))
     uni.$emit('user-profile-updated')
   } catch {
@@ -917,17 +936,7 @@ async function loadProfile() {
       const s = uni.getStorageSync('userInfo')
       if (s) {
         const o = typeof s === 'string' ? JSON.parse(s) : s
-        userInfo.value = {
-          userId:    o.userId    || '',
-          username:  o.username  || '',
-          name:      o.name      || o.username || '',
-          email:     o.email     || '',
-          phone:     o.phone     || '',
-          city:      o.city      || '',
-          avatar:    o.avatar    || '',
-          role:      o.role      || 'customer',
-          createdAt: o.createdAt || ''
-        }
+        userInfo.value = normalizeProfileRecord(o)
       }
     } catch (e) {
       console.error('Failed to load profile from cache:', e)
@@ -1043,7 +1052,7 @@ onShow(() => {
 const toggleEditInfo = () => {
   if (!editingInfo.value) {
     editForm.value = {
-      name:  userInfo.value.name,
+      name:  userInfo.value.name || userInfo.value.username,
       email: userInfo.value.email,
       phone: userInfo.value.phone,
       city:  userInfo.value.city
@@ -1068,24 +1077,45 @@ const saveInfo = async () => {
     uni.showToast({ title: 'Email is required', icon: 'none' })
     return
   }
+
+  const cachedUser = readStoredProfileUser()
+  const resolvedUserId = userInfo.value.userId || userInfo.value.id || cachedUser.userId || cachedUser.id
+  if (!resolvedUserId) {
+    uni.showToast({ title: 'Please log in again', icon: 'none' })
+    return
+  }
+
   savingInfo.value = true
   try {
     const payload = {
-      userId:   userInfo.value.userId,
-      username: editForm.value.name,
-      email:    editForm.value.email,
-      phone:    editForm.value.phone,
-      city:     editForm.value.city,
+      userId:   resolvedUserId,
+      username: String(editForm.value.name || userInfo.value.username || '').trim(),
+      email:    String(editForm.value.email || '').trim(),
+      phone:    String(editForm.value.phone || '').trim(),
+      city:     String(editForm.value.city || '').trim(),
     }
-    await updateProfile(payload)
-    userInfo.value = {
-      ...userInfo.value,
-      name:     editForm.value.name,
-      username: editForm.value.name,
-      email:    editForm.value.email,
-      phone:    editForm.value.phone,
-      city:     editForm.value.city
-    }
+    const updatedProfile = await updateProfile(payload)
+    const nextProfile = normalizeProfileRecord(
+      typeof updatedProfile === 'object' && updatedProfile !== null
+        ? {
+            ...userInfo.value,
+            ...updatedProfile,
+            userId:   updatedProfile.userId || updatedProfile.id || payload.userId,
+            username: updatedProfile.username || payload.username || userInfo.value.username,
+            name:     updatedProfile.name || updatedProfile.username || payload.username || userInfo.value.name
+          }
+        : {
+            ...userInfo.value,
+            userId:   payload.userId,
+            username: payload.username || userInfo.value.username,
+            name:     payload.username || userInfo.value.name,
+            email:    payload.email,
+            phone:    payload.phone,
+            city:     payload.city
+          }
+    )
+
+    userInfo.value = nextProfile
     uni.setStorageSync('userInfo', JSON.stringify(userInfo.value))
     uni.$emit('user-profile-updated')
     editingInfo.value = false

@@ -49,15 +49,30 @@ public class UserProfileController {
      */
     @PutMapping("/update")
     @Operation(summary = "Update Profile", description = "Modify user email and phone number")
-    public Result<String> updateUserInfo(@RequestBody User user) {
-        if (user.getUserId() == null) {
+    public Result<User> updateUserInfo(@RequestBody Map<String, Object> payload) {
+        Integer userId = parseUserId(payload.get("userId"));
+        if (userId == null) {
             return Result.error(400, "User ID is required");
         }
 
+        User user = new User();
+        user.setUserId(userId);
+        user.setUsername(readPayloadText(payload, "username"));
+        user.setEmail(readPayloadText(payload, "email"));
+        user.setPhone(readPayloadText(payload, "phone"));
+        user.setCity(readPayloadText(payload, "city"));
+
         if (userService.updateUser(user)) {
-            return Result.success("Profile updated successfully");
+            User refreshed = userService.getUserById(userId);
+            if (refreshed != null) {
+                refreshed.setPasswordHash(null);
+                return Result.success(refreshed);
+            }
+
+            user.setPasswordHash(null);
+            return Result.success(user);
         } else {
-            return Result.error(500, "Update failed: User might not exist");
+            return Result.error(404, "Update failed: User might not exist");
         }
     }
 
@@ -85,5 +100,34 @@ public class UserProfileController {
         settings.put("autoTopUp", false);
 
         return Result.success(settings);
+    }
+
+    private Integer parseUserId(Object rawValue) {
+        if (rawValue == null) {
+            return null;
+        }
+
+        if (rawValue instanceof Number number) {
+            return number.intValue();
+        }
+
+        try {
+            String value = String.valueOf(rawValue).trim();
+            if (value.isEmpty()) {
+                return null;
+            }
+            return Integer.parseInt(value);
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
+    }
+
+    private String readPayloadText(Map<String, Object> payload, String key) {
+        Object value = payload.get(key);
+        if (value == null) {
+            return null;
+        }
+
+        return String.valueOf(value).trim();
     }
 }
