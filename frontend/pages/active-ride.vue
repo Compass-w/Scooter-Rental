@@ -3,13 +3,15 @@
     <view class="active-ride-page">
       <view class="page-hero">
         <view class="hero-copy">
-          <text class="hero-eyebrow">{{ heroCopy.eyebrow }}</text>
-          <text class="hero-title">{{ heroCopy.title }}</text>
-          <text class="hero-subtitle">{{ heroCopy.subtitle }}</text>
+          <text class="hero-eyebrow">Active Ride Dashboard</text>
+          <text class="hero-title">Stay in control while your scooter is on the move</text>
+          <text class="hero-subtitle">
+            Track the remaining rental time, add more minutes, end the ride safely, or report a fault without leaving the dashboard.
+          </text>
         </view>
         <view class="hero-chip">
           <uni-icons type="paperplane-filled" size="18" color="#1D4ED8"></uni-icons>
-          <text class="hero-chip-text">{{ heroChipText }}</text>
+          <text class="hero-chip-text">{{ activeRide ? 'Ride in progress' : 'Ready when you are' }}</text>
         </view>
       </view>
 
@@ -172,42 +174,23 @@
 
       <view v-else class="empty-state-shell">
         <uni-card
-          :title="emptyStateCopy.title"
-          :sub-title="emptyStateCopy.subtitle"
+          title="No active ride found"
+          sub-title="Start a new booking from the scooter map to see your dashboard here."
           is-shadow
         >
           <view class="empty-illustration">
             <view class="empty-icon-ring">
               <uni-icons type="paperplane-filled" size="34" color="#2563EB"></uni-icons>
             </view>
-            <text class="empty-title">{{ emptyStateCopy.headline }}</text>
-            <text class="empty-subtitle">{{ emptyStateCopy.body }}</text>
-          </view>
-
-          <view v-if="latestBooking" class="empty-summary-card">
-            <view class="empty-summary-top">
-              <text class="empty-summary-label">Latest synced booking</text>
-              <view class="empty-status-pill" :class="`empty-status-${String(latestBooking.status || '').toLowerCase()}`">
-                <text class="empty-status-text">{{ formatStatusLabel(latestBooking.status) }}</text>
-              </view>
-            </view>
-            <text class="empty-summary-title">
-              Booking #{{ latestBooking.bookingId }} | Scooter #{{ latestBooking.scooterId || '--' }}
-            </text>
-            <text class="empty-summary-meta">{{ formatDateTime(latestBooking.startTime) }}</text>
-            <text class="empty-summary-meta">
-              {{ latestBooking.scooterModel || 'Scooter' }} | {{ formatMoney(latestBooking.totalCost) }}
+            <text class="empty-title">You're not currently riding</text>
+            <text class="empty-subtitle">
+              Once a booking becomes active, this page will show the live countdown, extension controls, and issue reporting tools.
             </text>
           </view>
 
-          <view class="empty-action-row">
-            <button class="primary-action" @tap="goToFindScooter">
-              <text>{{ emptyStateCopy.primaryLabel }}</text>
-            </button>
-            <button class="ghost-action outline-action" @tap="goToProfile">
-              <text>{{ emptyStateCopy.secondaryLabel }}</text>
-            </button>
-          </view>
+          <button class="primary-action" @tap="goToFindScooter">
+            <text>Find a Scooter</text>
+          </button>
         </uni-card>
       </view>
 
@@ -294,7 +277,6 @@ const syncing = ref(false)
 const busyAction = ref('')
 const countdownReached = ref(false)
 const activeRide = ref(getStoredActiveRide())
-const recentBookings = ref([])
 const selectedExtensionIndex = ref(0)
 const issuePopupRef = ref(null)
 const issueForm = ref({
@@ -303,63 +285,10 @@ const issueForm = ref({
 })
 
 const extensionMinutes = computed(() => extensionOptions[selectedExtensionIndex.value] || extensionOptions[0])
-const latestBooking = computed(() => recentBookings.value[0] || null)
 const durationLabel = computed(() => `${Number(activeRide.value?.durationMinutes || 0)} min reserved`)
 const countdownHint = computed(() => {
   if (!activeRide.value) return ''
   return `Scooter #${activeRide.value.scooterId} is active and scheduled to finish at ${plannedEndTime.value}.`
-})
-const heroCopy = computed(() => {
-  if (currentNavPage.value === 'booking') {
-    return {
-      eyebrow: 'Book & Details',
-      title: activeRide.value ? 'Review the live reservation details' : 'Keep every reservation in view',
-      subtitle: activeRide.value
-        ? 'See the current booking snapshot, pricing, and remaining time in one place.'
-        : 'Even without an active order, this page stays useful with your latest booking context and next actions.'
-    }
-  }
-
-  return {
-    eyebrow: 'My Ride Dashboard',
-    title: activeRide.value ? 'Stay in control while your scooter is on the move' : 'Your ride space is ready for the next trip',
-    subtitle: activeRide.value
-      ? 'Track the remaining rental time, add more minutes, end the ride safely, or report a fault without leaving the dashboard.'
-      : 'If no ride is active, we still show recent booking context here so the page does not feel empty.'
-  }
-})
-const heroChipText = computed(() => {
-  if (activeRide.value) return 'Ride in progress'
-  return currentNavPage.value === 'booking' ? 'Booking overview' : 'Ready when you are'
-})
-const emptyStateCopy = computed(() => {
-  if (currentNavPage.value === 'booking') {
-    return {
-      title: latestBooking.value ? 'No active booking right now' : 'No booking found yet',
-      subtitle: latestBooking.value
-        ? 'Book & Details still shows your latest synced order so you can review what happened last.'
-        : 'Reserve a scooter from the map and the booking details will appear here automatically.',
-      headline: latestBooking.value ? 'Your next reservation is one tap away' : 'Create your first booking',
-      body: latestBooking.value
-        ? 'You can start a fresh booking now or open your profile to review the full booking history and saved cards.'
-        : 'Once a booking is created, this page will show reservation details instead of a blank state.',
-      primaryLabel: 'Book a Scooter',
-      secondaryLabel: 'Open Profile'
-    }
-  }
-
-  return {
-    title: latestBooking.value ? 'No active ride at the moment' : 'No ride in progress',
-    subtitle: latestBooking.value
-      ? 'My Ride now keeps the latest order in view so the page still feels alive between trips.'
-      : 'Start a booking from the scooter map and this page will become your live ride dashboard.',
-    headline: latestBooking.value ? 'Ready for the next trip' : 'Nothing is riding yet',
-    body: latestBooking.value
-      ? 'Jump back into the map or open your profile if you want the full order history and payment details.'
-      : 'When a ride becomes active, this page will show countdown, extension controls, and issue reporting tools.',
-    primaryLabel: 'Find a Scooter',
-    secondaryLabel: 'Open Profile'
-  }
 })
 
 const countdownParts = computed(() => {
@@ -404,36 +333,11 @@ const projectedTotalCost = computed(() => {
   return formatMoney(Number(activeRide.value.totalCost || 0) + extraCost)
 })
 
-const normalizeBookingSnapshot = (booking = {}) => ({
-  bookingId: booking.bookingId ?? booking.id ?? '',
-  scooterId: booking.scooterId ?? '',
-  scooterModel: booking.scooterModel ?? booking.model ?? 'Scooter',
-  startTime: booking.startTime || '',
-  totalCost: Number(booking.totalCost ?? booking.estimatedCost ?? 0),
-  durationMinutes: Number(booking.durationMinutes ?? 0),
-  status: String(booking.status ?? booking.bookingStatus ?? '').trim().toUpperCase()
-})
-
-const toDate = (value) => {
-  if (!value) return null
-
-  if (value instanceof Date) {
-    return Number.isNaN(value.getTime()) ? null : value
-  }
-
-  if (Array.isArray(value)) {
-    const [year, month, day, hour = 0, minute = 0, second = 0] = value
-    const date = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second))
-    return Number.isNaN(date.getTime()) ? null : date
-  }
-
-  const date = new Date(String(value).replace(' ', 'T'))
-  return Number.isNaN(date.getTime()) ? null : date
-}
-
 const formatDateTime = (value) => {
-  const date = toDate(value)
-  if (!date) return 'Not available'
+  if (!value) return 'Not available'
+
+  const date = value instanceof Date ? value : new Date(String(value).replace(' ', 'T'))
+  if (Number.isNaN(date.getTime())) return 'Not available'
 
   return date.toLocaleString('en-GB', {
     month: 'short',
@@ -444,11 +348,6 @@ const formatDateTime = (value) => {
 }
 
 const formatMoney = (value) => `£${Number(value || 0).toFixed(2)}`
-
-const formatStatusLabel = (status) => {
-  const normalized = String(status || '').trim().toUpperCase()
-  return normalized ? `${normalized.charAt(0)}${normalized.slice(1).toLowerCase()}` : 'Unknown'
-}
 
 const updateActiveRideState = (ride) => {
   if (!ride) {
@@ -493,15 +392,11 @@ const syncActiveRide = async () => {
   }
 
   const userId = getStoredUserId()
-  if (!userId) {
-    recentBookings.value = []
-    return
-  }
+  if (!userId) return
 
   syncing.value = true
   try {
     const bookings = await getUserBookings(userId)
-    recentBookings.value = Array.isArray(bookings) ? bookings.map(normalizeBookingSnapshot) : []
     const liveRide = findActiveRide(bookings, cached || activeRide.value || {})
 
     if (!liveRide) {
@@ -630,10 +525,6 @@ const submitIssue = async () => {
 
 const goToFindScooter = () => {
   uni.navigateTo({ url: '/pages/find-scooter' })
-}
-
-const goToProfile = () => {
-  uni.navigateTo({ url: '/pages/profile' })
 }
 
 onLoad((options) => {
@@ -905,12 +796,6 @@ onUnload(() => {
   margin-top: 12rpx;
 }
 
-.empty-action-row {
-  display: flex;
-  gap: 16rpx;
-  margin-top: 18rpx;
-}
-
 .empty-illustration {
   display: flex;
   flex-direction: column;
@@ -943,100 +828,6 @@ onUnload(() => {
   font-size: 26rpx;
   color: #64748B;
   line-height: 1.65;
-}
-
-.empty-summary-card {
-  margin-top: 20rpx;
-  padding: 22rpx;
-  border-radius: 24rpx;
-  background: linear-gradient(180deg, #F8FBFF 0%, #EFF6FF 100%);
-  border: 2rpx solid rgba(37, 99, 235, 0.10);
-}
-
-.empty-summary-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16rpx;
-}
-
-.empty-summary-label {
-  font-size: 20rpx;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #64748B;
-}
-
-.empty-summary-title {
-  display: block;
-  margin-top: 14rpx;
-  font-size: 28rpx;
-  font-weight: 800;
-  color: #0F172A;
-}
-
-.empty-summary-meta {
-  display: block;
-  margin-top: 8rpx;
-  font-size: 24rpx;
-  color: #475569;
-  line-height: 1.55;
-}
-
-.empty-status-pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 48rpx;
-  padding: 0 16rpx;
-  border-radius: 999rpx;
-  background: #E2E8F0;
-}
-
-.empty-status-text {
-  font-size: 20rpx;
-  font-weight: 800;
-}
-
-.empty-status-pending {
-  background: #FEF3C7;
-}
-
-.empty-status-pending .empty-status-text {
-  color: #92400E;
-}
-
-.empty-status-active {
-  background: #DBEAFE;
-}
-
-.empty-status-active .empty-status-text {
-  color: #1D4ED8;
-}
-
-.empty-status-completed {
-  background: #DCFCE7;
-}
-
-.empty-status-completed .empty-status-text {
-  color: #166534;
-}
-
-.empty-status-cancelled {
-  background: #FEE2E2;
-}
-
-.empty-status-cancelled .empty-status-text {
-  color: #B91C1C;
-}
-
-.outline-action {
-  flex: 1;
-}
-
-.empty-action-row .primary-action {
-  flex: 1;
 }
 
 .issue-popup {
@@ -1108,10 +899,6 @@ onUnload(() => {
   .extend-preview,
   .action-grid {
     grid-template-columns: 1fr;
-  }
-
-  .empty-action-row {
-    flex-direction: column;
   }
 
   .issue-actions {

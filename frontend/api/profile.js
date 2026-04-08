@@ -1,154 +1,176 @@
+/**
+ * User Profile API
+ * Corresponds to User Profile module in API documentation (Section 3)
+ * Base URL: /api/users
+ */
+
 import request from '@/utils/request.js'
 
-const USER_INFO_KEY = 'userInfo'
-
-const toObject = (value) => {
-  if (!value) return null
-
-  if (typeof value === 'string') {
-    try {
-      return JSON.parse(value)
-    } catch {
-      return null
-    }
-  }
-
-  return typeof value === 'object' ? value : null
-}
-
-export const getStoredUserId = () => {
+/**
+ * Get the current user's ID from local storage
+ * @returns {number|string} userId
+ */
+const getUserId = () => {
   try {
-    const user = toObject(uni.getStorageSync(USER_INFO_KEY))
-    return user?.userId || user?.id || ''
-  } catch (error) {
-    console.error('Failed to read user id from storage:', error)
+    const s = uni.getStorageSync('userInfo')
+    const o = s ? (typeof s === 'string' ? JSON.parse(s) : s) : {}
+    return o.userId || o.id || ''
+  } catch (e) {
+    console.error('Failed to get userId:', e)
     return ''
   }
 }
 
-const ensureUserId = (userId = getStoredUserId()) => {
-  if (userId) return userId
-  throw new Error('User ID is missing')
+/**
+ * Get User Profile
+ * @returns {Promise} - Returns user profile data
+ *
+ * API: GET /users/{id}
+ * Response: { userId, username, email, phone, role, createdAt }
+ */
+export const getProfile = () => {
+  return request.get(`/users/${getUserId()}`)
 }
 
-const normalizeCard = (card = {}) => {
-  const masked = String(card.cardNumberMasked || '').trim()
-  const digits = masked.replace(/\D/g, '')
-
-  return {
-    cardId: card.cardId ?? card.id ?? '',
-    userId: card.userId ?? '',
-    cardHolderName: card.cardHolderName || '',
-    cardNumberMasked: masked || (digits ? `**** ${digits.slice(-4)}` : '**** ----'),
-    expiryDate: card.expiryDate || card.expires || '',
-    last4: digits.slice(-4),
-    brand: card.brand || 'Bank Card',
-    isDefault: Boolean(card.isDefault)
-  }
-}
-
-export const getProfile = (userId = getStoredUserId()) => {
-  const id = ensureUserId(userId)
-  return request.get(`/users/${id}`)
-}
-
+/**
+ * Update User Profile
+ * @param {Object} data - Fields to update
+ * @param {string} [data.username] - Display username
+ * @param {string} [data.email] - Email address (must be unique)
+ * @param {string} [data.phone] - Phone number
+ * @param {string} [data.city] - City of residence
+ * @returns {Promise} - Returns updated user profile
+ *
+ * API: PUT /users/{id}
+ */
 export const updateProfile = (data) => {
-  return request.put('/users/update', data)
+  return request.put(`/users/update`, data)
 }
 
-export const getStats = (period = 'Week', userId = getStoredUserId()) => {
-  const id = ensureUserId(userId)
-  return request.get(`/users/${id}/stats`, { period })
+/**
+ * Get Ride Statistics
+ * @param {string} period - Time period: 'Week' | 'Month' | 'All' (default: 'Month')
+ * @returns {Promise} - Returns ride stats (totalRides, totalKm, co2Saved, periodRides, etc.)
+ *
+ * API: GET /users/{id}/stats?period=
+ */
+export const getStats = (period = 'Month') => {
+  return request.get(`/users/${getUserId()}/stats`, { period })
 }
 
-export const getBookingHistory = (userId = getStoredUserId()) => {
-  const id = ensureUserId(userId)
-  return request.get(`/bookings/user/${id}`)
+/**
+ * Get Wallet
+ * @returns {Promise} - Returns balance, autoTopUp flag, and paymentMethods[]
+ *
+ * API: GET /users/{id}/wallet
+ */
+export const getWallet = () => {
+  return request.get(`/users/${getUserId()}/wallet`)
 }
 
-export const getBookings = async (status = 'all', userId = getStoredUserId()) => {
-  const bookings = await getBookingHistory(userId)
-  const list = Array.isArray(bookings) ? bookings : []
-  const normalizedStatus = String(status || 'all').trim().toLowerCase()
-
-  if (normalizedStatus === 'upcoming') {
-    return list.filter(item => ['PENDING', 'ACTIVE'].includes(String(item?.status || '').toUpperCase()))
-  }
-
-  if (normalizedStatus === 'past') {
-    return list.filter(item => ['COMPLETED', 'CANCELLED'].includes(String(item?.status || '').toUpperCase()))
-  }
-
-  return list
+/**
+ * Top Up Wallet
+ * @param {number} amount - Amount in GBP to add (e.g. 10.00)
+ * @returns {Promise} - Returns updated balance
+ *
+ * API: POST /users/{id}/wallet/topup
+ */
+export const topUpWallet = (amount) => {
+  return request.post(`/users/${getUserId()}/wallet/topup`, { amount })
 }
 
-export const cancelBooking = (bookingId, userId = getStoredUserId()) => {
-  const id = ensureUserId(userId)
-
-  if (!bookingId) {
-    return Promise.reject(new Error('Booking ID is required'))
-  }
-
-  return request.post('/bookings/cancel', {
-    bookingId,
-    userId: id
-  })
+/**
+ * Add Payment Card
+ * @param {Object} data - Card details
+ * @param {string} data.number - Full card number, 16 digits, no spaces
+ * @param {string} data.expires - Expiry date in MM/YY format
+ * @param {string} data.cvv - Security code, 3-4 digits
+ * @returns {Promise} - Returns saved card object (cardId, brand, last4, expires, isDefault)
+ *
+ * API: POST /users/{id}/wallet/cards
+ */
+export const addCard = (data) => {
+  return request.post(`/users/${getUserId()}/wallet/cards`, data)
 }
 
-export const getBankCards = async (userId = getStoredUserId()) => {
-  const id = ensureUserId(userId)
-  const cards = await request.get(`/cards/user/${id}`)
-  return Array.isArray(cards) ? cards.map(normalizeCard) : []
+/**
+ * Set Default Payment Card
+ * @param {string} cardId - ID of the card to set as default
+ * @returns {Promise} - Returns null on success
+ *
+ * API: PATCH /users/{id}/wallet/cards/{cardId}/default
+ */
+export const setDefaultCard = (cardId) => {
+  return request.patch(`/users/${getUserId()}/wallet/cards/${cardId}/default`)
 }
 
-export const addBankCard = (data, userId = getStoredUserId()) => {
-  const id = ensureUserId(userId)
-
-  return request.post('/cards/add', {
-    userId: id,
-    cardHolderName: data.cardHolderName || data.name || '',
-    cardNumberMasked: data.cardNumberMasked || data.number || '',
-    expiryDate: data.expiryDate || data.expires || '',
-    isDefault: Boolean(data.isDefault)
-  })
+/**
+ * Remove Payment Card
+ * @param {string} cardId - ID of the card to remove
+ * @returns {Promise} - Returns null on success
+ *
+ * API: DELETE /users/{id}/wallet/cards/{cardId}
+ */
+export const removeCard = (cardId) => {
+  return request.delete(`/users/${getUserId()}/wallet/cards/${cardId}`)
 }
 
-export const removeBankCard = (cardId) => {
-  if (!cardId) {
-    return Promise.reject(new Error('Card ID is required'))
-  }
-
-  return request.delete(`/cards/${cardId}`)
+/**
+ * Get Recent Trips
+ * @param {number} limit - Max number of trips to return (default: 3)
+ * @returns {Promise} - Returns { items: Trip[] }
+ *
+ * API: GET /users/{id}/trips?limit=
+ */
+export const getRecentTrips = (limit = 3) => {
+  return request.get(`/users/${getUserId()}/trips`, { limit })
 }
 
-export const getWallet = async (userId = getStoredUserId()) => {
-  const paymentMethods = await getBankCards(userId)
-
-  return {
-    balance: '0.00',
-    autoTopUp: false,
-    paymentMethods
-  }
+/**
+ * Get Bookings
+ * @param {string} status - 'upcoming' | 'past'
+ * @returns {Promise} - Returns { items: Booking[] }
+ *
+ * API: GET /users/{id}/bookings?status=
+ */
+export const getBookings = (status) => {
+  return request.get(`/users/${getUserId()}/bookings`, { status })
 }
 
-export const addCard = (data, userId = getStoredUserId()) => addBankCard(data, userId)
-
-export const removeCard = (cardId) => removeBankCard(cardId)
-
-export const topUpWallet = () => Promise.reject(new Error('Wallet top-up is not available on the current backend'))
-
-export const getRecentTrips = async (limit = 3, userId = getStoredUserId()) => {
-  const bookings = await getBookingHistory(userId)
-  return (Array.isArray(bookings) ? bookings : [])
-    .filter(item => String(item?.status || '').toUpperCase() === 'COMPLETED')
-    .slice(0, limit)
+/**
+ * Cancel Booking
+ * @param {number} bookingId - ID of the booking to cancel
+ * @returns {Promise} - Returns null on success
+ *
+ * API: POST /users/{id}/bookings/{bookingId}/cancel
+ * Note: A £1.00 fee applies if cancelled less than 1 hour before the booking time
+ */
+export const cancelBooking = (bookingId) => {
+  return request.post(`/users/${getUserId()}/bookings/${bookingId}/cancel`)
 }
 
-export const getSettings = async (userId = getStoredUserId()) => {
-  const id = ensureUserId(userId)
-  return request.get(`/users/${id}/settings`)
+/**
+ * Get User Settings
+ * @returns {Promise} - Returns { notifications, emailNotif, location, dataShare, autoTopUp }
+ *
+ * API: GET /users/{id}/settings
+ */
+export const getSettings = () => {
+  return request.get(`/users/${getUserId()}/settings`)
 }
 
-export const updateSettings = (data = {}) => Promise.resolve(data)
-
-export const setDefaultCard = () => Promise.reject(new Error('Default card update is not available on the current backend'))
+/**
+ * Update User Settings
+ * @param {Object} data - Only the fields to change (partial update)
+ * @param {boolean} [data.notifications] - Push notification toggle
+ * @param {boolean} [data.emailNotif] - Weekly email digest toggle
+ * @param {boolean} [data.location] - Location services toggle
+ * @param {boolean} [data.dataShare] - Analytics sharing toggle
+ * @param {boolean} [data.autoTopUp] - Auto top-up toggle
+ * @returns {Promise} - Returns null on success
+ *
+ * API: PATCH /users/{id}/settings
+ */
+export const updateSettings = (data) => {
+  return request.patch(`/users/${getUserId()}/settings`, data)
+}
