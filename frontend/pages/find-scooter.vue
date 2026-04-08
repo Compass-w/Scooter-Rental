@@ -103,10 +103,10 @@
             v-if="selectedScooter.status === 'AVAILABLE'"
             class="btn-ride"
             :disabled="riding"
-            @tap="startRide(selectedScooter)"
+            @tap="openBookingOptions(selectedScooter)"
           >
             <text v-if="riding">Starting ride...</text>
-            <text v-else>Ride Now</text>
+            <text v-else>Book Ride</text>
           </button>
           <view v-else class="btn-unavailable">
             <text>{{ selectedScooter.status === 'IN_USE' ? 'Currently In Use' : 'Under Maintenance' }}</text>
@@ -189,7 +189,7 @@
                   </view>
                 </view>
               </view>
-              <view v-if="scooter.status === 'AVAILABLE'" class="ride-btn-small" @tap.stop="startRide(scooter)">
+              <view v-if="scooter.status === 'AVAILABLE'" class="ride-btn-small" @tap.stop="openBookingOptions(scooter)">
                 <text class="ride-btn-text">Ride</text>
               </view>
             </view>
@@ -211,13 +211,21 @@
       </view>
 
     </view>
+    <BookingOptions
+      :visible="bookingOptionsVisible"
+      :scooter="bookingScooter"
+      :submitting="riding"
+      @close="closeBookingOptions"
+      @confirm="confirmRideStart"
+    />
   </BaseLayout>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import BaseLayout from '@/pages/BaseLayout.vue'
-import { getAvailableScooters, getAllScooters, startRide as startRideApi } from '@/api/scooter.js'
+import BookingOptions from '@/components/BookingOptions.vue'
+import { getAllScooters, startRide as startRideApi } from '@/api/scooter.js'
 
 /**
  * Reactive state variables
@@ -231,6 +239,8 @@ const drawerOpen      = ref(false)
 const selectedScooter = ref(null)
 const riding          = ref(false)
 const mapReady        = ref(false)
+const bookingOptionsVisible = ref(false)
+const bookingScooter  = ref(null)
 
 // Leaflet map HTML path — place scooter-map.html inside /static/
 const mapSrc = ref('/static/scooter-map.html')
@@ -385,7 +395,7 @@ const _handleMapPayload = ({ type, data } = {}) => {
 
   if (type === 'rideTap') {
     selectedScooter.value = data
-    startRide(data)
+    openBookingOptions(data)
   }
 }
 
@@ -443,6 +453,107 @@ const selectScooterFromList = (scooter) => {
   drawerOpen.value = false
   if (scooter.latitude && scooter.longitude) {
     sendToMap('flyTo', { lat: scooter.latitude, lng: scooter.longitude, zoom: 17 })
+  }
+}
+
+/**
+ * Read the cached user info and return the current user ID if available.
+ */
+const getStoredUserId = () => {
+  try {
+    const cached = uni.getStorageSync('userInfo')
+    const userInfo = typeof cached === 'string' ? JSON.parse(cached) : cached
+    return userInfo?.userId || userInfo?.id || ''
+  } catch {
+    return ''
+  }
+}
+
+/**
+ * Update a scooter status locally so the UI responds immediately.
+ * @param {number|string} scooterId - Scooter ID
+ * @param {string} nextStatus - New status value
+ */
+const updateScooterStatus = (scooterId, nextStatus) => {
+  scooters.value = scooters.value.map(s =>
+    String(s.id) === String(scooterId)
+      ? { ...s, status: nextStatus }
+      : s
+  )
+
+  if (selectedScooter.value && String(selectedScooter.value.id) === String(scooterId)) {
+    selectedScooter.value = { ...selectedScooter.value, status: nextStatus }
+  }
+
+  if (mapReady.value) {
+    sendToMap('updateScooters', scooters.value)
+  }
+}
+
+/**
+ * Open the booking options sheet for an available scooter.
+ * @param {Object} scooter - Scooter to book
+ */
+const openBookingOptions = (scooter) => {
+  if (!scooter || scooter.status !== 'AVAILABLE' || riding.value) return
+
+  selectedScooter.value = scooter
+  bookingScooter.value = scooter
+  bookingOptionsVisible.value = true
+  drawerOpen.value = false
+}
+
+/**
+ * Close the booking options sheet unless a request is still in flight.
+ */
+const closeBookingOptions = () => {
+  if (riding.value) return
+  bookingOptionsVisible.value = false
+  bookingScooter.value = null
+}
+
+/**
+ * Confirm the booking after the simulated payment step.
+ * @param {Object} paymentData - Selected plan and simulated payment details
+ */
+const confirmRideStart = async (paymentData) => {
+  if (!bookingScooter.value) return
+
+  const userId = getStoredUserId()
+  if (!userId) {
+    bookingOptionsVisible.value = false
+    bookingScooter.value = null
+    uni.showToast({ title: 'Please login first', icon: 'none' })
+    setTimeout(() => uni.reLaunch({ url: '/pages/login' }), 1500)
+    return
+  }
+
+  riding.value = true
+  try {
+    const booking = await startRideApi({
+      userId,
+      scooterId: bookingScooter.value.id,
+      planType: paymentData.planType
+    })
+
+    updateScooterStatus(bookingScooter.value.id, 'IN_USE')
+    bookingOptionsVisible.value = false
+    bookingScooter.value = null
+    selectedScooter.value = null
+
+    const estimatedCost = Number(booking?.estimatedCost ?? paymentData.totalPrice ?? 0).toFixed(2)
+    const bookingLabel = booking?.bookingId ? `Booking #${booking.bookingId}` : 'Your booking'
+    uni.showModal({
+      title: 'Ride started',
+      content: `${bookingLabel} is now active. Reserved total: £${estimatedCost}.`,
+      showCancel: false
+    })
+
+    setTimeout(loadScooters, 1200)
+  } catch (e) {
+    console.error('Failed to start ride:', e)
+  } finally {
+    riding.value = false
   }
 }
 

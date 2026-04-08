@@ -22,7 +22,7 @@ export const getAllScooters = (lat, lng) => {
   const params = {}
   if (lat != null) params.lat = lat
   if (lng != null) params.lng = lng
-  return request.get('/scooters/available', { params })
+  return request.get('/scooters', params)
 }
 
 /**
@@ -37,9 +37,13 @@ export const getScooterById = (id) => {
  * Start a ride
  * POST /api/bookings/start
  */
-export const startRide = (userId, scooterId, planType = 'PAY_AS_YOU_GO') => {
+export const startRide = (userIdOrPayload, scooterId, planType = 'PAY_AS_YOU_GO') => {
+  if (typeof userIdOrPayload === 'object' && userIdOrPayload !== null) {
+    return request.post('/bookings/start', userIdOrPayload)
+  }
+
   return request.post('/bookings/start', {
-    userId,
+    userId: userIdOrPayload,
     scooterId,
     planType
   })

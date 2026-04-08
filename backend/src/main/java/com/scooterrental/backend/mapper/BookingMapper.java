@@ -2,6 +2,7 @@ package com.scooterrental.backend.mapper;
 
 import com.scooterrental.backend.entity.Booking;
 import org.apache.ibatis.annotations.*;
+
 import java.util.List;
 import java.util.Map;
 
@@ -24,7 +25,23 @@ public interface BookingMapper {
 
     // Get weekly usage stats [ID: 22]
     @Select("SELECT TO_CHAR(created_at, 'YYYY-MM-DD') as day, SUM(duration_minutes) as minutes " +
-            "FROM bookings WHERE user_id = #{userId} AND created_at > NOW() - INTERVAL '7 days' " +
+            "FROM bookings WHERE user_id = #{userId} AND status = 'COMPLETED' AND created_at > NOW() - INTERVAL '7 days' " +
             "GROUP BY day ORDER BY day")
     List<Map<String, Object>> getWeeklyStats(Integer userId);
+
+    @Insert("INSERT INTO bookings (user_id, scooter_id, start_time, total_cost, duration_minutes, status) " +
+            "VALUES (#{userId}, #{scooterId}, #{startTime}, #{totalCost}, #{durationMinutes}, #{status})")
+    @Options(useGeneratedKeys = true, keyProperty = "bookingId")
+    int insertBooking(Booking booking);
+
+    @Select("SELECT booking_id AS bookingId, user_id AS userId, scooter_id AS scooterId, " +
+            "start_time AS startTime, end_time AS endTime, total_cost AS totalCost, " +
+            "duration_minutes AS durationMinutes, status, created_at AS createdAt " +
+            "FROM bookings WHERE booking_id = #{bookingId}")
+    Booking selectByBookingId(@Param("bookingId") Integer bookingId);
+
+    @Update("UPDATE bookings SET end_time = #{endTime}, total_cost = #{totalCost}, " +
+            "duration_minutes = #{durationMinutes}, status = #{status} " +
+            "WHERE booking_id = #{bookingId}")
+    int completeBooking(Booking booking);
 }

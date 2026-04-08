@@ -48,7 +48,9 @@ export const SCOOTER_STATUS = {
 export const PLAN_TYPE = {
   PAY_AS_YOU_GO: 'PAY_AS_YOU_GO',  // Pay as you go
   ONE_HOUR: '1_HOUR',              // 1 hour plan
-  ONE_DAY: '1_DAY'                 // 1 day plan
+  FOUR_HOURS: '4_HOURS',           // 4 hour plan
+  ONE_DAY: '1_DAY',                // 1 day plan
+  ONE_WEEK: '1_WEEK'               // 1 week plan
 }
 
 // Booking Status
