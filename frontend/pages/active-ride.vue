@@ -172,7 +172,7 @@
       <!-- Booking overview header -->
       <view class="booking-header">
         <view class="booking-header-left">
-          <view class="booking-hero-chip">
+          <view class="booking-hero-chip" :class="activeRide ? 'booking-badge-active' : 'booking-badge-idle'">
             <view class="booking-hero-chip-dot"></view>
             <text class="booking-hero-chip-text">{{ heroChip }}</text>
           </view>
@@ -206,7 +206,8 @@
               <text class="booking-order-model">{{ activeRide.scooterModel || 'Electric Scooter' }}</text>
               <text class="booking-order-id">Order #{{ activeRide.bookingId || 'Pending' }} · Scooter #{{ activeRide.scooterId }}</text>
             </view>
-            <view class="booking-order-status-chip">
+            <view class="booking-order-status-chip" :class="activeRide ? 'booking-badge-active' : 'booking-badge-idle'">
+              <view class="booking-order-status-dot"></view>
               <text class="booking-order-status-text">{{ activeRide.status || 'ACTIVE' }}</text>
             </view>
           </view>
@@ -1407,23 +1408,23 @@ onUnload(() => {
   display: inline-flex;
   align-items: center;
   gap: 10rpx;
-  padding: 10rpx 20rpx;
+  padding: 12rpx 22rpx;
   border-radius: 999rpx;
-  background: rgba(37,99,235,0.08);
-  border: 1rpx solid rgba(37,99,235,0.12);
+  border: 1rpx solid #DBEAFE;
+  background: rgba(255,255,255,0.84);
+  box-shadow: 0 10rpx 24rpx rgba(148,163,184,0.12);
   margin-bottom: 18rpx;
 }
 .booking-hero-chip-dot {
   width: 12rpx;
   height: 12rpx;
   border-radius: 50%;
-  background: #2563EB;
-  box-shadow: 0 0 0 8rpx rgba(37,99,235,0.08);
+  background: #94A3B8;
 }
 .booking-hero-chip-text {
   font-size: 22rpx;
   font-weight: 700;
-  color: #1D4ED8;
+  color: #64748B;
 }
 .booking-header-title { display: block; font-size: 42rpx; font-weight: 900; color: #0F172A; line-height: 1.12; letter-spacing: -0.02em; }
 .booking-header-sub { display: block; font-size: 28rpx; color: #1E293B; margin-top: 10rpx; font-weight: 800; line-height: 1.45; }
@@ -1443,9 +1444,19 @@ onUnload(() => {
 .booking-badge-active { background: rgba(240,253,244,0.95); border-color: #BBF7D0; }
 .booking-badge-idle { background: rgba(248,250,252,0.95); border-color: #E2E8F0; }
 .booking-badge-dot { width: 12rpx; height: 12rpx; border-radius: 50%; background: #94A3B8; }
-.booking-badge-active .booking-badge-dot { background: #22C55E; }
+.booking-badge-active .booking-badge-dot,
+.booking-badge-active .booking-hero-chip-dot,
+.booking-badge-active .booking-order-status-dot { background: #22C55E; }
+.booking-badge-idle .booking-badge-dot,
+.booking-badge-idle .booking-hero-chip-dot,
+.booking-badge-idle .booking-order-status-dot { background: #94A3B8; }
 .booking-badge-text { font-size: 20rpx; font-weight: 800; color: #64748B; letter-spacing: 0.06em; }
-.booking-badge-active .booking-badge-text { color: #15803D; }
+.booking-badge-active .booking-badge-text,
+.booking-badge-active .booking-hero-chip-text,
+.booking-badge-active .booking-order-status-text { color: #15803D; }
+.booking-badge-idle .booking-badge-text,
+.booking-badge-idle .booking-hero-chip-text,
+.booking-badge-idle .booking-order-status-text { color: #64748B; }
 
 .booking-sync-bar {
   margin-top: 16rpx;
@@ -1487,12 +1498,23 @@ onUnload(() => {
 .booking-order-model { display: block; font-size: 30rpx; font-weight: 800; color: #0F172A; }
 .booking-order-id { display: block; font-size: 22rpx; color: #94A3B8; margin-top: 4rpx; }
 .booking-order-status-chip {
-  padding: 10rpx 20rpx;
+  display: inline-flex;
+  align-items: center;
+  gap: 10rpx;
+  padding: 12rpx 22rpx;
   border-radius: 999rpx;
-  background: #DCFCE7;
+  border: 1rpx solid #DBEAFE;
+  background: rgba(255,255,255,0.84);
+  box-shadow: 0 10rpx 24rpx rgba(148,163,184,0.12);
   flex-shrink: 0;
 }
-.booking-order-status-text { font-size: 20rpx; font-weight: 800; color: #15803D; letter-spacing: 0.04em; }
+.booking-order-status-dot {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 50%;
+  background: #94A3B8;
+}
+.booking-order-status-text { font-size: 20rpx; font-weight: 800; color: #64748B; letter-spacing: 0.06em; }
 
 /* Timeline */
 .booking-timeline { padding: 24rpx 28rpx; }
