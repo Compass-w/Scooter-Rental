@@ -396,7 +396,7 @@
             </view>
             <view class="city-status" :class="city.live ? 'live' : 'soon'">
               <view class="city-dot"></view>
-              <text class="city-status-text">{{ city.live ? 'Live' : 'Coming soon' }}</text>
+              <text class="city-status-text">{{ city.live ? 'Live' : 'Soon' }}</text>
             </view>
           </view>
         </view>
