@@ -40,6 +40,13 @@ public interface BookingMapper {
             "FROM bookings WHERE booking_id = #{bookingId}")
     Booking selectByBookingId(@Param("bookingId") Integer bookingId);
 
+    @Select("SELECT booking_id AS bookingId, user_id AS userId, scooter_id AS scooterId, " +
+            "start_time AS startTime, end_time AS endTime, total_cost AS totalCost, " +
+            "duration_minutes AS durationMinutes, status, created_at AS createdAt " +
+            "FROM bookings WHERE user_id = #{userId} AND status = 'ACTIVE' " +
+            "ORDER BY start_time DESC LIMIT 1")
+    Booking selectActiveBookingByUserId(@Param("userId") Integer userId);
+
     @Update("UPDATE bookings SET end_time = #{endTime}, total_cost = #{totalCost}, " +
             "duration_minutes = #{durationMinutes}, status = #{status} " +
             "WHERE booking_id = #{bookingId}")

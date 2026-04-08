@@ -61,6 +61,7 @@ public class UserProfileController {
         user.setEmail(readPayloadText(payload, "email"));
         user.setPhone(readPayloadText(payload, "phone"));
         user.setCity(readPayloadText(payload, "city"));
+        user.setAvatarUrl(readPayloadText(payload, "avatarUrl"));
 
         if (userService.updateUser(user)) {
             User refreshed = userService.getUserById(userId);

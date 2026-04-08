@@ -748,9 +748,13 @@ const handleEndRide = () => {
       try {
         const result = await endRide(activeRide.value.bookingId)
         updateActiveRideState(null)
+        await syncActiveRide()
+        const followUpMessage = activeRide.value?.bookingId
+          ? ` Another active booking (#${activeRide.value.bookingId}) is still open, so please end it before starting a new scooter.`
+          : ''
         uni.showModal({
           title: 'Ride ended',
-          content: `Booking #${result?.bookingId || ''} finished. Total charged: ${formatMoney(result?.totalCost)}.`,
+          content: `Booking #${result?.bookingId || ''} finished. Total charged: ${formatMoney(result?.totalCost)}.${followUpMessage}`,
           showCancel: false
         })
       } catch (error) {

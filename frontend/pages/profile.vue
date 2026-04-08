@@ -838,9 +838,10 @@ import {
 import { logout as apiLogout } from '@/api/user.js'
 
 // Reactive state — user profile
-const userInfo    = ref({ username: '', name: '', email: '', phone: '', city: '', avatar: '', createdAt: '' })
+const userInfo    = ref({ username: '', name: '', email: '', phone: '', city: '', avatar: '', avatarUrl: '', createdAt: '' })
 const editingInfo = ref(false)
 const savingInfo  = ref(false)
+const savingAvatar = ref(false)
 const editForm    = ref({ name: '', email: '', phone: '', city: '' })
 
 // Reactive state — drawer
@@ -907,6 +908,7 @@ const normalizeProfileRecord = (data = {}) => {
   const cachedUser = readStoredProfileUser()
   const resolvedUserId = data.userId || data.id || cachedUser.userId || cachedUser.id || ''
   const resolvedUsername = data.username || data.name || cachedUser.username || cachedUser.name || ''
+  const resolvedAvatarUrl = data.avatarUrl || data.avatar || cachedUser.avatarUrl || cachedUser.avatar || ''
 
   return {
     userId:    resolvedUserId,
@@ -916,9 +918,84 @@ const normalizeProfileRecord = (data = {}) => {
     email:     data.email || '',
     phone:     data.phone || '',
     city:      data.city || '',
-    avatar:    data.avatar || data.avatarUrl || '',
+    avatar:    resolvedAvatarUrl,
+    avatarUrl: resolvedAvatarUrl,
     role:      data.role || cachedUser.role || 'customer',
     createdAt: data.createdAt || cachedUser.createdAt || ''
+  }
+}
+
+const toNullableText = (value) => {
+  const nextValue = String(value ?? '').trim()
+  return nextValue ? nextValue : null
+}
+
+const readAsDataUrlWithFileReader = (filePath) => new Promise((resolve, reject) => {
+  if (typeof fetch !== 'function' || typeof FileReader === 'undefined') {
+    reject(new Error('Browser file APIs are not available'))
+    return
+  }
+
+  fetch(filePath)
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error('Failed to read the selected image')
+      }
+      return response.blob()
+    })
+    .then((blob) => {
+      if (!blob.type.startsWith('image/')) {
+        throw new Error('Please choose an image file')
+      }
+
+      if (blob.size > 1024 * 1024) {
+        throw new Error('Avatar image is too large. Please choose one under 1 MB.')
+      }
+
+      const reader = new FileReader()
+      reader.onload = () => resolve(String(reader.result || ''))
+      reader.onerror = () => reject(new Error('Failed to convert the image'))
+      reader.readAsDataURL(blob)
+    })
+    .catch(reject)
+})
+
+const readAsDataUrlWithFs = (filePath) => new Promise((resolve, reject) => {
+  try {
+    const fs = uni.getFileSystemManager?.()
+    if (!fs?.readFile) {
+      reject(new Error('File system access is not available'))
+      return
+    }
+
+    fs.readFile({
+      filePath,
+      encoding: 'base64',
+      success: ({ data }) => {
+        const ext = String(filePath.split('.').pop() || 'png').toLowerCase()
+        const mime = ext === 'jpg' ? 'jpeg' : ext
+        resolve(`data:image/${mime};base64,${data}`)
+      },
+      fail: () => reject(new Error('Failed to read the selected image'))
+    })
+  } catch (error) {
+    reject(error)
+  }
+})
+
+const convertAvatarToDataUrl = async (filePath) => {
+  if (!filePath) {
+    throw new Error('No image was selected')
+  }
+
+  if (/^data:image\//i.test(filePath)) {
+    return filePath
+  }
+
+  try {
+    return await readAsDataUrlWithFileReader(filePath)
+  } catch (error) {
+    return readAsDataUrlWithFs(filePath)
   }
 }
 
@@ -1089,10 +1166,11 @@ const saveInfo = async () => {
   try {
     const payload = {
       userId:   resolvedUserId,
-      username: String(editForm.value.name || userInfo.value.username || '').trim(),
-      email:    String(editForm.value.email || '').trim(),
-      phone:    String(editForm.value.phone || '').trim(),
-      city:     String(editForm.value.city || '').trim(),
+      username: toNullableText(editForm.value.name || userInfo.value.username),
+      email:    toNullableText(editForm.value.email),
+      phone:    toNullableText(editForm.value.phone),
+      city:     toNullableText(editForm.value.city),
+      avatarUrl: toNullableText(userInfo.value.avatarUrl)
     }
     const updatedProfile = await updateProfile(payload)
     const nextProfile = normalizeProfileRecord(
@@ -1102,7 +1180,8 @@ const saveInfo = async () => {
             ...updatedProfile,
             userId:   updatedProfile.userId || updatedProfile.id || payload.userId,
             username: updatedProfile.username || payload.username || userInfo.value.username,
-            name:     updatedProfile.name || updatedProfile.username || payload.username || userInfo.value.name
+            name:     updatedProfile.name || updatedProfile.username || payload.username || userInfo.value.name,
+            avatarUrl: updatedProfile.avatarUrl || userInfo.value.avatarUrl
           }
         : {
             ...userInfo.value,
@@ -1111,7 +1190,8 @@ const saveInfo = async () => {
             name:     payload.username || userInfo.value.name,
             email:    payload.email,
             phone:    payload.phone,
-            city:     payload.city
+            city:     payload.city,
+            avatarUrl: payload.avatarUrl || userInfo.value.avatarUrl
           }
     )
 
@@ -1130,18 +1210,66 @@ const saveInfo = async () => {
 
 /**
  * Let user pick a new avatar from camera or album
- * Updates local preview immediately; full upload handled by backend
+ * Saves the avatar to the backend so it persists across refreshes
  */
 const changeAvatar = () => {
+  if (savingAvatar.value) return
+
   uni.chooseImage({
     count: 1,
     sizeType: ['compressed'],
     sourceType: ['album', 'camera'],
-    success(res) {
-      userInfo.value.avatar = res.tempFilePaths[0]
-      uni.setStorageSync('userInfo', JSON.stringify(userInfo.value))
-      uni.$emit('user-profile-updated')
-      uni.showToast({ title: 'Avatar updated', icon: 'success' })
+    async success(res) {
+      const tempAvatarPath = res?.tempFilePaths?.[0]
+      if (!tempAvatarPath) return
+
+      const cachedUser = readStoredProfileUser()
+      const resolvedUserId = userInfo.value.userId || userInfo.value.id || cachedUser.userId || cachedUser.id
+      if (!resolvedUserId) {
+        uni.showToast({ title: 'Please log in again', icon: 'none' })
+        return
+      }
+
+      const previousAvatar = userInfo.value.avatar
+      const previousAvatarUrl = userInfo.value.avatarUrl
+
+      userInfo.value = {
+        ...userInfo.value,
+        avatar: tempAvatarPath
+      }
+
+      savingAvatar.value = true
+      try {
+        const avatarDataUrl = await convertAvatarToDataUrl(tempAvatarPath)
+        const updatedProfile = await updateProfile({
+          userId: resolvedUserId,
+          username: toNullableText(userInfo.value.username || userInfo.value.name),
+          email: toNullableText(userInfo.value.email),
+          phone: toNullableText(userInfo.value.phone),
+          city: toNullableText(userInfo.value.city),
+          avatarUrl: avatarDataUrl
+        })
+
+        userInfo.value = normalizeProfileRecord(
+          typeof updatedProfile === 'object' && updatedProfile !== null
+            ? { ...userInfo.value, ...updatedProfile, avatarUrl: updatedProfile.avatarUrl || avatarDataUrl }
+            : { ...userInfo.value, avatarUrl: avatarDataUrl }
+        )
+
+        uni.setStorageSync('userInfo', JSON.stringify(userInfo.value))
+        uni.$emit('user-profile-updated')
+        uni.showToast({ title: 'Avatar updated', icon: 'success' })
+      } catch (error) {
+        console.error('Failed to save avatar:', error)
+        userInfo.value = {
+          ...userInfo.value,
+          avatar: previousAvatar,
+          avatarUrl: previousAvatarUrl
+        }
+        uni.showToast({ title: error?.message || 'Avatar save failed', icon: 'none' })
+      } finally {
+        savingAvatar.value = false
+      }
     }
   })
 }

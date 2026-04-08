@@ -12,6 +12,7 @@ CREATE TABLE users (
     email VARCHAR(100),
     phone VARCHAR(20),
     city VARCHAR(100),
+    avatar_url TEXT,
     password_hash VARCHAR(255) NOT NULL,
     role VARCHAR(20) DEFAULT 'customer',
     total_riding_minutes INT DEFAULT 0, -- Track total riding time for stats

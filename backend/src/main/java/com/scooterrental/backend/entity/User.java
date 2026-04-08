@@ -23,6 +23,9 @@ public class User {
     @Schema(description = "City of residence", example = "Leeds")
     private String city;
 
+    @Schema(description = "Avatar image URL or data URL", example = "data:image/png;base64,...")
+    private String avatarUrl;
+
     @Schema(description = "Encrypted Password", hidden = true)
     private String passwordHash;
 

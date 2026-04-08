@@ -227,7 +227,8 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import BaseLayout from '@/pages/BaseLayout.vue'
 import BookingOptions from '@/components/BookingOptions.vue'
 import { getAllScooters, startRide as startRideApi } from '@/api/scooter.js'
-import { setStoredActiveRide } from '@/utils/activeRide.js'
+import { getUserBookings } from '@/api/booking.js'
+import { findActiveRide, getStoredActiveRide, setStoredActiveRide } from '@/utils/activeRide.js'
 
 /**
  * Reactive state variables
@@ -560,6 +561,40 @@ const getStoredUserId = () => {
   }
 }
 
+const getCurrentActiveRide = async (userId) => {
+  const cachedRide = getStoredActiveRide()
+  const matchingCachedRide = cachedRide?.userId && String(cachedRide.userId) === String(userId) && String(cachedRide.status || '').toUpperCase() === 'ACTIVE'
+    ? cachedRide
+    : null
+
+  try {
+    const bookings = await getUserBookings(userId)
+    const liveRide = findActiveRide(bookings, matchingCachedRide || {})
+    if (liveRide) {
+      setStoredActiveRide(liveRide)
+    }
+    return liveRide
+  } catch (error) {
+    console.error('Failed to check active ride:', error)
+    return matchingCachedRide
+  }
+}
+
+const promptToResumeActiveRide = (activeRide) => {
+  const bookingLabel = activeRide?.bookingId ? `Booking #${activeRide.bookingId}` : 'Your current ride'
+  uni.showModal({
+    title: 'Finish current ride first',
+    content: `${bookingLabel} is still active. Please end it before renting another scooter.`,
+    confirmText: 'Open My Ride',
+    cancelText: 'Stay Here',
+    success: ({ confirm }) => {
+      if (confirm) {
+        uni.navigateTo({ url: '/pages/active-ride?source=trip' })
+      }
+    }
+  })
+}
+
 /**
  * Update a scooter status locally so the UI responds immediately.
  * @param {number|string} scooterId - Scooter ID
@@ -585,8 +620,17 @@ const updateScooterStatus = (scooterId, nextStatus) => {
  * Open the booking options sheet for an available scooter.
  * @param {Object} scooter - Scooter to book
  */
-const openBookingOptions = (scooter) => {
+const openBookingOptions = async (scooter) => {
   if (!scooter || scooter.status !== 'AVAILABLE' || riding.value) return
+
+  const userId = getStoredUserId()
+  if (userId) {
+    const activeRide = await getCurrentActiveRide(userId)
+    if (activeRide) {
+      promptToResumeActiveRide(activeRide)
+      return
+    }
+  }
 
   selectedScooter.value = scooter
   bookingScooter.value = scooter
@@ -616,6 +660,14 @@ const confirmRideStart = async (paymentData) => {
     bookingScooter.value = null
     uni.showToast({ title: 'Please login first', icon: 'none' })
     setTimeout(() => uni.reLaunch({ url: '/pages/login' }), 1500)
+    return
+  }
+
+  const activeRide = await getCurrentActiveRide(userId)
+  if (activeRide) {
+    bookingOptionsVisible.value = false
+    bookingScooter.value = null
+    promptToResumeActiveRide(activeRide)
     return
   }
 
@@ -680,6 +732,12 @@ const startRide = async (scooter) => {
   if (!userId) {
     uni.showToast({ title: 'Please login first', icon: 'none' })
     setTimeout(() => uni.reLaunch({ url: '/pages/login' }), 1500)
+    return
+  }
+
+  const activeRide = await getCurrentActiveRide(userId)
+  if (activeRide) {
+    promptToResumeActiveRide(activeRide)
     return
   }
 

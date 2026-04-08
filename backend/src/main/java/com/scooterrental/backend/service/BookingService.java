@@ -50,6 +50,12 @@ public class BookingService {
     public StartRideResponse startRide(StartRideRequest request) {
         validateStartRideRequest(request);
 
+        Booking existingActiveBooking = bookingMapper.selectActiveBookingByUserId(request.getUserId());
+        if (existingActiveBooking != null) {
+            throw new IllegalStateException(
+                    "You already have an active ride. Please end booking #" + existingActiveBooking.getBookingId() + " before starting a new one.");
+        }
+
         Scooter scooter = scooterMapper.selectById(request.getScooterId());
         if (scooter == null) {
             throw new IllegalArgumentException("Scooter not found");
