@@ -1,385 +1,473 @@
 <template>
   <BaseLayout nav-type="default" :show-menu="true" :show-footer="false" :current-page="currentNavPage">
-
-    <!-- ═══════════════ MY RIDE PAGE (trip) ═══════════════ -->
-    <view v-if="isTripPage" class="trip-page">
-
-      <!-- Dark immersive hero with timer -->
-      <view class="trip-hero">
-        <view class="trip-hero-bg">
-          <view class="trip-hero-ring ring-1"></view>
-          <view class="trip-hero-ring ring-2"></view>
-          <view class="trip-hero-ring ring-3"></view>
-        </view>
-        <view class="trip-hero-top">
-          <view class="trip-status-pill" :class="activeRide ? 'trip-status-active' : 'trip-status-idle'">
-            <view class="trip-status-dot"></view>
-            <text class="trip-status-text">{{ activeRide ? 'Ride in Progress' : 'No Active Ride' }}</text>
-          </view>
-          <view v-if="syncing" class="trip-sync-badge">
-            <text class="trip-sync-text">Syncing...</text>
-          </view>
-        </view>
-
-        <!-- Big countdown timer display -->
-        <view v-if="activeRide" class="trip-timer-section">
-          <text class="trip-timer-label">Time Remaining</text>
-          <view class="trip-timer-display" :class="countdownExpired ? 'timer-expired' : ''">
-            <text class="trip-timer-value">{{ countdownText }}</text>
-          </view>
-          <text class="trip-timer-hint">Ends at {{ plannedEndTime }}</text>
-        </view>
-        <view v-else class="trip-timer-section">
-          <text class="trip-timer-label">Ready to Ride</text>
-          <view class="trip-timer-display">
-            <text class="trip-timer-value">--:--:--</text>
-          </view>
-          <text class="trip-timer-hint">Start a booking to begin your countdown</text>
-        </view>
-
-        <!-- Alert banner inside hero -->
-        <view v-if="activeRide && countdownExpired" class="trip-alert-banner">
-          <text class="trip-alert-icon">⚠</text>
-          <text class="trip-alert-text">Time's up — extend or end your ride now</text>
-        </view>
-      </view>
-
-      <!-- Scooter info strip -->
-      <view v-if="activeRide" class="trip-scooter-strip">
-        <view class="trip-scooter-icon">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="5.5" cy="17.5" r="2.5"/><circle cx="18.5" cy="17.5" r="2.5"/>
-            <path d="M8 17.5h7M15 17.5l-2-5h-2l-1-3H8"/><path d="M15 12.5l3-5h-2"/>
-          </svg>
-        </view>
-        <view class="trip-scooter-info">
-          <text class="trip-scooter-id">#{{ activeRide.scooterId }} · {{ activeRide.scooterModel }}</text>
-          <text class="trip-scooter-since">Started {{ formatDateTime(activeRide.startTime) }}</text>
-        </view>
-        <view class="trip-scooter-cost">
-          <text class="trip-scooter-cost-value">{{ formatMoney(activeRide.totalCost) }}</text>
-          <text class="trip-scooter-cost-label">Reserved</text>
-        </view>
-      </view>
-
-      <!-- Main content stack -->
-      <view class="trip-content">
-
-        <!-- Active ride: extend + actions card -->
-        <view v-if="activeRide" class="trip-card">
-          <view class="trip-card-header">
-            <view class="trip-card-icon-wrap">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-              </svg>
+    <view class="ride-shell">
+      <view class="ride-container">
+        <view class="ride-page-hero" :class="isBookingPage ? 'ride-page-hero-booking' : 'ride-page-hero-trip'">
+          <view class="ride-page-hero-main">
+            <view class="ride-page-kicker-row">
+              <text class="ride-page-kicker">{{ isBookingPage ? 'Book & Details' : 'My Ride' }}</text>
+              <view class="ride-page-status" :class="activeRide ? 'ride-page-status-live' : 'ride-page-status-idle'">
+                <view class="ride-page-status-dot"></view>
+                <text class="ride-page-status-text">{{ heroChip }}</text>
+              </view>
             </view>
-            <text class="trip-card-title">Extend Ride</text>
-          </view>
-          <text class="trip-section-label">Add more time</text>
-          <view class="trip-extend-grid">
-            <view
-              v-for="(label, index) in extensionLabels"
-              :key="label"
-              class="trip-extend-chip"
-              :class="selectedExtensionIndex === index ? 'trip-extend-chip-active' : ''"
-              @tap="selectedExtensionIndex = index"
-            >
-              <text class="trip-extend-chip-time">{{ extensionOptions[index] }}</text>
-              <text class="trip-extend-chip-unit">min</text>
-            </view>
-          </view>
-          <view class="trip-extend-preview">
-            <view class="trip-preview-row">
-              <text class="trip-preview-label">New end time</text>
-              <text class="trip-preview-value">{{ projectedEndTime }}</text>
-            </view>
-            <view class="trip-preview-divider"></view>
-            <view class="trip-preview-row">
-              <text class="trip-preview-label">Updated total</text>
-              <text class="trip-preview-value trip-preview-cost">{{ projectedTotalCost }}</text>
-            </view>
-          </view>
-          <button class="trip-btn-extend" :disabled="busyAction === 'extend'" @tap="handleExtendRide">
-            <text>{{ busyAction === 'extend' ? 'Adding time...' : `+ Add ${extensionMinutes} min` }}</text>
-          </button>
-        </view>
-
-        <!-- Active ride action buttons -->
-        <view v-if="activeRide" class="trip-action-row">
-          <button class="trip-action-btn trip-action-report" @tap="openIssuePopup">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-            </svg>
-            <text>Report Issue</text>
-          </button>
-          <button class="trip-action-btn trip-action-end" :disabled="busyAction === 'end'" @tap="handleEndRide">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-            </svg>
-            <text>{{ busyAction === 'end' ? 'Ending...' : 'End Ride' }}</text>
-          </button>
-        </view>
-
-        <!-- Empty state for trip page -->
-        <view v-else class="trip-empty-state">
-          <view class="trip-empty-illustration">
-            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#93C5FD" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="5.5" cy="17.5" r="2.5"/><circle cx="18.5" cy="17.5" r="2.5"/>
-              <path d="M8 17.5h7M15 17.5l-2-5h-2l-1-3H8"/><path d="M15 12.5l3-5h-2"/>
-            </svg>
-          </view>
-          <text class="trip-empty-title">Your ride hub is ready</text>
-          <text class="trip-empty-desc">Once you unlock a scooter, your live timer, controls, and stats will all appear right here.</text>
-          <button class="trip-btn-find" @tap="goToFindScooter">
-            <text>Find a Scooter</text>
-          </button>
-          <view class="trip-preview-tiles">
-            <view class="trip-preview-tile">
-              <text class="trip-ptile-icon">⏱</text>
-              <text class="trip-ptile-label">Live countdown</text>
-            </view>
-            <view class="trip-preview-tile">
-              <text class="trip-ptile-icon">🛴</text>
-              <text class="trip-ptile-label">Scooter info</text>
-            </view>
-            <view class="trip-preview-tile">
-              <text class="trip-ptile-icon">⚡</text>
-              <text class="trip-ptile-label">Extend ride</text>
-            </view>
-            <view class="trip-preview-tile">
-              <text class="trip-ptile-icon">🔧</text>
-              <text class="trip-ptile-label">Report issues</text>
-            </view>
-          </view>
-        </view>
-
-      </view>
-    </view>
-
-    <!-- ═══════════════ BOOK & RIDING PAGE (booking) ═══════════════ -->
-    <view v-else class="booking-page">
-
-      <!-- Light top header bar -->
-      <view class="booking-header">
-        <view class="booking-header-left">
-          <text class="booking-header-title">Book & Riding</text>
-          <text class="booking-header-sub">{{ activeRide ? 'Booking confirmed' : 'No active booking' }}</text>
-        </view>
-        <view class="booking-status-badge" :class="activeRide ? 'booking-badge-active' : 'booking-badge-idle'">
-          <view class="booking-badge-dot"></view>
-          <text class="booking-badge-text">{{ activeRide ? 'ACTIVE' : 'IDLE' }}</text>
-        </view>
-      </view>
-
-      <view v-if="syncing" class="booking-sync-bar">
-        <text class="booking-sync-text">🔄 Syncing booking details...</text>
-      </view>
-
-      <!-- Active booking content -->
-      <view v-if="activeRide" class="booking-content">
-
-        <!-- Order card (Didi/Meituan style) -->
-        <view class="booking-order-card">
-          <view class="booking-order-top">
-            <view class="booking-order-icon">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="5.5" cy="17.5" r="2.5"/><circle cx="18.5" cy="17.5" r="2.5"/>
-                <path d="M8 17.5h7M15 17.5l-2-5h-2l-1-3H8"/><path d="M15 12.5l3-5h-2"/>
-              </svg>
-            </view>
-            <view class="booking-order-title-wrap">
-              <text class="booking-order-model">{{ activeRide.scooterModel || 'Electric Scooter' }}</text>
-              <text class="booking-order-id">Order #{{ activeRide.bookingId || 'Pending' }} · Scooter #{{ activeRide.scooterId }}</text>
-            </view>
-            <view class="booking-order-status-chip">
-              <text class="booking-order-status-text">{{ activeRide.status || 'ACTIVE' }}</text>
-            </view>
+            <text class="ride-page-title">{{ heroTitle }}</text>
+            <text class="ride-page-subtitle">{{ heroSubtitle }}</text>
           </view>
 
-          <!-- Timeline-style trip info -->
-          <view class="booking-timeline">
-            <view class="booking-timeline-row">
-              <view class="booking-tl-dot booking-tl-dot-start"></view>
-              <view class="booking-tl-line"></view>
-              <view class="booking-tl-dot booking-tl-dot-end"></view>
-              <view class="booking-tl-labels">
-                <view class="booking-tl-label-item">
-                  <text class="booking-tl-time">{{ formatDateTime(activeRide.startTime) }}</text>
-                  <text class="booking-tl-desc">Ride started</text>
-                </view>
-                <view class="booking-tl-label-item">
-                  <text class="booking-tl-time">{{ plannedEndTime }}</text>
-                  <text class="booking-tl-desc">Planned finish</text>
-                </view>
+          <view class="ride-page-hero-side">
+            <view class="ride-page-summary-card">
+              <text class="ride-page-summary-label">
+                {{ activeRide ? (isBookingPage ? 'Planned finish' : 'Time remaining') : (isBookingPage ? 'Next step' : 'Ride status') }}
+              </text>
+              <text class="ride-page-summary-value">
+                {{ activeRide ? (isBookingPage ? plannedEndTime : countdownText) : (isBookingPage ? 'Pick a scooter from the map' : 'Start a booking to unlock controls') }}
+              </text>
+            </view>
+
+            <view v-if="activeRide" class="ride-page-mini-grid">
+              <view class="ride-page-mini-item">
+                <text class="ride-page-mini-label">Scooter</text>
+                <text class="ride-page-mini-value">#{{ activeRide.scooterId }}</text>
+              </view>
+              <view class="ride-page-mini-item">
+                <text class="ride-page-mini-label">{{ isBookingPage ? 'Reserved' : 'Current total' }}</text>
+                <text class="ride-page-mini-value">{{ formatMoney(activeRide.totalCost) }}</text>
               </view>
             </view>
           </view>
         </view>
 
-        <!-- Info grid cards -->
-        <view class="booking-info-section">
-          <text class="booking-section-title">Trip Details</text>
-          <view class="booking-info-grid">
-            <view class="booking-info-cell">
-              <text class="booking-info-icon">🕐</text>
-              <text class="booking-info-label">Duration</text>
-              <text class="booking-info-value">{{ durationLabel }}</text>
-            </view>
-            <view class="booking-info-cell">
-              <text class="booking-info-icon">💳</text>
-              <text class="booking-info-label">Reserved</text>
-              <text class="booking-info-value">{{ formatMoney(activeRide.totalCost) }}</text>
-            </view>
-            <view class="booking-info-cell" v-if="activeRide.cardLast4">
-              <text class="booking-info-icon">🏦</text>
-              <text class="booking-info-label">Payment</text>
-              <text class="booking-info-value">···· {{ activeRide.cardLast4 }}</text>
-            </view>
-            <view class="booking-info-cell">
-              <text class="booking-info-icon">📍</text>
-              <text class="booking-info-label">Status</text>
-              <text class="booking-info-value">{{ activeRide.status || 'Active' }}</text>
-            </view>
-          </view>
+        <view v-if="syncing" class="ride-sync-banner">
+          <view class="ride-sync-dot"></view>
+          <text class="ride-sync-text">{{ isBookingPage ? 'Syncing booking details...' : 'Refreshing ride status...' }}</text>
         </view>
 
-        <!-- Quick extend section -->
-        <view class="booking-extend-section">
-          <text class="booking-section-title">Extend Booking</text>
-          <view class="booking-extend-chips">
+        <view v-if="isTripPage" class="ride-view">
+          <template v-if="activeRide">
+            <view class="ride-card trip-focus-card">
+              <view class="ride-card-head">
+                <view class="ride-card-head-main">
+                  <view class="ride-card-icon ride-card-icon-primary">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="5.5" cy="17.5" r="2.5" />
+                      <circle cx="18.5" cy="17.5" r="2.5" />
+                      <path d="M8 17.5h7M15 17.5l-2-5h-2l-1-3H8" />
+                      <path d="M15 12.5l3-5h-2" />
+                    </svg>
+                  </view>
+                  <view class="ride-card-head-copy">
+                    <text class="ride-card-title">{{ activeRide.scooterModel || 'Electric Scooter' }}</text>
+                    <text class="ride-card-subtitle">Scooter #{{ activeRide.scooterId }} started {{ formatDateTime(activeRide.startTime) }}</text>
+                  </view>
+                </view>
+                <view class="ride-status-tag ride-status-tag-live">
+                  <text>{{ rideStatusText }}</text>
+                </view>
+              </view>
+
+              <view class="trip-focus-layout">
+                <view class="trip-countdown-card" :class="countdownExpired ? 'trip-countdown-card-alert' : ''">
+                  <text class="trip-countdown-label">{{ countdownExpired ? 'Reserved time reached' : 'Time remaining' }}</text>
+                  <text class="trip-countdown-value">{{ countdownText }}</text>
+                  <text class="trip-countdown-note">Planned finish {{ plannedEndTime }}</text>
+                </view>
+
+                <view class="ride-info-grid trip-summary-grid">
+                  <view class="ride-info-tile">
+                    <text class="ride-info-label">Reserved duration</text>
+                    <text class="ride-info-value">{{ durationLabel }}</text>
+                  </view>
+                  <view class="ride-info-tile">
+                    <text class="ride-info-label">Reserved total</text>
+                    <text class="ride-info-value">{{ formatMoney(activeRide.totalCost) }}</text>
+                  </view>
+                  <view class="ride-info-tile">
+                    <text class="ride-info-label">Started at</text>
+                    <text class="ride-info-value">{{ formatDateTime(activeRide.startTime) }}</text>
+                  </view>
+                  <view class="ride-info-tile">
+                    <text class="ride-info-label">Planned finish</text>
+                    <text class="ride-info-value">{{ plannedEndTime }}</text>
+                  </view>
+                </view>
+              </view>
+
+              <view class="ride-inline-banner" :class="countdownExpired ? 'ride-inline-banner-warn' : ''">
+                <text class="ride-inline-banner-text">
+                  {{ countdownExpired ? 'This ride has reached the reserved duration. Extend the booking or end the ride now.' : countdownHint }}
+                </text>
+              </view>
+            </view>
+
+            <view class="trip-main-grid">
+              <view class="ride-card ride-elevated-card">
+                <view class="ride-card-head">
+                  <view class="ride-card-head-main">
+                    <view class="ride-card-icon ride-card-icon-soft">
+                      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="9" />
+                        <path d="M12 7v5l3 2" />
+                      </svg>
+                    </view>
+                    <view class="ride-card-head-copy">
+                      <text class="ride-card-title">Add more time</text>
+                      <text class="ride-card-subtitle">Keep your current scooter and extend the reservation in one tap.</text>
+                    </view>
+                  </view>
+                  <view class="ride-chip-badge">
+                    <text>+{{ extensionMinutes }} min</text>
+                  </view>
+                </view>
+
+                <view class="ride-choice-row">
+                  <view
+                    v-for="(minutes, index) in extensionOptions"
+                    :key="minutes"
+                    class="ride-choice-card"
+                    :class="selectedExtensionIndex === index ? 'ride-choice-card-active' : ''"
+                    @tap="selectedExtensionIndex = index"
+                  >
+                    <text class="ride-choice-time">{{ minutes }} min</text>
+                    <text class="ride-choice-price">{{ formatMoney(Number(activeRide.pricePerMinute || 0) * minutes) }}</text>
+                  </view>
+                </view>
+
+                <view class="ride-preview-panel">
+                  <view class="ride-preview-row">
+                    <text class="ride-preview-label">New finish time</text>
+                    <text class="ride-preview-value">{{ projectedEndTime }}</text>
+                  </view>
+                  <view class="ride-preview-row">
+                    <text class="ride-preview-label">Updated reserved total</text>
+                    <text class="ride-preview-value ride-preview-value-primary">{{ projectedTotalCost }}</text>
+                  </view>
+                </view>
+
+                <button class="ride-btn ride-btn-primary" :disabled="busyAction === 'extend'" @tap="handleExtendRide">
+                  <text>{{ busyAction === 'extend' ? 'Adding time...' : 'Extend +' + extensionMinutes + ' min' }}</text>
+                </button>
+              </view>
+
+              <view class="ride-card">
+                <view class="ride-card-head">
+                  <view class="ride-card-head-main">
+                    <view class="ride-card-icon ride-card-icon-warning">
+                      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
+                        <path d="M12 9v4" />
+                        <path d="M12 17h.01" />
+                      </svg>
+                    </view>
+                    <view class="ride-card-head-copy">
+                      <text class="ride-card-title">Ride actions</text>
+                      <text class="ride-card-subtitle">Use the controls below if you need support or want to finish the booking.</text>
+                    </view>
+                  </view>
+                </view>
+
+                <view class="ride-action-stack">
+                  <button class="ride-btn ride-btn-secondary" @tap="openIssuePopup">
+                    <text>Report Issue</text>
+                  </button>
+                  <button class="ride-btn ride-btn-danger" :disabled="busyAction === 'end'" @tap="handleEndRide">
+                    <text>{{ busyAction === 'end' ? 'Ending...' : 'End Ride' }}</text>
+                  </button>
+                </view>
+
+                <text class="ride-card-footnote">Need the order summary? Switch to Book & Details anytime without losing the live timer here.</text>
+              </view>
+            </view>
+          </template>
+
+          <template v-else>
+            <view class="ride-card ride-empty-card">
+              <view class="ride-empty-mark">R</view>
+              <text class="ride-empty-title">Your live ride hub is ready</text>
+              <text class="ride-empty-desc">Once a scooter is unlocked, this page will show the countdown, reservation details, extension options, and safety actions in one clean dashboard.</text>
+              <button class="ride-btn ride-btn-primary ride-empty-btn" @tap="goToFindScooter">
+                <text>Find a Scooter</text>
+              </button>
+            </view>
+
+            <view class="ride-info-grid ride-empty-grid">
+              <view class="ride-info-tile">
+                <text class="ride-info-label">Live countdown</text>
+                <text class="ride-info-value">See remaining time and the planned finish at a glance.</text>
+              </view>
+              <view class="ride-info-tile">
+                <text class="ride-info-label">Scooter snapshot</text>
+                <text class="ride-info-value">Track the scooter model, start time, and reserved amount.</text>
+              </view>
+              <view class="ride-info-tile">
+                <text class="ride-info-label">Instant extension</text>
+                <text class="ride-info-value">Add 15, 30, or 60 minutes without leaving the page.</text>
+              </view>
+              <view class="ride-info-tile">
+                <text class="ride-info-label">Support actions</text>
+                <text class="ride-info-value">Report a fault or end the ride with clear next-step controls.</text>
+              </view>
+            </view>
+          </template>
+        </view>
+
+        <view v-else class="ride-view">
+          <template v-if="activeRide">
+            <view class="ride-card booking-order-card">
+              <view class="booking-order-banner">
+                <view>
+                  <text class="booking-order-kicker">Current order</text>
+                  <text class="booking-order-title">{{ activeRide.scooterModel || 'Electric Scooter' }}</text>
+                </view>
+                <view class="ride-status-tag ride-status-tag-live">
+                  <text>{{ rideStatusText }}</text>
+                </view>
+              </view>
+
+              <view class="booking-order-meta">
+                <view class="booking-meta-pill">
+                  <text class="booking-meta-label">Order</text>
+                  <text class="booking-meta-value">#{{ activeRide.bookingId || 'Pending' }}</text>
+                </view>
+                <view class="booking-meta-pill">
+                  <text class="booking-meta-label">Scooter</text>
+                  <text class="booking-meta-value">#{{ activeRide.scooterId }}</text>
+                </view>
+                <view class="booking-meta-pill">
+                  <text class="booking-meta-label">Reserved</text>
+                  <text class="booking-meta-value">{{ formatMoney(activeRide.totalCost) }}</text>
+                </view>
+              </view>
+
+              <view class="booking-track-card">
+                <view class="booking-track-item">
+                  <view class="booking-track-marker booking-track-marker-live"></view>
+                  <view class="booking-track-copy">
+                    <text class="booking-track-title">Ride started</text>
+                    <text class="booking-track-value">{{ formatDateTime(activeRide.startTime) }}</text>
+                  </view>
+                </view>
+                <view class="booking-track-line"></view>
+                <view class="booking-track-item">
+                  <view class="booking-track-marker"></view>
+                  <view class="booking-track-copy">
+                    <text class="booking-track-title">Planned finish</text>
+                    <text class="booking-track-value">{{ plannedEndTime }}</text>
+                  </view>
+                </view>
+              </view>
+
+              <view v-if="countdownExpired" class="ride-inline-banner ride-inline-banner-warn">
+                <text class="ride-inline-banner-text">The reserved duration has been reached. Extend the booking or end the ride when you are ready.</text>
+              </view>
+            </view>
+
+            <view class="booking-main-grid">
+              <view class="ride-card">
+                <view class="ride-card-head">
+                  <view class="ride-card-head-main">
+                    <view class="ride-card-icon ride-card-icon-soft">
+                      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="4" y="4" width="16" height="16" rx="3" />
+                        <path d="M8 9h8" />
+                        <path d="M8 13h8" />
+                      </svg>
+                    </view>
+                    <view class="ride-card-head-copy">
+                      <text class="ride-card-title">Trip details</text>
+                      <text class="ride-card-subtitle">Everything you need for this order, arranged like a quick ride summary.</text>
+                    </view>
+                  </view>
+                </view>
+
+                <view class="ride-info-grid booking-info-grid">
+                  <view class="ride-info-tile">
+                    <text class="ride-info-label">Duration</text>
+                    <text class="ride-info-value">{{ durationLabel }}</text>
+                  </view>
+                  <view class="ride-info-tile">
+                    <text class="ride-info-label">Status</text>
+                    <text class="ride-info-value">{{ rideStatusText }}</text>
+                  </view>
+                  <view class="ride-info-tile">
+                    <text class="ride-info-label">Reserved total</text>
+                    <text class="ride-info-value">{{ formatMoney(activeRide.totalCost) }}</text>
+                  </view>
+                  <view class="ride-info-tile">
+                    <text class="ride-info-label">Payment</text>
+                    <text class="ride-info-value">{{ activeRide.cardLast4 ? '**** ' + activeRide.cardLast4 : 'Saved card on file' }}</text>
+                  </view>
+                </view>
+              </view>
+
+              <view class="ride-card ride-elevated-card booking-extend-card">
+                <view class="ride-card-head">
+                  <view class="ride-card-head-main">
+                    <view class="ride-card-icon ride-card-icon-primary">
+                      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="9" />
+                        <path d="M12 7v5l3 2" />
+                      </svg>
+                    </view>
+                    <view class="ride-card-head-copy">
+                      <text class="ride-card-title">Extend booking</text>
+                      <text class="ride-card-subtitle">Adjust the finish time before the reservation runs out.</text>
+                    </view>
+                  </view>
+                </view>
+
+                <view class="ride-choice-row">
+                  <view
+                    v-for="(minutes, index) in extensionOptions"
+                    :key="'booking-' + minutes"
+                    class="ride-choice-card ride-choice-card-compact"
+                    :class="selectedExtensionIndex === index ? 'ride-choice-card-active' : ''"
+                    @tap="selectedExtensionIndex = index"
+                  >
+                    <text class="ride-choice-time">{{ minutes }} min</text>
+                    <text class="ride-choice-price">{{ formatMoney(Number(activeRide.pricePerMinute || 0) * minutes) }}</text>
+                  </view>
+                </view>
+
+                <view class="ride-preview-panel">
+                  <view class="ride-preview-row">
+                    <text class="ride-preview-label">New finish time</text>
+                    <text class="ride-preview-value">{{ projectedEndTime }}</text>
+                  </view>
+                  <view class="ride-preview-row">
+                    <text class="ride-preview-label">Updated total</text>
+                    <text class="ride-preview-value ride-preview-value-primary">{{ projectedTotalCost }}</text>
+                  </view>
+                </view>
+
+                <button class="ride-btn ride-btn-primary" :disabled="busyAction === 'extend'" @tap="handleExtendRide">
+                  <text>{{ busyAction === 'extend' ? 'Extending...' : 'Extend +' + extensionMinutes + ' min' }}</text>
+                </button>
+              </view>
+
+              <view class="ride-card booking-action-card">
+                <view class="ride-card-head">
+                  <view class="ride-card-head-main">
+                    <view class="ride-card-icon ride-card-icon-warning">
+                      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 12h16" />
+                        <path d="M12 4v16" />
+                        <circle cx="12" cy="12" r="9" />
+                      </svg>
+                    </view>
+                    <view class="ride-card-head-copy">
+                      <text class="ride-card-title">Next actions</text>
+                      <text class="ride-card-subtitle">Open the live dashboard or finish the ride from here.</text>
+                    </view>
+                  </view>
+                </view>
+
+                <view class="ride-action-stack">
+                  <button class="ride-btn ride-btn-secondary" @tap="goToRideDashboard">
+                    <text>Open My Ride</text>
+                  </button>
+                  <button class="ride-btn ride-btn-danger" :disabled="busyAction === 'end'" @tap="handleEndRide">
+                    <text>{{ busyAction === 'end' ? 'Ending...' : 'End Ride' }}</text>
+                  </button>
+                </view>
+              </view>
+            </view>
+          </template>
+
+          <template v-else>
+            <view class="ride-card ride-empty-card booking-empty-card">
+              <view class="ride-empty-mark ride-empty-mark-warm">B</view>
+              <text class="ride-empty-title">No active booking yet</text>
+              <text class="ride-empty-desc">Choose a scooter on the map to confirm your plan and payment. This page will then show the order summary, timeline, pricing, and quick actions.</text>
+
+              <view class="booking-step-list">
+                <view class="booking-step-item">
+                  <view class="booking-step-index">1</view>
+                  <text class="booking-step-text">Select a nearby scooter on the map.</text>
+                </view>
+                <view class="booking-step-item">
+                  <view class="booking-step-index">2</view>
+                  <text class="booking-step-text">Choose your duration and payment method.</text>
+                </view>
+                <view class="booking-step-item">
+                  <view class="booking-step-index">3</view>
+                  <text class="booking-step-text">Review the booking here and start riding.</text>
+                </view>
+              </view>
+
+              <view class="booking-empty-actions">
+                <button class="ride-btn ride-btn-primary" @tap="goToFindScooter">
+                  <text>Book a Scooter</text>
+                </button>
+                <button class="ride-btn ride-btn-secondary" @tap="goToRideDashboard">
+                  <text>Open My Ride</text>
+                </button>
+              </view>
+            </view>
+
+            <view class="ride-info-grid ride-empty-grid">
+              <view class="ride-info-tile">
+                <text class="ride-info-label">Scooter</text>
+                <text class="ride-info-value">Assigned as soon as you pick one from the map.</text>
+              </view>
+              <view class="ride-info-tile">
+                <text class="ride-info-label">Plan</text>
+                <text class="ride-info-value">Duration, finish time, and pricing in one summary card.</text>
+              </view>
+              <view class="ride-info-tile">
+                <text class="ride-info-label">Payment</text>
+                <text class="ride-info-value">Use your saved card and keep the reserved total visible.</text>
+              </view>
+              <view class="ride-info-tile">
+                <text class="ride-info-label">Status</text>
+                <text class="ride-info-value">Track whether the order is booked, active, or completed.</text>
+              </view>
+            </view>
+          </template>
+        </view>
+      </view>
+
+      <view v-if="issuePanelOpen" class="overlay" :style="ui.overlay" @tap="closeIssuePopup">
+        <view class="sheet" :style="ui.sheet" @tap.stop>
+          <view class="card-head" :style="ui.cardHead">
+            <view>
+              <text class="card-title" :style="ui.cardTitle">Report an issue</text>
+              <text class="card-sub" :style="ui.cardSub">Tell us what went wrong so we can help quickly.</text>
+            </view>
+          </view>
+          <text class="section-label" :style="ui.tileLabel">Fault category</text>
+          <view class="chips" :style="ui.chips">
             <view
-              v-for="(label, index) in extensionLabels"
-              :key="label"
-              class="booking-extend-chip"
-              :class="selectedExtensionIndex === index ? 'booking-chip-active' : ''"
-              @tap="selectedExtensionIndex = index"
+              v-for="category in issueCategories"
+              :key="category.value"
+              :class="['chip', issueForm.category === category.value ? 'chip-active' : '']"
+              :style="[ui.chip, issueForm.category === category.value ? ui.chipActive : null]"
+              @tap="issueForm.category = category.value"
             >
-              <text class="booking-chip-text">{{ label }}</text>
+              <text :class="['chip-text', issueForm.category === category.value ? 'chip-text-active' : '']" :style="[ui.chipText, issueForm.category === category.value ? ui.chipTextActive : null]">{{ category.label }}</text>
             </view>
           </view>
-          <view class="booking-extend-preview">
-            <text class="booking-ext-preview-text">New end: <text class="booking-ext-highlight">{{ projectedEndTime }}</text> · Total: <text class="booking-ext-highlight">{{ projectedTotalCost }}</text></text>
-          </view>
-        </view>
-
-        <!-- Action buttons -->
-        <view class="booking-actions">
-          <button class="booking-btn-extend" :disabled="busyAction === 'extend'" @tap="handleExtendRide">
-            <text>{{ busyAction === 'extend' ? 'Extending...' : `Extend +${extensionMinutes} min` }}</text>
-          </button>
-          <view class="booking-btn-row">
-            <button class="booking-btn-secondary" @tap="goToRideDashboard">
-              <text>Open My Ride</text>
+          <text class="section-label" :style="ui.tileLabel">Description</text>
+          <textarea
+            v-model="issueForm.description"
+            class="textarea"
+            :style="ui.textarea"
+            maxlength="300"
+            placeholder="Describe the fault, unusual noise, brake issue, battery issue, or anything else we should know."
+          />
+          <view class="actions" :style="ui.actions">
+            <button class="btn btn-secondary" :style="[ui.button, ui.buttonSecondary]" @tap="closeIssuePopup">
+              <text>Cancel</text>
             </button>
-            <button class="booking-btn-danger" :disabled="busyAction === 'end'" @tap="handleEndRide">
-              <text>{{ busyAction === 'end' ? 'Ending...' : 'End Ride' }}</text>
+            <button class="btn btn-primary" :style="[ui.button, ui.buttonPrimary]" :disabled="busyAction === 'issue'" @tap="submitIssue">
+              <text>{{ busyAction === 'issue' ? 'Submitting...' : 'Submit Report' }}</text>
             </button>
-          </view>
-        </view>
-      </view>
-
-      <!-- Empty booking state -->
-      <view v-else class="booking-empty">
-        <view class="booking-empty-card">
-          <view class="booking-empty-art">
-            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#BFDBFE" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 4v5M15 4v5"/>
-            </svg>
-          </view>
-          <text class="booking-empty-title">No Active Booking</text>
-          <text class="booking-empty-desc">Choose a scooter on the map to confirm your plan and payment. All details will appear here once booked.</text>
-          <view class="booking-empty-checklist">
-            <view class="booking-checklist-item">
-              <text class="booking-check-icon">○</text>
-              <text class="booking-check-text">Select scooter on map</text>
-            </view>
-            <view class="booking-checklist-item">
-              <text class="booking-check-icon">○</text>
-              <text class="booking-check-text">Choose your plan & duration</text>
-            </view>
-            <view class="booking-checklist-item">
-              <text class="booking-check-icon">○</text>
-              <text class="booking-check-text">Confirm payment & ride</text>
-            </view>
-          </view>
-          <view class="booking-empty-actions">
-            <button class="booking-btn-primary-cta" @tap="goToFindScooter">
-              <text>Book a Scooter</text>
-            </button>
-            <button class="booking-btn-ghost" @tap="goToRideDashboard">
-              <text>Open My Ride</text>
-            </button>
-          </view>
-        </view>
-        <view class="booking-empty-info-grid">
-          <view class="booking-info-preview-cell">
-            <text class="booking-info-preview-icon">🛴</text>
-            <text class="booking-info-preview-label">Scooter</text>
-            <text class="booking-info-preview-value">Assigned after map selection</text>
-          </view>
-          <view class="booking-info-preview-cell">
-            <text class="booking-info-preview-icon">⏱</text>
-            <text class="booking-info-preview-label">Plan</text>
-            <text class="booking-info-preview-value">Duration & rate you choose</text>
-          </view>
-          <view class="booking-info-preview-cell">
-            <text class="booking-info-preview-icon">💳</text>
-            <text class="booking-info-preview-label">Payment</text>
-            <text class="booking-info-preview-value">Card or saved method</text>
-          </view>
-          <view class="booking-info-preview-cell">
-            <text class="booking-info-preview-icon">📋</text>
-            <text class="booking-info-preview-label">Status</text>
-            <text class="booking-info-preview-value">Booked, active, or completed</text>
           </view>
         </view>
       </view>
     </view>
-
-    <!-- ═══════════════ ISSUE REPORT PANEL (shared) ═══════════════ -->
-    <view v-if="issuePanelOpen" class="overlay" :style="ui.overlay" @tap="closeIssuePopup">
-      <view class="sheet" :style="ui.sheet" @tap.stop>
-        <view class="card-head" :style="ui.cardHead">
-          <view>
-            <text class="card-title" :style="ui.cardTitle">Report an issue</text>
-            <text class="card-sub" :style="ui.cardSub">Tell us what went wrong so we can help quickly.</text>
-          </view>
-        </view>
-        <text class="section-label" :style="ui.tileLabel">Fault category</text>
-        <view class="chips" :style="ui.chips">
-          <view
-            v-for="category in issueCategories"
-            :key="category.value"
-            :class="['chip', issueForm.category === category.value ? 'chip-active' : '']"
-            :style="[ui.chip, issueForm.category === category.value ? ui.chipActive : null]"
-            @tap="issueForm.category = category.value"
-          >
-            <text :class="['chip-text', issueForm.category === category.value ? 'chip-text-active' : '']" :style="[ui.chipText, issueForm.category === category.value ? ui.chipTextActive : null]">{{ category.label }}</text>
-          </view>
-        </view>
-        <text class="section-label" :style="ui.tileLabel">Description</text>
-        <textarea
-          v-model="issueForm.description"
-          class="textarea"
-          :style="ui.textarea"
-          maxlength="300"
-          placeholder="Describe the fault, unusual noise, brake issue, battery issue, or anything else we should know."
-        />
-        <view class="actions" :style="ui.actions">
-          <button class="btn btn-secondary" :style="[ui.button, ui.buttonSecondary]" @tap="closeIssuePopup">
-            <text>Cancel</text>
-          </button>
-          <button class="btn btn-primary" :style="[ui.button, ui.buttonPrimary]" :disabled="busyAction === 'issue'" @tap="submitIssue">
-            <text>{{ busyAction === 'issue' ? 'Submitting...' : 'Submit Report' }}</text>
-          </button>
-        </view>
-      </view>
-    </view>
-
   </BaseLayout>
 </template>
-
-
 
 <script setup>
 import { computed, ref } from 'vue'
@@ -411,94 +499,20 @@ const nowTick = ref(Date.now())
 let timer = null
 
 const ui = Object.freeze({
-  page: {
-    minHeight: 'calc(100vh - 160px)',
-    padding: '24px 18px 32px',
-    background: 'radial-gradient(circle at top right, rgba(59, 130, 246, 0.18), transparent 36%), linear-gradient(180deg, #F8FBFF 0%, #EEF5FF 48%, #F8FBFF 100%)'
-  },
-  hero: {
-    padding: '22px',
-    borderRadius: '22px',
-    background: 'linear-gradient(135deg, #1D4ED8 0%, #2563EB 55%, #60A5FA 100%)',
-    color: '#FFFFFF',
-    marginBottom: '18px',
-    boxShadow: '0 18px 40px rgba(37, 99, 235, 0.18)'
-  },
-  eyebrow: {
-    display: 'inline-block',
-    padding: '6px 10px',
-    borderRadius: '999px',
-    background: 'rgba(255, 255, 255, 0.16)',
-    fontSize: '12px',
-    fontWeight: '700',
-    letterSpacing: '0.08em',
-    textTransform: 'uppercase'
-  },
-  title: {
-    display: 'block',
-    marginTop: '12px',
-    fontSize: '28px',
-    lineHeight: '1.2',
-    fontWeight: '800'
-  },
-  subtitle: {
-    display: 'block',
-    marginTop: '10px',
-    fontSize: '15px',
-    lineHeight: '1.65',
-    color: 'rgba(255, 255, 255, 0.86)'
-  },
-  heroChip: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '8px',
-    marginTop: '16px',
-    padding: '10px 14px',
-    borderRadius: '999px',
-    background: 'rgba(255, 255, 255, 0.92)'
-  },
-  heroChipDot: {
-    width: '10px',
-    height: '10px',
-    borderRadius: '50%',
-    background: '#2563EB'
-  },
-  heroChipText: {
-    fontSize: '13px',
-    fontWeight: '700',
-    color: '#1D4ED8'
-  },
-  banner: {
+  overlay: {
+    position: 'fixed',
+    inset: '0',
+    background: 'rgba(15, 23, 42, 0.48)',
+    zIndex: '1200',
     display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    marginBottom: '14px',
-    padding: '12px 14px',
-    borderRadius: '14px',
-    background: 'rgba(255, 255, 255, 0.92)',
-    border: '1px solid rgba(37, 99, 235, 0.12)',
-    boxShadow: '0 10px 22px rgba(37, 99, 235, 0.08)'
+    alignItems: 'flex-end'
   },
-  bannerAlert: {
-    background: '#DBEAFE'
-  },
-  bannerText: {
-    fontSize: '14px',
-    fontWeight: '700',
-    color: '#1D4ED8',
-    lineHeight: '1.6'
-  },
-  stack: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '14px'
-  },
-  card: {
-    background: 'rgba(255, 255, 255, 0.97)',
-    border: '1px solid rgba(148, 163, 184, 0.14)',
-    boxShadow: '0 16px 38px rgba(15, 23, 42, 0.06)',
-    padding: '20px',
-    borderRadius: '20px'
+  sheet: {
+    width: '100%',
+    padding: '24px 18px 30px',
+    borderRadius: '24px 24px 0 0',
+    background: 'linear-gradient(180deg, #F8FBFF 0%, #FFFFFF 28%)',
+    boxShadow: '0 -12px 30px rgba(15, 23, 42, 0.18)'
   },
   cardHead: {
     display: 'flex',
@@ -520,41 +534,6 @@ const ui = Object.freeze({
     lineHeight: '1.6',
     color: '#64748B'
   },
-  badge: {
-    flexShrink: '0',
-    padding: '8px 12px',
-    borderRadius: '999px',
-    background: '#EFF6FF',
-    color: '#1D4ED8',
-    fontSize: '12px',
-    fontWeight: '700'
-  },
-  timerBox: {
-    display: 'flex',
-    justifyContent: 'center',
-    padding: '18px 14px',
-    marginBottom: '14px',
-    borderRadius: '16px',
-    background: 'linear-gradient(180deg, #F8FBFF 0%, #EFF6FF 100%)',
-    border: '1px solid rgba(59, 130, 246, 0.16)'
-  },
-  timerText: {
-    fontSize: '30px',
-    fontWeight: '800',
-    color: '#1D4ED8',
-    letterSpacing: '0.06em'
-  },
-  grid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: '12px'
-  },
-  tile: {
-    padding: '14px',
-    borderRadius: '14px',
-    background: 'linear-gradient(180deg, #F8FBFF 0%, #EEF6FF 100%)',
-    border: '1px solid rgba(37, 99, 235, 0.10)'
-  },
   tileLabel: {
     display: 'block',
     fontSize: '12px',
@@ -563,13 +542,6 @@ const ui = Object.freeze({
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: '0.04em'
-  },
-  tileValue: {
-    display: 'block',
-    fontSize: '16px',
-    lineHeight: '1.5',
-    color: '#0F172A',
-    fontWeight: '700'
   },
   chips: {
     display: 'flex',
@@ -594,20 +566,18 @@ const ui = Object.freeze({
   chipTextActive: {
     color: '#1D4ED8'
   },
-  detailList: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: '10px',
+  textarea: {
+    width: '100%',
+    minHeight: '140px',
+    padding: '14px',
+    boxSizing: 'border-box',
+    borderRadius: '14px',
+    background: '#FFFFFF',
+    border: '1px solid #D7E3F9',
+    fontSize: '14px',
+    lineHeight: '1.6',
+    color: '#0F172A',
     marginBottom: '14px'
-  },
-  detailItem: {
-    padding: '10px 14px',
-    borderRadius: '999px',
-    background: '#EFF6FF',
-    border: '1px solid rgba(37, 99, 235, 0.12)',
-    fontSize: '13px',
-    fontWeight: '600',
-    color: '#1E3A8A'
   },
   actions: {
     display: 'flex',
@@ -634,57 +604,6 @@ const ui = Object.freeze({
     background: '#EFF6FF',
     color: '#1D4ED8',
     border: '1px solid rgba(37, 99, 235, 0.14)'
-  },
-  buttonDanger: {
-    background: 'linear-gradient(135deg, #1E3A8A, #1D4ED8)',
-    color: '#FFFFFF'
-  },
-  emptyCard: {
-    textAlign: 'center'
-  },
-  emptyMark: {
-    display: 'inline-flex',
-    width: '64px',
-    height: '64px',
-    borderRadius: '50%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    margin: '0 auto 16px',
-    background: 'radial-gradient(circle, rgba(59, 130, 246, 0.16), rgba(191, 219, 254, 0.5))',
-    color: '#1D4ED8',
-    fontSize: '22px',
-    fontWeight: '800'
-  },
-  centered: {
-    textAlign: 'center'
-  },
-  overlay: {
-    position: 'fixed',
-    inset: '0',
-    background: 'rgba(15, 23, 42, 0.48)',
-    zIndex: '1200',
-    display: 'flex',
-    alignItems: 'flex-end'
-  },
-  sheet: {
-    width: '100%',
-    padding: '24px 18px 30px',
-    borderRadius: '24px 24px 0 0',
-    background: 'linear-gradient(180deg, #F8FBFF 0%, #FFFFFF 28%)',
-    boxShadow: '0 -12px 30px rgba(15, 23, 42, 0.18)'
-  },
-  textarea: {
-    width: '100%',
-    minHeight: '140px',
-    padding: '14px',
-    boxSizing: 'border-box',
-    borderRadius: '14px',
-    background: '#FFFFFF',
-    border: '1px solid #D7E3F9',
-    fontSize: '14px',
-    lineHeight: '1.6',
-    color: '#0F172A',
-    marginBottom: '14px'
   }
 })
 
@@ -711,6 +630,7 @@ const heroChip = computed(() => {
   if (isBookingPage.value) return activeRide.value ? 'Booking is active' : 'Waiting for booking'
   return activeRide.value ? 'Ride in progress' : 'Ready when you are'
 })
+const rideStatusText = computed(() => String(activeRide.value?.status || 'ACTIVE').replace(/_/g, ' '))
 const durationLabel = computed(() => `${Number(activeRide.value?.durationMinutes || 0)} min reserved`)
 
 const formatDateTime = (value) => {
@@ -939,526 +859,970 @@ onUnload(() => {
 </script>
 
 <style scoped>
-
-/* ═══════════════════════════════════════════════
-   SHARED — Issue sheet (used by both pages)
-═══════════════════════════════════════════════ */
-.overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.52); z-index: 1200; display: flex; align-items: flex-end; }
-.sheet { width: 100%; padding: 32rpx 28rpx calc(env(safe-area-inset-bottom) + 32rpx); border-radius: 40rpx 40rpx 0 0; background: #fff; box-shadow: 0 -16rpx 48rpx rgba(15,23,42,0.18); }
-.card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16rpx; margin-bottom: 22rpx; }
-.card-title { display: block; font-size: 34rpx; font-weight: 800; color: #0F172A; }
-.card-sub { display: block; margin-top: 8rpx; font-size: 24rpx; line-height: 1.6; color: #64748B; }
-.section-label { display: block; font-size: 22rpx; color: #94A3B8; margin-bottom: 16rpx; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
-.chips { display: flex; flex-wrap: wrap; gap: 12rpx; margin-bottom: 24rpx; }
-.chip { padding: 16rpx 26rpx; border-radius: 999rpx; background: #F1F5F9; border: 2rpx solid #E2E8F0; }
-.chip-active { background: #EFF6FF; border-color: #2563EB; }
-.chip-text { font-size: 26rpx; font-weight: 600; color: #64748B; }
-.chip-text-active { color: #2563EB; }
-.textarea { width: 100%; min-height: 200rpx; padding: 24rpx; box-sizing: border-box; border-radius: 20rpx; background: #F8FBFF; border: 2rpx solid #E2E8F0; font-size: 26rpx; line-height: 1.6; color: #0F172A; margin-bottom: 20rpx; }
-.actions { display: flex; flex-wrap: wrap; gap: 16rpx; }
-.btn { min-height: 90rpx; border-radius: 999rpx; display: flex; align-items: center; justify-content: center; font-size: 28rpx; font-weight: 700; border: none; flex: 1 1 220rpx; }
-.btn::after { border: none; }
-.btn-primary { background: linear-gradient(135deg, #2563EB, #1D4ED8); color: #fff; box-shadow: 0 12rpx 24rpx rgba(37,99,235,0.22); }
-.btn-secondary { background: #F1F5F9; color: #475569; border: 2rpx solid #E2E8F0; }
-.btn[disabled] { opacity: 0.6; }
-
-/* ═══════════════════════════════════════════════
-   MY RIDE PAGE — Dark immersive dashboard style
-═══════════════════════════════════════════════ */
-.trip-page {
-  min-height: calc(100vh - 160rpx);
-  background: #0F172A;
-  padding-bottom: 48rpx;
-}
-
-/* Hero: full-bleed dark section with rings */
-.trip-hero {
+.ride-shell {
   position: relative;
-  background: linear-gradient(160deg, #0F172A 0%, #1E3A8A 60%, #1D4ED8 100%);
-  padding: 48rpx 32rpx 56rpx;
+  min-height: calc(100vh - 160rpx);
+  padding: 28rpx 24rpx 72rpx;
+  background: linear-gradient(180deg, #f8fbff 0%, #f3f7fd 46%, #fcfdff 100%);
   overflow: hidden;
 }
-.trip-hero-bg { position: absolute; inset: 0; pointer-events: none; }
-.trip-hero-ring {
+
+.ride-shell::before,
+.ride-shell::after {
+  content: '';
   position: absolute;
   border-radius: 50%;
-  border: 1rpx solid rgba(147, 197, 253, 0.12);
+  pointer-events: none;
 }
-.ring-1 { width: 500rpx; height: 500rpx; top: -180rpx; right: -120rpx; }
-.ring-2 { width: 340rpx; height: 340rpx; top: -80rpx; right: -30rpx; border-color: rgba(147,197,253,0.08); }
-.ring-3 { width: 700rpx; height: 700rpx; bottom: -400rpx; left: -200rpx; border-color: rgba(96,165,250,0.06); }
 
-.trip-hero-top {
+.ride-shell::before {
+  width: 440rpx;
+  height: 440rpx;
+  top: -140rpx;
+  right: -160rpx;
+  background: radial-gradient(circle, rgba(96, 165, 250, 0.2), rgba(96, 165, 250, 0));
+}
+
+.ride-shell::after {
+  width: 520rpx;
+  height: 520rpx;
+  bottom: -220rpx;
+  left: -200rpx;
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.12), rgba(245, 158, 11, 0));
+}
+
+.ride-container {
+  position: relative;
+  z-index: 1;
+  max-width: 1180px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.ride-view,
+.trip-main-grid,
+.booking-main-grid {
+  display: grid;
+  gap: 20rpx;
+}
+
+.ride-page-hero {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  gap: 18rpx;
+  padding: 32rpx;
+  border-radius: 32rpx;
+  border: 1rpx solid rgba(255, 255, 255, 0.82);
+  box-shadow:
+    0 18rpx 44rpx rgba(15, 23, 42, 0.07),
+    0 2rpx 10rpx rgba(148, 163, 184, 0.08);
+}
+
+.ride-page-hero::before,
+.ride-page-hero::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.ride-page-hero::before {
+  width: 260rpx;
+  height: 260rpx;
+  top: -90rpx;
+  right: -40rpx;
+  background: radial-gradient(circle, rgba(255, 199, 94, 0.34), rgba(255, 199, 94, 0));
+}
+
+.ride-page-hero::after {
+  width: 300rpx;
+  height: 300rpx;
+  left: -140rpx;
+  bottom: -170rpx;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.18), rgba(59, 130, 246, 0));
+}
+
+.ride-page-hero-trip {
+  background: linear-gradient(135deg, #eef6ff 0%, #ffffff 56%, #fff8ec 100%);
+}
+
+.ride-page-hero-booking {
+  background: linear-gradient(135deg, #fff9ec 0%, #ffffff 50%, #eef6ff 100%);
+}
+
+.ride-page-hero-main,
+.ride-page-hero-side {
+  position: relative;
+  z-index: 1;
+}
+
+.ride-page-kicker-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 40rpx;
-  position: relative;
-  z-index: 1;
+  gap: 14rpx;
+  flex-wrap: wrap;
 }
-.trip-status-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 10rpx;
-  padding: 10rpx 22rpx;
-  border-radius: 999rpx;
-  border: 1rpx solid rgba(255,255,255,0.18);
-  background: rgba(255,255,255,0.1);
-  backdrop-filter: blur(8rpx);
-}
-.trip-status-active { border-color: rgba(74,222,128,0.4); background: rgba(74,222,128,0.12); }
-.trip-status-dot {
-  width: 14rpx; height: 14rpx; border-radius: 50%;
-  background: #94A3B8;
-  animation: trip-pulse 2s infinite;
-}
-.trip-status-active .trip-status-dot { background: #4ADE80; }
-.trip-status-idle .trip-status-dot { background: #94A3B8; animation: none; }
-@keyframes trip-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.6; transform: scale(0.85); }
-}
-.trip-status-text { font-size: 22rpx; font-weight: 700; color: #fff; letter-spacing: 0.02em; }
-.trip-sync-badge { padding: 8rpx 18rpx; border-radius: 999rpx; background: rgba(255,255,255,0.1); }
-.trip-sync-text { font-size: 20rpx; color: rgba(255,255,255,0.6); font-weight: 600; }
 
-/* Timer display */
-.trip-timer-section { text-align: center; position: relative; z-index: 1; padding: 20rpx 0 28rpx; }
-.trip-timer-label { display: block; font-size: 22rpx; font-weight: 700; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 18rpx; }
-.trip-timer-display {
+.ride-page-kicker {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 28rpx 52rpx;
-  border-radius: 32rpx;
-  background: rgba(255,255,255,0.07);
-  border: 1rpx solid rgba(255,255,255,0.14);
-  backdrop-filter: blur(12rpx);
-  margin-bottom: 18rpx;
+  padding: 10rpx 18rpx;
+  border-radius: 999rpx;
+  border: 1rpx solid #e5edf6;
+  background: rgba(255, 255, 255, 0.88);
+  color: #0f172a;
+  font-size: 20rpx;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
-.timer-expired { border-color: rgba(251,113,133,0.4); background: rgba(251,113,133,0.1); }
-.trip-timer-value {
-  font-size: 72rpx;
-  font-weight: 900;
-  color: #fff;
-  letter-spacing: 0.06em;
-  font-variant-numeric: tabular-nums;
-}
-.timer-expired .trip-timer-value { color: #FB7185; }
-.trip-timer-hint { display: block; font-size: 24rpx; color: rgba(255,255,255,0.5); font-weight: 500; }
 
-/* Alert banner inside hero */
-.trip-alert-banner {
+.ride-page-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 10rpx;
+  padding: 10rpx 18rpx;
+  border-radius: 999rpx;
+  border: 1rpx solid #e2e8f0;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.ride-page-status-live {
+  background: #ecfdf5;
+  border-color: #bbf7d0;
+}
+
+.ride-page-status-idle {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+.ride-page-status-dot {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 50%;
+  background: #94a3b8;
+}
+
+.ride-page-status-live .ride-page-status-dot {
+  background: #10b981;
+  box-shadow: 0 0 0 6rpx rgba(16, 185, 129, 0.12);
+}
+
+.ride-page-status-text {
+  font-size: 22rpx;
+  font-weight: 800;
+  color: #334155;
+}
+
+.ride-page-title {
+  display: block;
+  max-width: 12em;
+  margin-top: 18rpx;
+  font-size: 44rpx;
+  line-height: 1.2;
+  font-weight: 900;
+  color: #0f172a;
+}
+
+.ride-page-subtitle {
+  display: block;
+  max-width: 920rpx;
+  margin-top: 14rpx;
+  font-size: 26rpx;
+  line-height: 1.7;
+  color: #475569;
+}
+
+.ride-page-hero-side {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.ride-page-summary-card {
+  padding: 22rpx 24rpx;
+  border-radius: 24rpx;
+  border: 1rpx solid #edf2f7;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(10rpx);
+}
+
+.ride-page-summary-label,
+.ride-page-mini-label,
+.ride-info-label,
+.booking-meta-label,
+.booking-track-title,
+.section-label {
+  display: block;
+  font-size: 20rpx;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #94a3b8;
+}
+
+.ride-page-summary-value,
+.ride-page-mini-value {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 28rpx;
+  line-height: 1.4;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.ride-page-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12rpx;
+}
+
+.ride-page-mini-item {
+  padding: 18rpx 20rpx;
+  border-radius: 20rpx;
+  border: 1rpx solid #edf2f7;
+  background: rgba(255, 255, 255, 0.74);
+}
+
+.ride-sync-banner {
   display: flex;
   align-items: center;
   gap: 12rpx;
-  margin-top: 24rpx;
-  padding: 18rpx 24rpx;
+  padding: 18rpx 22rpx;
   border-radius: 20rpx;
-  background: rgba(251,113,133,0.15);
-  border: 1rpx solid rgba(251,113,133,0.3);
-  position: relative;
-  z-index: 1;
+  border: 1rpx solid #dbeafe;
+  background: #eff6ff;
 }
-.trip-alert-icon { font-size: 28rpx; }
-.trip-alert-text { font-size: 24rpx; font-weight: 700; color: #FCA5A5; flex: 1; }
 
-/* Scooter info strip */
-.trip-scooter-strip {
-  display: flex;
-  align-items: center;
-  gap: 20rpx;
-  padding: 24rpx 32rpx;
-  background: rgba(255,255,255,0.05);
-  border-bottom: 1rpx solid rgba(255,255,255,0.06);
+.ride-sync-dot {
+  width: 14rpx;
+  height: 14rpx;
+  border-radius: 50%;
+  background: #3b82f6;
+  animation: ride-sync-pulse 1.4s ease-in-out infinite;
 }
-.trip-scooter-icon {
-  width: 72rpx; height: 72rpx;
-  border-radius: 20rpx;
-  background: rgba(37,99,235,0.2);
-  border: 1rpx solid rgba(96,165,250,0.3);
+
+@keyframes ride-sync-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.9);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.ride-sync-text {
+  font-size: 24rpx;
+  font-weight: 700;
+  color: #1d4ed8;
+}
+
+.ride-card {
+  background: rgba(255, 255, 255, 0.96);
+  border: 1rpx solid #e7eef6;
+  border-radius: 28rpx;
+  padding: 28rpx;
+  box-shadow:
+    0 12rpx 36rpx rgba(15, 23, 42, 0.06),
+    0 2rpx 8rpx rgba(148, 163, 184, 0.08);
+}
+
+.ride-elevated-card {
+  background: linear-gradient(180deg, #ffffff 0%, #fafdff 100%);
+}
+
+.ride-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14rpx;
+}
+
+.ride-card-head-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 16rpx;
+}
+
+.ride-card-head-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.ride-card-icon {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 22rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
-.trip-scooter-info { flex: 1; min-width: 0; }
-.trip-scooter-id { display: block; font-size: 26rpx; font-weight: 700; color: #fff; }
-.trip-scooter-since { display: block; font-size: 22rpx; color: rgba(255,255,255,0.45); margin-top: 4rpx; }
-.trip-scooter-cost { text-align: right; flex-shrink: 0; }
-.trip-scooter-cost-value { display: block; font-size: 30rpx; font-weight: 800; color: #93C5FD; }
-.trip-scooter-cost-label { display: block; font-size: 20rpx; color: rgba(255,255,255,0.4); margin-top: 2rpx; }
 
-/* Content area */
-.trip-content { padding: 28rpx 28rpx 48rpx; display: flex; flex-direction: column; gap: 20rpx; }
-
-/* Card on dark background */
-.trip-card {
-  background: rgba(255,255,255,0.06);
-  border: 1rpx solid rgba(255,255,255,0.1);
-  border-radius: 28rpx;
-  padding: 28rpx;
-  backdrop-filter: blur(8rpx);
+.ride-card-icon svg {
+  width: 36rpx;
+  height: 36rpx;
 }
-.trip-card-header { display: flex; align-items: center; gap: 16rpx; margin-bottom: 22rpx; }
-.trip-card-icon-wrap {
-  width: 56rpx; height: 56rpx;
-  border-radius: 16rpx;
-  background: rgba(37,99,235,0.2);
-  border: 1rpx solid rgba(96,165,250,0.25);
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-}
-.trip-card-title { font-size: 30rpx; font-weight: 800; color: #fff; }
-.trip-section-label { display: block; font-size: 22rpx; color: rgba(255,255,255,0.45); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 16rpx; }
 
-/* Extend time chips */
-.trip-extend-grid { display: flex; gap: 14rpx; margin-bottom: 22rpx; }
-.trip-extend-chip {
-  flex: 1;
+.ride-card-icon-primary {
+  background: linear-gradient(135deg, #2563eb, #60a5fa);
+  box-shadow: 0 12rpx 24rpx rgba(37, 99, 235, 0.22);
+}
+
+.ride-card-icon-primary svg {
+  stroke: #ffffff;
+}
+
+.ride-card-icon-soft {
+  border: 1rpx solid #dbeafe;
+  background: #eff6ff;
+}
+
+.ride-card-icon-soft svg {
+  stroke: #2563eb;
+}
+
+.ride-card-icon-warning {
+  border: 1rpx solid #fed7aa;
+  background: #fff7ed;
+}
+
+.ride-card-icon-warning svg {
+  stroke: #ea580c;
+}
+
+.ride-card-title {
+  display: block;
+  font-size: 32rpx;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.ride-card-subtitle {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  line-height: 1.6;
+  color: #64748b;
+}
+
+.ride-status-tag,
+.ride-chip-badge {
+  flex-shrink: 0;
+  padding: 10rpx 18rpx;
+  border-radius: 999rpx;
+  font-size: 20rpx;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.ride-status-tag-live {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.ride-chip-badge {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.trip-focus-layout {
+  display: grid;
+  gap: 18rpx;
+  margin-top: 22rpx;
+}
+
+.trip-countdown-card {
+  padding: 26rpx;
+  border-radius: 24rpx;
+  border: 1rpx solid #dbeafe;
+  background: linear-gradient(135deg, #eff6ff, #fafdff);
+}
+
+.trip-countdown-card-alert {
+  border-color: #fdba74;
+  background: linear-gradient(135deg, #fff7ed, #fffdf8);
+}
+
+.trip-countdown-label {
+  display: block;
+  font-size: 20rpx;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.trip-countdown-value {
+  display: block;
+  margin-top: 14rpx;
+  font-size: 64rpx;
+  line-height: 1;
+  font-weight: 900;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+
+.trip-countdown-card-alert .trip-countdown-value,
+.ride-inline-banner-warn .ride-inline-banner-text {
+  color: #9a3412;
+}
+
+.trip-countdown-note {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  line-height: 1.6;
+  color: #64748b;
+}
+
+.ride-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14rpx;
+}
+
+.ride-info-tile {
+  min-height: 132rpx;
+  padding: 20rpx;
+  border-radius: 22rpx;
+  border: 1rpx solid #e7eef6;
+  background: #f8fbff;
+}
+
+.ride-info-value {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 26rpx;
+  line-height: 1.55;
+  font-weight: 700;
+  color: #0f172a;
+  word-break: break-word;
+}
+
+.ride-inline-banner {
+  margin-top: 18rpx;
+  padding: 18rpx 20rpx;
+  border-radius: 20rpx;
+  border: 1rpx solid #dbeafe;
+  background: #f0f9ff;
+}
+
+.ride-inline-banner-warn {
+  border-color: #fed7aa;
+  background: #fff7ed;
+}
+
+.ride-inline-banner-text {
+  display: block;
+  font-size: 24rpx;
+  line-height: 1.65;
+  color: #335381;
+}
+
+.ride-choice-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14rpx;
+  margin: 22rpx 0 18rpx;
+}
+
+.ride-choice-card {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 24rpx 12rpx;
-  border-radius: 20rpx;
-  background: rgba(255,255,255,0.05);
-  border: 2rpx solid rgba(255,255,255,0.1);
-  cursor: pointer;
-  transition: all 0.18s ease;
+  gap: 6rpx;
+  padding: 20rpx 14rpx;
+  border-radius: 22rpx;
+  border: 2rpx solid #dbe6f2;
+  background: #f8fbff;
 }
-.trip-extend-chip-active {
-  background: rgba(37,99,235,0.3);
-  border-color: #2563EB;
-  box-shadow: 0 0 0 4rpx rgba(37,99,235,0.2);
-}
-.trip-extend-chip-time { display: block; font-size: 38rpx; font-weight: 900; color: #fff; line-height: 1; }
-.trip-extend-chip-unit { display: block; font-size: 20rpx; color: rgba(255,255,255,0.45); font-weight: 600; margin-top: 4rpx; text-transform: uppercase; }
-.trip-extend-chip-active .trip-extend-chip-time { color: #93C5FD; }
-.trip-extend-chip-active .trip-extend-chip-unit { color: rgba(147,197,253,0.7); }
 
-/* Extend preview */
-.trip-extend-preview {
-  background: rgba(255,255,255,0.04);
-  border: 1rpx solid rgba(255,255,255,0.08);
-  border-radius: 20rpx;
-  padding: 20rpx 24rpx;
-  margin-bottom: 22rpx;
+.ride-choice-card-active {
+  border-color: #3b82f6;
+  background: linear-gradient(135deg, #eff6ff, #ffffff);
+  box-shadow: 0 10rpx 24rpx rgba(59, 130, 246, 0.14);
 }
-.trip-preview-row { display: flex; justify-content: space-between; align-items: center; }
-.trip-preview-divider { height: 1rpx; background: rgba(255,255,255,0.08); margin: 14rpx 0; }
-.trip-preview-label { font-size: 22rpx; color: rgba(255,255,255,0.45); font-weight: 600; }
-.trip-preview-value { font-size: 26rpx; color: #fff; font-weight: 700; }
-.trip-preview-cost { color: #4ADE80; }
 
-/* Buttons */
-.trip-btn-extend {
-  width: 100%;
-  height: 96rpx;
-  border-radius: 999rpx;
-  background: linear-gradient(135deg, #2563EB, #1D4ED8);
-  color: #fff;
+.ride-choice-card-compact {
+  padding-top: 18rpx;
+  padding-bottom: 18rpx;
+}
+
+.ride-choice-time {
+  display: block;
   font-size: 30rpx;
   font-weight: 800;
-  border: none;
-  box-shadow: 0 16rpx 32rpx rgba(37,99,235,0.35);
-  display: flex; align-items: center; justify-content: center;
+  color: #0f172a;
 }
-.trip-btn-extend::after { border: none; }
-.trip-btn-extend[disabled] { opacity: 0.55; }
 
-/* Action row (report + end) */
-.trip-action-row { display: flex; gap: 16rpx; }
-.trip-action-btn {
-  flex: 1;
-  height: 90rpx;
+.ride-choice-price {
+  display: block;
+  font-size: 22rpx;
+  color: #64748b;
+}
+
+.ride-preview-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+  margin-bottom: 20rpx;
+  padding: 20rpx 22rpx;
+  border-radius: 20rpx;
+  border: 1rpx solid #e7eef6;
+  background: #f8fbff;
+}
+
+.ride-preview-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24rpx;
+}
+
+.ride-preview-label {
+  font-size: 22rpx;
+  line-height: 1.5;
+  color: #64748b;
+}
+
+.ride-preview-value {
+  text-align: right;
+  font-size: 24rpx;
+  line-height: 1.5;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.ride-preview-value-primary {
+  color: #2563eb;
+}
+
+.ride-btn,
+.btn {
+  min-height: 96rpx;
   border-radius: 999rpx;
   border: none;
-  display: flex; align-items: center; justify-content: center; gap: 10rpx;
-  font-size: 26rpx; font-weight: 700;
-}
-.trip-action-btn::after { border: none; }
-.trip-action-report { background: rgba(255,255,255,0.1); color: #fff; border: 1rpx solid rgba(255,255,255,0.15); }
-.trip-action-end { background: rgba(239,68,68,0.15); color: #FCA5A5; border: 1rpx solid rgba(239,68,68,0.3); }
-.trip-action-btn[disabled] { opacity: 0.5; }
-
-/* Empty state */
-.trip-empty-state { text-align: center; padding: 20rpx 0; }
-.trip-empty-illustration {
-  width: 160rpx; height: 160rpx;
-  border-radius: 50%;
-  background: rgba(37,99,235,0.12);
-  border: 2rpx solid rgba(96,165,250,0.2);
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 28rpx;
-}
-.trip-empty-title { display: block; font-size: 36rpx; font-weight: 800; color: #fff; margin-bottom: 12rpx; }
-.trip-empty-desc { display: block; font-size: 26rpx; line-height: 1.65; color: rgba(255,255,255,0.45); margin-bottom: 36rpx; padding: 0 16rpx; }
-.trip-btn-find {
-  height: 96rpx;
-  border-radius: 999rpx;
-  background: #fff;
-  color: #1D4ED8;
-  font-size: 30rpx;
+  padding: 0 28rpx;
+  font-size: 28rpx;
   font-weight: 800;
-  border: none;
-  padding: 0 64rpx;
-  box-shadow: 0 12rpx 28rpx rgba(0,0,0,0.25);
-  display: inline-flex; align-items: center; justify-content: center;
-  margin-bottom: 40rpx;
 }
-.trip-btn-find::after { border: none; }
-.trip-preview-tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16rpx; }
-.trip-preview-tile {
-  padding: 22rpx;
-  border-radius: 20rpx;
-  background: rgba(255,255,255,0.05);
-  border: 1rpx solid rgba(255,255,255,0.08);
+
+.ride-btn {
+  width: 100%;
+}
+
+.ride-btn::after,
+.btn::after {
+  border: none;
+}
+
+.ride-btn text,
+.btn text,
+.ride-status-tag text,
+.ride-chip-badge text {
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.ride-btn-primary {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #ffffff;
+  box-shadow: 0 18rpx 32rpx rgba(37, 99, 235, 0.24);
+}
+
+.ride-btn-secondary {
+  border: 1rpx solid #dbeafe;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.ride-btn-danger {
+  border: 1rpx solid #fecdd3;
+  background: #fff1f2;
+  color: #dc2626;
+}
+
+.ride-btn[disabled],
+.btn[disabled] {
+  opacity: 0.55;
+}
+
+.ride-action-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+  margin-top: 22rpx;
+}
+
+.ride-card-footnote {
+  display: block;
+  margin-top: 16rpx;
+  font-size: 22rpx;
+  line-height: 1.65;
+  color: #94a3b8;
+}
+
+.ride-empty-card {
+  text-align: center;
+  padding-top: 36rpx;
+  padding-bottom: 36rpx;
+}
+
+.ride-empty-mark {
+  width: 112rpx;
+  height: 112rpx;
+  margin: 0 auto 20rpx;
+  border-radius: 36rpx;
+  background: linear-gradient(135deg, #dbeafe, #eff6ff);
+  color: #1d4ed8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 44rpx;
+  font-weight: 800;
+  box-shadow: 0 10rpx 24rpx rgba(37, 99, 235, 0.12);
+}
+
+.ride-empty-mark-warm {
+  background: linear-gradient(135deg, #fff4d6, #fff9ec);
+  color: #c27a00;
+  box-shadow: 0 10rpx 24rpx rgba(245, 158, 11, 0.14);
+}
+
+.ride-empty-title {
+  display: block;
+  font-size: 36rpx;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.ride-empty-desc {
+  display: block;
+  max-width: 920rpx;
+  margin: 12rpx auto 0;
+  font-size: 26rpx;
+  line-height: 1.7;
+  color: #64748b;
+}
+
+.ride-empty-btn {
+  max-width: 360rpx;
+  margin: 28rpx auto 0;
+}
+
+.ride-empty-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.booking-order-card {
+  background: linear-gradient(180deg, #ffffff 0%, #fcfdff 100%);
+}
+
+.booking-order-banner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16rpx;
+  padding-bottom: 20rpx;
+  border-bottom: 1rpx solid #edf2f7;
+}
+
+.booking-order-kicker {
+  display: block;
+  font-size: 20rpx;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #f59e0b;
+}
+
+.booking-order-title {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 36rpx;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.booking-order-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-top: 20rpx;
+}
+
+.booking-meta-pill {
+  flex: 1 1 180rpx;
+  min-width: 180rpx;
+  padding: 16rpx 18rpx;
+  border-radius: 18rpx;
+  border: 1rpx solid #e7eef6;
+  background: #f8fbff;
+}
+
+.booking-meta-value,
+.booking-track-value {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 28rpx;
+  line-height: 1.45;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.booking-track-card {
+  margin-top: 20rpx;
+  padding: 20rpx 22rpx;
+  border-radius: 24rpx;
+  border: 1rpx solid #f7e4b6;
+  background: linear-gradient(135deg, #fff9ec, #ffffff 42%, #eff6ff 100%);
+}
+
+.booking-track-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 16rpx;
+}
+
+.booking-track-marker {
+  width: 18rpx;
+  height: 18rpx;
+  margin-top: 8rpx;
+  border-radius: 50%;
+  background: #cbd5e1;
+  box-shadow: 0 0 0 8rpx rgba(203, 213, 225, 0.24);
+  flex-shrink: 0;
+}
+
+.booking-track-marker-live {
+  background: #2563eb;
+  box-shadow: 0 0 0 8rpx rgba(37, 99, 235, 0.14);
+}
+
+.booking-track-line {
+  width: 2rpx;
+  height: 56rpx;
+  margin: 10rpx 0 10rpx 8rpx;
+  background: linear-gradient(#93c5fd, #e2e8f0);
+}
+
+.booking-track-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.booking-step-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+  margin-top: 28rpx;
   text-align: left;
 }
-.trip-ptile-icon { display: block; font-size: 32rpx; margin-bottom: 10rpx; }
-.trip-ptile-label { display: block; font-size: 24rpx; color: rgba(255,255,255,0.6); font-weight: 600; }
 
-/* ═══════════════════════════════════════════════
-   BOOK & RIDING PAGE — Light card order style
-═══════════════════════════════════════════════ */
-.booking-page {
-  min-height: calc(100vh - 160rpx);
-  background: #F0F4F8;
-  padding-bottom: 60rpx;
-}
-
-/* Header bar */
-.booking-header {
+.booking-step-item {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 36rpx 32rpx 24rpx;
-  background: #fff;
-  border-bottom: 1rpx solid #E8EDF3;
-}
-.booking-header-title { display: block; font-size: 38rpx; font-weight: 900; color: #0F172A; }
-.booking-header-sub { display: block; font-size: 24rpx; color: #94A3B8; margin-top: 4rpx; }
-.booking-status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 10rpx;
-  padding: 12rpx 22rpx;
-  border-radius: 999rpx;
-}
-.booking-badge-active { background: #DCFCE7; }
-.booking-badge-idle { background: #F1F5F9; }
-.booking-badge-dot { width: 12rpx; height: 12rpx; border-radius: 50%; background: #94A3B8; }
-.booking-badge-active .booking-badge-dot { background: #22C55E; }
-.booking-badge-text { font-size: 20rpx; font-weight: 800; color: #64748B; letter-spacing: 0.06em; }
-.booking-badge-active .booking-badge-text { color: #15803D; }
-
-.booking-sync-bar { padding: 16rpx 32rpx; background: #EFF6FF; border-bottom: 1rpx solid #DBEAFE; }
-.booking-sync-text { font-size: 24rpx; color: #2563EB; font-weight: 600; }
-
-/* Content */
-.booking-content { padding: 24rpx 24rpx 0; display: flex; flex-direction: column; gap: 18rpx; }
-
-/* Order card — Meituan style white card with accent */
-.booking-order-card {
-  background: #fff;
-  border-radius: 28rpx;
-  box-shadow: 0 4rpx 20rpx rgba(15,23,42,0.06);
-  overflow: hidden;
-}
-.booking-order-top {
-  display: flex;
-  align-items: center;
-  gap: 18rpx;
-  padding: 28rpx 28rpx 20rpx;
-  border-bottom: 1rpx solid #F1F5F9;
-}
-.booking-order-icon {
-  width: 80rpx; height: 80rpx;
-  border-radius: 22rpx;
-  background: linear-gradient(135deg, #2563EB, #1D4ED8);
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-  box-shadow: 0 8rpx 20rpx rgba(37,99,235,0.28);
-}
-.booking-order-title-wrap { flex: 1; min-width: 0; }
-.booking-order-model { display: block; font-size: 30rpx; font-weight: 800; color: #0F172A; }
-.booking-order-id { display: block; font-size: 22rpx; color: #94A3B8; margin-top: 4rpx; }
-.booking-order-status-chip {
-  padding: 10rpx 20rpx;
-  border-radius: 999rpx;
-  background: #DCFCE7;
-  flex-shrink: 0;
-}
-.booking-order-status-text { font-size: 20rpx; font-weight: 800; color: #15803D; letter-spacing: 0.04em; }
-
-/* Timeline */
-.booking-timeline { padding: 24rpx 28rpx; }
-.booking-timeline-row { display: flex; align-items: stretch; gap: 18rpx; }
-.booking-tl-dot {
-  width: 18rpx; height: 18rpx;
-  border-radius: 50%;
-  flex-shrink: 0;
-  margin-top: 6rpx;
-}
-.booking-tl-dot-start { background: #2563EB; box-shadow: 0 0 0 4rpx rgba(37,99,235,0.18); }
-.booking-tl-dot-end { background: #94A3B8; }
-.booking-tl-line { width: 2rpx; background: linear-gradient(#2563EB, #E2E8F0); flex-shrink: 0; margin: 20rpx 8rpx; }
-.booking-tl-labels { flex: 1; display: flex; flex-direction: column; justify-content: space-between; gap: 28rpx; }
-.booking-tl-label-item {}
-.booking-tl-time { display: block; font-size: 28rpx; font-weight: 700; color: #0F172A; }
-.booking-tl-desc { display: block; font-size: 22rpx; color: #94A3B8; margin-top: 4rpx; }
-
-/* Info section */
-.booking-info-section { background: #fff; border-radius: 28rpx; padding: 24rpx 24rpx 28rpx; box-shadow: 0 4rpx 20rpx rgba(15,23,42,0.06); }
-.booking-section-title { display: block; font-size: 26rpx; font-weight: 800; color: #0F172A; margin-bottom: 18rpx; }
-.booking-info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14rpx; }
-.booking-info-cell {
-  padding: 20rpx;
+  align-items: flex-start;
+  gap: 14rpx;
+  padding: 16rpx 18rpx;
   border-radius: 20rpx;
-  background: #F8FBFF;
-  border: 1rpx solid #E8EDF3;
+  border: 1rpx solid #f7e4b6;
+  background: #fff9ec;
 }
-.booking-info-icon { display: block; font-size: 30rpx; margin-bottom: 8rpx; }
-.booking-info-label { display: block; font-size: 20rpx; color: #94A3B8; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6rpx; }
-.booking-info-value { display: block; font-size: 26rpx; color: #0F172A; font-weight: 700; }
 
-/* Extend section */
-.booking-extend-section { background: #fff; border-radius: 28rpx; padding: 24rpx; box-shadow: 0 4rpx 20rpx rgba(15,23,42,0.06); }
-.booking-extend-chips { display: flex; gap: 12rpx; margin-bottom: 16rpx; }
-.booking-extend-chip {
-  flex: 1;
-  height: 76rpx;
-  border-radius: 18rpx;
-  background: #F8FBFF;
-  border: 2rpx solid #E2E8F0;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer;
-}
-.booking-chip-active { background: #EFF6FF; border-color: #2563EB; }
-.booking-chip-text { font-size: 26rpx; font-weight: 700; color: #64748B; }
-.booking-chip-active .booking-chip-text { color: #2563EB; }
-.booking-extend-preview {
-  padding: 16rpx 20rpx;
-  border-radius: 16rpx;
-  background: #F8FBFF;
-  border: 1rpx solid #E8EDF3;
-}
-.booking-ext-preview-text { font-size: 24rpx; color: #64748B; font-weight: 500; line-height: 1.6; }
-.booking-ext-highlight { font-weight: 700; color: #2563EB; }
-
-/* Action buttons */
-.booking-actions { padding: 0 0 8rpx; display: flex; flex-direction: column; gap: 14rpx; }
-.booking-btn-extend {
-  width: 100%; height: 100rpx;
-  border-radius: 999rpx;
-  background: linear-gradient(135deg, #2563EB, #1D4ED8);
-  color: #fff;
-  font-size: 30rpx; font-weight: 800;
-  border: none;
-  box-shadow: 0 14rpx 28rpx rgba(37,99,235,0.28);
-  display: flex; align-items: center; justify-content: center;
-}
-.booking-btn-extend::after { border: none; }
-.booking-btn-extend[disabled] { opacity: 0.55; }
-.booking-btn-row { display: flex; gap: 14rpx; }
-.booking-btn-secondary {
-  flex: 1; height: 90rpx;
-  border-radius: 999rpx;
-  background: #F1F5F9;
-  color: #475569;
-  font-size: 27rpx; font-weight: 700;
-  border: 2rpx solid #E2E8F0;
-  display: flex; align-items: center; justify-content: center;
-}
-.booking-btn-secondary::after { border: none; }
-.booking-btn-danger {
-  flex: 1; height: 90rpx;
-  border-radius: 999rpx;
-  background: #FFF1F2;
-  color: #E11D48;
-  font-size: 27rpx; font-weight: 700;
-  border: 2rpx solid #FECDD3;
-  display: flex; align-items: center; justify-content: center;
-}
-.booking-btn-danger::after { border: none; }
-.booking-btn-danger[disabled] { opacity: 0.55; }
-
-/* Empty booking state */
-.booking-empty { padding: 24rpx; display: flex; flex-direction: column; gap: 18rpx; }
-.booking-empty-card {
-  background: #fff;
-  border-radius: 28rpx;
-  padding: 40rpx 32rpx;
-  box-shadow: 0 4rpx 20rpx rgba(15,23,42,0.06);
-  text-align: center;
-}
-.booking-empty-art {
-  width: 140rpx; height: 140rpx;
+.booking-step-index {
+  width: 40rpx;
+  height: 40rpx;
   border-radius: 50%;
-  background: #EFF6FF;
-  border: 2rpx solid #DBEAFE;
-  display: inline-flex;
+  background: #f59e0b;
+  color: #ffffff;
+  display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 28rpx;
+  font-size: 24rpx;
+  font-weight: 800;
+  flex-shrink: 0;
 }
-.booking-empty-title { display: block; font-size: 36rpx; font-weight: 800; color: #0F172A; margin-bottom: 12rpx; }
-.booking-empty-desc { display: block; font-size: 26rpx; line-height: 1.65; color: #64748B; margin-bottom: 32rpx; }
 
-/* Checklist */
-.booking-empty-checklist { text-align: left; margin-bottom: 36rpx; display: flex; flex-direction: column; gap: 18rpx; }
-.booking-checklist-item { display: flex; align-items: center; gap: 18rpx; padding: 16rpx 20rpx; background: #F8FBFF; border-radius: 16rpx; border: 1rpx solid #E8EDF3; }
-.booking-check-icon { font-size: 24rpx; color: #CBD5E1; flex-shrink: 0; }
-.booking-check-text { font-size: 26rpx; color: #475569; font-weight: 600; }
-
-.booking-empty-actions { display: flex; flex-direction: column; gap: 14rpx; }
-.booking-btn-primary-cta {
-  width: 100%; height: 100rpx;
-  border-radius: 999rpx;
-  background: linear-gradient(135deg, #2563EB, #1D4ED8);
-  color: #fff;
-  font-size: 30rpx; font-weight: 800;
-  border: none;
-  box-shadow: 0 12rpx 24rpx rgba(37,99,235,0.25);
-  display: flex; align-items: center; justify-content: center;
+.booking-step-text {
+  font-size: 24rpx;
+  line-height: 1.6;
+  color: #475569;
 }
-.booking-btn-primary-cta::after { border: none; }
-.booking-btn-ghost {
-  width: 100%; height: 88rpx;
-  border-radius: 999rpx;
-  background: transparent;
-  color: #2563EB;
-  font-size: 28rpx; font-weight: 700;
-  border: 2rpx solid #DBEAFE;
-  display: flex; align-items: center; justify-content: center;
-}
-.booking-btn-ghost::after { border: none; }
 
-/* Info preview grid */
-.booking-empty-info-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+.booking-empty-actions {
+  display: flex;
+  flex-direction: column;
   gap: 14rpx;
+  margin-top: 28rpx;
 }
-.booking-info-preview-cell {
-  background: #fff;
-  border-radius: 20rpx;
-  padding: 24rpx 20rpx;
-  box-shadow: 0 2rpx 10rpx rgba(15,23,42,0.04);
-}
-.booking-info-preview-icon { display: block; font-size: 32rpx; margin-bottom: 10rpx; }
-.booking-info-preview-label { display: block; font-size: 20rpx; color: #94A3B8; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8rpx; }
-.booking-info-preview-value { display: block; font-size: 22rpx; color: #475569; font-weight: 600; line-height: 1.4; }
 
-/* Responsive */
-@media (max-width: 750px) {
-  .trip-timer-value { font-size: 58rpx; }
-  .trip-extend-grid { gap: 10rpx; }
-  .booking-info-grid { grid-template-columns: 1fr; }
-  .booking-empty-info-grid { grid-template-columns: 1fr; }
-  .booking-btn-row { flex-direction: column; }
-  .trip-preview-tiles { grid-template-columns: repeat(2, 1fr); }
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.52);
+  z-index: 1200;
+  display: flex;
+  align-items: flex-end;
+}
+
+.sheet {
+  width: 100%;
+  padding: 32rpx 28rpx calc(env(safe-area-inset-bottom) + 32rpx);
+  border-radius: 40rpx 40rpx 0 0;
+  background: #ffffff;
+  box-shadow: 0 -16rpx 48rpx rgba(15, 23, 42, 0.18);
+}
+
+.card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16rpx;
+  margin-bottom: 22rpx;
+}
+
+.card-title {
+  display: block;
+  font-size: 34rpx;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.card-sub {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  line-height: 1.6;
+  color: #64748b;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-bottom: 24rpx;
+}
+
+.chip {
+  padding: 16rpx 26rpx;
+  border-radius: 999rpx;
+  background: #f1f5f9;
+  border: 2rpx solid #e2e8f0;
+}
+
+.chip-active {
+  background: #eff6ff;
+  border-color: #2563eb;
+}
+
+.chip-text {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.chip-text-active {
+  color: #2563eb;
+}
+
+.textarea {
+  width: 100%;
+  min-height: 200rpx;
+  padding: 24rpx;
+  box-sizing: border-box;
+  border-radius: 20rpx;
+  background: #f8fbff;
+  border: 2rpx solid #e2e8f0;
+  font-size: 26rpx;
+  line-height: 1.6;
+  color: #0f172a;
+  margin-bottom: 20rpx;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+
+.btn {
+  flex: 1 1 220rpx;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #ffffff;
+  box-shadow: 0 12rpx 24rpx rgba(37, 99, 235, 0.22);
+}
+
+.btn-secondary {
+  background: #f1f5f9;
+  color: #475569;
+  border: 2rpx solid #e2e8f0;
+}
+
+@media screen and (min-width: 960px) {
+  .ride-page-hero {
+    grid-template-columns: minmax(0, 1.22fr) minmax(300px, 0.78fr);
+    align-items: end;
+  }
+
+  .trip-focus-layout {
+    grid-template-columns: minmax(320px, 0.92fr) minmax(0, 1.08fr);
+    align-items: stretch;
+  }
+
+  .trip-main-grid,
+  .booking-main-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ride-empty-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .booking-empty-actions {
+    flex-direction: row;
+  }
+}
+
+@media screen and (max-width: 767px) {
+  .ride-shell {
+    padding-left: 20rpx;
+    padding-right: 20rpx;
+  }
+
+  .ride-page-title {
+    font-size: 38rpx;
+  }
+
+  .trip-countdown-value {
+    font-size: 56rpx;
+  }
+
+  .ride-page-mini-grid,
+  .ride-info-grid,
+  .ride-empty-grid,
+  .ride-choice-row {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
