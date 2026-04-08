@@ -80,6 +80,7 @@ export const logout = () => {
     request.clearToken()
     // Clear user info
     uni.removeStorageSync('userInfo')
+    uni.$emit('user-logout')
     // Navigate to login page
     uni.reLaunch({
       url: '/pages/login'

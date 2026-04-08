@@ -170,6 +170,18 @@ const put = (url, data = {}, options = {}) => {
 }
 
 /**
+ * PATCH Request
+ */
+const patch = (url, data = {}, options = {}) => {
+  return request({
+    url,
+    method: 'PATCH',
+    data,
+    ...options
+  })
+}
+
+/**
  * DELETE Request
  */
 const del = (url, data = {}, options = {}) => {
@@ -186,6 +198,7 @@ export default {
   get,
   post,
   put,
+  patch,
   delete: del,
   getToken,
   setToken,

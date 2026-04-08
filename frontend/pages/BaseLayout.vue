@@ -259,11 +259,13 @@ onMounted(() => {
   // so the navbar updates immediately without needing a full page recreate.
   uni.$on('login-success', refreshAuthState)
   uni.$on('user-logout', refreshAuthState)
+  uni.$on('user-profile-updated', refreshAuthState)
 })
 
 onUnmounted(() => {
   uni.$off('login-success', refreshAuthState)
   uni.$off('user-logout', refreshAuthState)
+  uni.$off('user-profile-updated', refreshAuthState)
 })
 
 const goToHome = () => {

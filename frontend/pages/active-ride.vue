@@ -3,15 +3,13 @@
     <view class="active-ride-page">
       <view class="page-hero">
         <view class="hero-copy">
-          <text class="hero-eyebrow">Active Ride Dashboard</text>
-          <text class="hero-title">Stay in control while your scooter is on the move</text>
-          <text class="hero-subtitle">
-            Track the remaining rental time, add more minutes, end the ride safely, or report a fault without leaving the dashboard.
-          </text>
+          <text class="hero-eyebrow">{{ heroContent.eyebrow }}</text>
+          <text class="hero-title">{{ heroContent.title }}</text>
+          <text class="hero-subtitle">{{ heroContent.subtitle }}</text>
         </view>
         <view class="hero-chip">
-          <uni-icons type="paperplane-filled" size="18" color="#1D4ED8"></uni-icons>
-          <text class="hero-chip-text">{{ activeRide ? 'Ride in progress' : 'Ready when you are' }}</text>
+          <uni-icons :type="heroChipIcon" size="18" color="#1D4ED8"></uni-icons>
+          <text class="hero-chip-text">{{ heroContent.chip }}</text>
         </view>
       </view>
 
@@ -33,7 +31,7 @@
 
       <uni-load-more v-if="syncing && !activeRide" status="loading" />
 
-      <view v-else-if="activeRide" class="dashboard-stack">
+      <view v-else-if="activeRide && isTripPage" class="dashboard-stack">
         <uni-card
           title="Remaining Rental Time"
           sub-title="Live countdown for your current booking"
@@ -172,19 +170,134 @@
         </uni-card>
       </view>
 
-      <view v-else class="empty-state-shell">
+      <view v-else-if="activeRide && isBookingPage" class="dashboard-stack booking-dashboard">
+        <uni-card
+          title="Booking Snapshot"
+          sub-title="Current reservation details for this ride"
+          extra="ACTIVE"
+          is-shadow
+        >
+          <view class="overview-grid">
+            <view
+              v-for="item in bookingOverviewItems"
+              :key="item.label"
+              class="overview-tile"
+            >
+              <text class="overview-label">{{ item.label }}</text>
+              <text class="overview-value">{{ item.value }}</text>
+            </view>
+          </view>
+        </uni-card>
+
+        <uni-card
+          title="Extend Reserved Time"
+          sub-title="Adjust the booking without leaving the detail page"
+          is-shadow
+        >
+          <uni-section title="Select extra time" type="line"></uni-section>
+          <uni-segmented-control
+            :current="selectedExtensionIndex"
+            :values="extensionLabels"
+            style-type="button"
+            active-color="#2563EB"
+            in-active-color="#EFF6FF"
+            @clickItem="handleExtensionSelection"
+          />
+
+          <view class="extend-preview">
+            <view class="extend-preview-copy">
+              <text class="extend-preview-title">New planned finish</text>
+              <text class="extend-preview-value">{{ projectedEndTime }}</text>
+            </view>
+            <view class="extend-preview-copy">
+              <text class="extend-preview-title">Updated reserved total</text>
+              <text class="extend-preview-value">{{ projectedTotalCost }}</text>
+            </view>
+          </view>
+
+          <button
+            class="primary-action"
+            :disabled="busyAction === 'extend'"
+            @tap="handleExtendRide"
+          >
+            <text>{{ busyAction === 'extend' ? 'Extending booking...' : `Extend by ${extensionMinutes} min` }}</text>
+          </button>
+        </uni-card>
+
+        <uni-card
+          title="Booking Essentials"
+          sub-title="Everything currently attached to this reservation"
+          is-shadow
+        >
+          <view class="detail-grid">
+            <view class="detail-pill">
+              <uni-icons type="wallet" size="18" color="#2563EB"></uni-icons>
+              <text class="detail-pill-text">Reserved {{ formatMoney(activeRide.totalCost) }}</text>
+            </view>
+            <view class="detail-pill">
+              <uni-icons type="calendar-filled" size="18" color="#2563EB"></uni-icons>
+              <text class="detail-pill-text">{{ durationLabel }}</text>
+            </view>
+            <view class="detail-pill">
+              <uni-icons type="locked-filled" size="18" color="#2563EB"></uni-icons>
+              <text class="detail-pill-text">Status {{ activeRide.status }}</text>
+            </view>
+            <view class="detail-pill">
+              <uni-icons type="paperplane-filled" size="18" color="#2563EB"></uni-icons>
+              <text class="detail-pill-text">Finish {{ plannedEndTime }}</text>
+            </view>
+            <view class="detail-pill" v-if="activeRide.cardLast4">
+              <uni-icons type="wallet-filled" size="18" color="#2563EB"></uni-icons>
+              <text class="detail-pill-text">Card ending {{ activeRide.cardLast4 }}</text>
+            </view>
+          </view>
+        </uni-card>
+
+        <view class="support-grid">
+          <view class="support-card">
+            <text class="support-card-title">Need live ride controls?</text>
+            <text class="support-card-copy">
+              Open My Ride at any time for the live timer, ride controls, and safety actions.
+            </text>
+            <button class="secondary-action compact-action" @tap="goToRideDashboard">
+              <text>Open My Ride</text>
+            </button>
+          </view>
+
+          <view class="support-card">
+            <text class="support-card-title">Quick actions</text>
+            <text class="support-card-copy">
+              Extend the reservation, report a scooter issue, or finish the booking here when needed.
+            </text>
+            <view class="mode-action-row">
+              <button class="secondary-action compact-action" @tap="openIssuePopup">
+                <text>Report Issue</text>
+              </button>
+              <button
+                class="danger-action compact-action"
+                :disabled="busyAction === 'end'"
+                @tap="handleEndRide"
+              >
+                <text>{{ busyAction === 'end' ? 'Ending ride...' : 'End Ride' }}</text>
+              </button>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <view v-else-if="isTripPage" class="empty-state-shell">
         <uni-card
           title="No active ride found"
-          sub-title="Start a new booking from the scooter map to see your dashboard here."
+          sub-title="Start a new booking from the scooter map to unlock the live ride dashboard."
           is-shadow
         >
           <view class="empty-illustration">
             <view class="empty-icon-ring">
               <uni-icons type="paperplane-filled" size="34" color="#2563EB"></uni-icons>
             </view>
-            <text class="empty-title">You're not currently riding</text>
+            <text class="empty-title">My Ride is standing by</text>
             <text class="empty-subtitle">
-              Once a booking becomes active, this page will show the live countdown, extension controls, and issue reporting tools.
+              Once a ride becomes active, this page turns into your control center for countdowns, extensions, issue reports, and ending the rental safely.
             </text>
           </view>
 
@@ -192,6 +305,107 @@
             <text>Find a Scooter</text>
           </button>
         </uni-card>
+
+        <view class="support-grid">
+          <view class="support-card scaffold-card">
+            <text class="support-card-title">Ride dashboard preview</text>
+            <text class="support-card-copy">
+              The layout below fills with live data as soon as a scooter starts moving under your account.
+            </text>
+            <view class="preview-grid">
+              <view
+                v-for="item in tripPreviewItems"
+                :key="item.label"
+                class="preview-tile"
+              >
+                <text class="preview-label">{{ item.label }}</text>
+                <text class="preview-value">{{ item.value }}</text>
+              </view>
+            </view>
+          </view>
+
+          <view class="support-card">
+            <text class="support-card-title">What this page is for</text>
+            <view class="checklist-list">
+              <view
+                v-for="item in tripChecklist"
+                :key="item.title"
+                class="checklist-item"
+              >
+                <view class="item-icon">
+                  <uni-icons type="checkmarkempty" size="16" color="#1D4ED8"></uni-icons>
+                </view>
+                <view class="item-copy">
+                  <text class="item-title">{{ item.title }}</text>
+                  <text class="item-subtitle">{{ item.copy }}</text>
+                </view>
+              </view>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <view v-else class="empty-state-shell">
+        <uni-card
+          title="No booking details yet"
+          sub-title="Reserve a scooter to see the order summary, payment snapshot, and next steps here."
+          is-shadow
+        >
+          <view class="empty-illustration">
+            <view class="empty-icon-ring">
+              <uni-icons type="calendar-filled" size="34" color="#2563EB"></uni-icons>
+            </view>
+            <text class="empty-title">Book & Details is ready for your next order</text>
+            <text class="empty-subtitle">
+              Once you choose a scooter and confirm a plan, this page will keep the booking essentials together before and during the ride.
+            </text>
+          </view>
+
+          <view class="empty-actions">
+            <button class="primary-action compact-action" @tap="goToFindScooter">
+              <text>Book a Scooter</text>
+            </button>
+            <button class="secondary-action compact-action" @tap="goToRideDashboard">
+              <text>Open My Ride</text>
+            </button>
+          </view>
+        </uni-card>
+
+        <view class="support-grid">
+          <view class="support-card scaffold-card">
+            <text class="support-card-title">Booking framework</text>
+            <text class="support-card-copy">
+              These details will be filled automatically once a booking is created from the map.
+            </text>
+            <view class="placeholder-list">
+              <view
+                v-for="item in bookingPreviewItems"
+                :key="item.label"
+                class="placeholder-row"
+              >
+                <text class="placeholder-label">{{ item.label }}</text>
+                <text class="placeholder-value">{{ item.value }}</text>
+              </view>
+            </view>
+          </view>
+
+          <view class="support-card">
+            <text class="support-card-title">How booking works</text>
+            <view class="timeline-list">
+              <view
+                v-for="(step, index) in bookingSteps"
+                :key="step.title"
+                class="timeline-item"
+              >
+                <view class="timeline-step">{{ index + 1 }}</view>
+                <view class="item-copy">
+                  <text class="item-title">{{ step.title }}</text>
+                  <text class="item-subtitle">{{ step.copy }}</text>
+                </view>
+              </view>
+            </view>
+          </view>
+        </view>
       </view>
 
       <uni-popup ref="issuePopupRef" type="bottom" background-color="#FFFFFF" :safe-area="true">
@@ -284,11 +498,97 @@ const issueForm = ref({
   description: ''
 })
 
+const tripPreviewItems = [
+  { label: 'Live timer', value: 'Countdown and time left' },
+  { label: 'Scooter', value: 'Model, ID, and start time' },
+  { label: 'Controls', value: 'Extend time or end ride' },
+  { label: 'Support', value: 'Issue reporting tools' }
+]
+
+const tripChecklist = [
+  {
+    title: 'Watch your reserved time',
+    copy: 'See the countdown and planned finish time as soon as a ride becomes active.'
+  },
+  {
+    title: 'Handle ride actions quickly',
+    copy: 'Extend the booking, report a fault, or end the ride without leaving this page.'
+  },
+  {
+    title: 'Keep the ride transparent',
+    copy: 'The dashboard keeps scooter, timing, and reserved total together while you ride.'
+  }
+]
+
+const bookingPreviewItems = [
+  { label: 'Scooter', value: 'Assigned after you choose on the map' },
+  { label: 'Plan', value: 'Your selected duration and rate' },
+  { label: 'Payment', value: 'Saved card or payment summary' },
+  { label: 'Status', value: 'Booked, active, or completed' }
+]
+
+const bookingSteps = [
+  {
+    title: 'Choose a scooter',
+    copy: 'Pick an available scooter from the map and open the booking sheet.'
+  },
+  {
+    title: 'Confirm the plan',
+    copy: 'Select your duration, review pricing, and start the ride.'
+  },
+  {
+    title: 'Track the booking here',
+    copy: 'This page keeps the reservation snapshot, payment detail, and next actions together.'
+  }
+]
+
+const isBookingPage = computed(() => currentNavPage.value === 'booking')
+const isTripPage = computed(() => !isBookingPage.value)
+
+const heroContent = computed(() => {
+  if (isBookingPage.value) {
+    return {
+      eyebrow: 'Booking Overview',
+      title: activeRide.value
+        ? 'Everything reserved for this ride in one place'
+        : 'Book & Details is prepared for your next scooter order',
+      subtitle: activeRide.value
+        ? 'Review the reserved scooter, planned finish, payment snapshot, and next actions without switching context.'
+        : 'This page becomes your booking summary as soon as you confirm a scooter, keeping the plan, payment, and key ride details together.',
+      chip: activeRide.value ? 'Booking is active' : 'Waiting for booking'
+    }
+  }
+
+  return {
+    eyebrow: 'My Ride Dashboard',
+    title: activeRide.value
+      ? 'Stay in control while your scooter is on the move'
+      : 'Your ride controls will appear here the moment a trip starts',
+    subtitle: activeRide.value
+      ? 'Track the remaining rental time, add more minutes, end the ride safely, or report a fault without leaving the dashboard.'
+      : 'Use this page as your ride hub for countdowns, live controls, safety actions, and status updates once a scooter is in use.',
+    chip: activeRide.value ? 'Ride in progress' : 'Ready when you are'
+  }
+})
+
+const heroChipIcon = computed(() => (isBookingPage.value ? 'calendar-filled' : 'paperplane-filled'))
 const extensionMinutes = computed(() => extensionOptions[selectedExtensionIndex.value] || extensionOptions[0])
 const durationLabel = computed(() => `${Number(activeRide.value?.durationMinutes || 0)} min reserved`)
 const countdownHint = computed(() => {
   if (!activeRide.value) return ''
   return `Scooter #${activeRide.value.scooterId} is active and scheduled to finish at ${plannedEndTime.value}.`
+})
+const bookingOverviewItems = computed(() => {
+  if (!activeRide.value) return []
+
+  return [
+    { label: 'Booking', value: `#${activeRide.value.bookingId}` },
+    { label: 'Scooter', value: `#${activeRide.value.scooterId} ${activeRide.value.scooterModel}` },
+    { label: 'Booked from', value: formatDateTime(activeRide.value.startTime) },
+    { label: 'Planned finish', value: plannedEndTime.value },
+    { label: 'Reserved duration', value: durationLabel.value },
+    { label: 'Reserved total', value: formatMoney(activeRide.value.totalCost) }
+  ]
 })
 
 const countdownParts = computed(() => {
@@ -527,6 +827,11 @@ const goToFindScooter = () => {
   uni.navigateTo({ url: '/pages/find-scooter' })
 }
 
+const goToRideDashboard = () => {
+  if (currentNavPage.value === 'trip') return
+  uni.redirectTo({ url: '/pages/active-ride?source=trip' })
+}
+
 onLoad((options) => {
   currentNavPage.value = options?.source === 'booking' ? 'booking' : 'trip'
 })
@@ -612,6 +917,45 @@ onUnload(() => {
   display: flex;
   flex-direction: column;
   gap: 8rpx;
+}
+
+.booking-dashboard {
+  gap: 18rpx;
+}
+
+.overview-grid,
+.support-grid,
+.preview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16rpx;
+}
+
+.overview-tile,
+.preview-tile {
+  padding: 22rpx;
+  border-radius: 24rpx;
+  background: linear-gradient(180deg, #F8FBFF 0%, #EEF6FF 100%);
+  border: 1rpx solid rgba(37, 99, 235, 0.10);
+}
+
+.overview-label,
+.preview-label,
+.placeholder-label {
+  display: block;
+  font-size: 22rpx;
+  color: #64748B;
+  margin-bottom: 8rpx;
+}
+
+.overview-value,
+.preview-value,
+.placeholder-value {
+  display: block;
+  font-size: 27rpx;
+  color: #0F172A;
+  font-weight: 700;
+  line-height: 1.5;
 }
 
 .timer-shell {
@@ -793,7 +1137,130 @@ onUnload(() => {
 }
 
 .empty-state-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 18rpx;
   margin-top: 12rpx;
+}
+
+.empty-actions,
+.mode-action-row {
+  display: flex;
+  gap: 16rpx;
+}
+
+.mode-action-row {
+  margin-top: 22rpx;
+}
+
+.support-card {
+  padding: 28rpx;
+  border-radius: 30rpx;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1rpx solid rgba(148, 163, 184, 0.14);
+  box-shadow: 0 18rpx 48rpx rgba(15, 23, 42, 0.06);
+}
+
+.scaffold-card {
+  background: linear-gradient(180deg, rgba(239, 246, 255, 0.92) 0%, rgba(255, 255, 255, 0.98) 100%);
+}
+
+.support-card-title {
+  display: block;
+  font-size: 30rpx;
+  font-weight: 800;
+  color: #0F172A;
+}
+
+.support-card-copy {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  color: #64748B;
+  line-height: 1.7;
+}
+
+.compact-action {
+  min-height: 84rpx;
+  margin-top: 22rpx;
+  flex: 1;
+}
+
+.mode-action-row .compact-action,
+.empty-actions .compact-action {
+  margin-top: 0;
+}
+
+.checklist-list,
+.timeline-list,
+.placeholder-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+  margin-top: 22rpx;
+}
+
+.checklist-item,
+.timeline-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 16rpx;
+}
+
+.item-icon,
+.timeline-step {
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 14rpx;
+  background: #EFF6FF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.timeline-step {
+  background: linear-gradient(135deg, #DBEAFE, #BFDBFE);
+  color: #1D4ED8;
+  font-size: 24rpx;
+  font-weight: 800;
+}
+
+.item-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.item-title {
+  display: block;
+  font-size: 26rpx;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.item-subtitle {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 23rpx;
+  line-height: 1.65;
+  color: #64748B;
+}
+
+.placeholder-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 18rpx;
+  padding: 18rpx 0;
+  border-bottom: 1rpx solid #E2E8F0;
+}
+
+.placeholder-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.placeholder-value {
+  text-align: right;
 }
 
 .empty-illustration {
@@ -897,10 +1364,15 @@ onUnload(() => {
 
   .timer-summary-grid,
   .extend-preview,
-  .action-grid {
+  .action-grid,
+  .overview-grid,
+  .support-grid,
+  .preview-grid {
     grid-template-columns: 1fr;
   }
 
+  .empty-actions,
+  .mode-action-row,
   .issue-actions {
     flex-direction: column;
   }

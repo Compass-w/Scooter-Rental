@@ -599,26 +599,25 @@
         <view class="ph-stats-strip">
           <view class="ph-stat">
             <view class="ph-stat-value-row">
-              <text class="ph-stat-val">{{ stats.totalKm }}</text>
-              <text class="ph-stat-unit">km</text>
+              <text class="ph-stat-val">{{ stats.totalRides }}</text>
+              <text class="ph-stat-unit">rides</text>
             </view>
-            <text class="ph-stat-label">Distance</text>
+            <text class="ph-stat-label">Completed</text>
           </view>
           <view class="ph-stat-sep"></view>
           <view class="ph-stat">
             <view class="ph-stat-value-row">
-              <text class="ph-stat-val">{{ (stats.totalKm * 0.057).toFixed(1) }}k</text>
-              <text class="ph-stat-unit">kcal</text>
+              <text class="ph-stat-val">{{ stats.totalMinutes }}</text>
+              <text class="ph-stat-unit">min</text>
             </view>
-            <text class="ph-stat-label">Calories</text>
+            <text class="ph-stat-label">Ride Time</text>
           </view>
           <view class="ph-stat-sep"></view>
           <view class="ph-stat">
             <view class="ph-stat-value-row">
-              <text class="ph-stat-val">{{ stats.co2Saved }}</text>
-              <text class="ph-stat-unit">kg</text>
+              <text class="ph-stat-val">£{{ stats.totalSpent }}</text>
             </view>
-            <text class="ph-stat-label">CO₂ Saved</text>
+            <text class="ph-stat-label">Total Spent</text>
           </view>
           <view class="ph-stat-sep"></view>
           <!-- Trip Records action -->
@@ -654,12 +653,12 @@
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5">
                   <path d="M12 22V12M12 12C12 6 6 2 2 6c0 4 4 6 10 6zM12 12C12 6 18 2 22 6c0 4-4 6-10 6z"/>
                 </svg>
-                <text class="pc-eco-text">+{{ (recentTrips[0].km * 39.2).toFixed(0) }}g CO₂</text>
+                <text class="pc-eco-text">Booking #{{ recentTrips[0].bookingId }}</text>
               </view>
             </view>
             <view class="pc-ride-status-row">
               <view class="pc-status-dot"></view>
-              <text class="pc-status-text">Completed</text>
+              <text class="pc-status-text">{{ recentTrips[0].statusLabel }}</text>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5">
                 <polyline points="9 18 15 12 9 6"/>
               </svg>
@@ -669,7 +668,7 @@
           <view class="pc-ride-bottom">
             <view class="pc-ride-meta">
               <text class="pc-ride-date">{{ recentTrips[0].date }} · {{ recentTrips[0].duration }} min</text>
-              <text class="pc-ride-route">{{ recentTrips[0].from }} → {{ recentTrips[0].to }}</text>
+              <text class="pc-ride-route">{{ recentTrips[0].scooterLabel }}</text>
             </view>
             <text class="pc-ride-cost">£{{ recentTrips[0].cost }}</text>
           </view>
@@ -795,13 +794,13 @@
               <text class="pc-trip-num">{{ i + 1 }}</text>
             </view>
             <view class="pc-trip-info">
-              <text class="pc-trip-route">{{ trip.from }} → {{ trip.to }}</text>
-              <text class="pc-trip-meta">{{ trip.date }} · {{ trip.duration }}min · {{ trip.km }}km</text>
+              <text class="pc-trip-route">{{ trip.scooterLabel }}</text>
+              <text class="pc-trip-meta">{{ trip.date }} · {{ trip.duration }} min · {{ trip.statusLabel }}</text>
             </view>
             <view class="pc-trip-right">
               <text class="pc-trip-cost">£{{ trip.cost }}</text>
               <view class="pc-trip-pill pill-done">
-                <text class="pc-trip-pill-text">Done</text>
+                <text class="pc-trip-pill-text">{{ trip.statusLabel }}</text>
               </view>
             </view>
           </view>
@@ -825,7 +824,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
 import BaseLayout from '@/pages/BaseLayout.vue'
 import {
   getProfile, updateProfile,
@@ -850,9 +850,8 @@ const closeDrawer = () => { drawerOpen.value = false }
 
 // Reactive state — statistics
 const activePeriod = ref('Month')
-const stats        = ref({ totalRides: 0, totalKm: 0, co2Saved: 0, totalSpent: '0.00' })
-const periodStats  = ref({ rides: 0, avgDuration: 0, km: 0, spent: '0.00' })
-const co2Progress  = computed(() => Math.min((stats.value.co2Saved / 50) * 100, 100))
+const stats        = ref({ totalRides: 0, totalMinutes: 0, totalSpent: '0.00', currentRides: 0 })
+const periodStats  = ref({ rides: 0, minutes: 0, spent: '0.00' })
 
 // Reactive state — wallet
 const wallet  = ref({ balance: '0.00', autoTopUp: false, paymentMethods: [] })
@@ -912,6 +911,7 @@ async function loadProfile() {
       createdAt: data.createdAt || ''
     }
     uni.setStorageSync('userInfo', JSON.stringify(userInfo.value))
+    uni.$emit('user-profile-updated')
   } catch {
     try {
       const s = uni.getStorageSync('userInfo')
@@ -943,16 +943,15 @@ async function loadStats(period = 'Month') {
   try {
     const data = await getStats(period)
     stats.value = {
-      totalRides: data.totalRides ?? 0,
-      totalKm:    data.totalKm   ?? 0,
-      co2Saved:   data.co2Saved  ?? 0,
-      totalSpent: data.totalSpent ?? '0.00'
+      totalRides:   data.totalRides   ?? 0,
+      totalMinutes: data.totalMinutes ?? 0,
+      totalSpent:   data.totalSpent   ?? '0.00',
+      currentRides: data.currentRides ?? 0
     }
     periodStats.value = {
-      rides:       data.periodRides       ?? 0,
-      avgDuration: data.periodAvgDuration ?? 0,
-      km:          data.periodKm          ?? 0,
-      spent:       data.periodSpent       ?? '0.00'
+      rides:   data.periodRides   ?? 0,
+      minutes: data.periodMinutes ?? 0,
+      spent:   data.periodSpent   ?? '0.00'
     }
   } catch (e) {
     console.error('Failed to load stats:', e)
@@ -1025,16 +1024,16 @@ async function loadSettings() {
  * Component mounted lifecycle hook
  * Load all page data in parallel
  */
-onMounted(() => {
-  Promise.all([
-    loadProfile(),
-    loadStats('Month'),
-    loadWallet(),
-    loadRecentTrips(),
-    loadBookings('upcoming'),
-    loadBookings('past'),
-    loadSettings()
-  ])
+const refreshProfilePage = () => Promise.all([
+  loadProfile(),
+  loadStats('Month'),
+  loadWallet(),
+  loadRecentTrips(),
+  loadSettings()
+])
+
+onShow(() => {
+  refreshProfilePage()
 })
 
 /**
@@ -1078,7 +1077,7 @@ const saveInfo = async () => {
       phone:    editForm.value.phone,
       city:     editForm.value.city,
     }
-    const res = await updateProfile(payload)
+    await updateProfile(payload)
     userInfo.value = {
       ...userInfo.value,
       name:     editForm.value.name,
@@ -1088,6 +1087,7 @@ const saveInfo = async () => {
       city:     editForm.value.city
     }
     uni.setStorageSync('userInfo', JSON.stringify(userInfo.value))
+    uni.$emit('user-profile-updated')
     editingInfo.value = false
     uni.showToast({ title: 'Profile updated!', icon: 'success' })
   } catch (e) {
@@ -1110,6 +1110,7 @@ const changeAvatar = () => {
     success(res) {
       userInfo.value.avatar = res.tempFilePaths[0]
       uni.setStorageSync('userInfo', JSON.stringify(userInfo.value))
+      uni.$emit('user-profile-updated')
       uni.showToast({ title: 'Avatar updated', icon: 'success' })
     }
   })
