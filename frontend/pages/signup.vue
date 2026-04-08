@@ -81,20 +81,38 @@
           <!-- Phone -->
           <view class="form-group">
             <text class="label">Phone Number</text>
-            <view class="input-wrapper" :class="fieldState('phone')">
-              <view class="icon-left">
-                <uni-icons type="phone" size="24" :color="iconColor('phone')"></uni-icons>
-              </view>
-              <input
-                class="input-pill"
-                v-model="phone"
-                type="text"
-                placeholder="07123456789"
-                @blur="validateField('phone')"
-                @input="clearError('phone')"
-              />
-              <view class="icon-right" v-if="touched.phone">
-                <uni-icons :type="errors.phone ? 'closeempty' : 'checkmarkempty'" size="20" :color="errors.phone ? '#EF4444' : '#10B981'"></uni-icons>
+            <view class="phone-field-row" :class="fieldState('phone')">
+              <picker
+                class="country-code-picker"
+                :range="countryCodeOptions"
+                range-key="label"
+                :value="selectedCountryIndex"
+                @change="handleCountryCodeChange"
+              >
+                <view class="country-code-pill">
+                  <view class="country-code-copy">
+                    <text class="country-code-value">{{ selectedCountry.code }}</text>
+                    <text class="country-code-label">{{ selectedCountry.shortLabel }}</text>
+                  </view>
+                  <uni-icons type="bottom" size="16" color="#64748B"></uni-icons>
+                </view>
+              </picker>
+
+              <view class="input-wrapper phone-input-wrap" :class="fieldState('phone')">
+                <view class="icon-left">
+                  <uni-icons type="phone" size="24" :color="iconColor('phone')"></uni-icons>
+                </view>
+                <input
+                  class="input-pill"
+                  v-model="phone"
+                  type="text"
+                  :placeholder="selectedCountry.example"
+                  @blur="validateField('phone')"
+                  @input="handlePhoneInput"
+                />
+                <view class="icon-right" v-if="touched.phone">
+                  <uni-icons :type="errors.phone ? 'closeempty' : 'checkmarkempty'" size="20" :color="errors.phone ? '#EF4444' : '#10B981'"></uni-icons>
+                </view>
               </view>
             </view>
             <view class="hint-row" v-if="errors.phone">
@@ -103,9 +121,9 @@
             </view>
             <view class="hint-row" v-else-if="touched.phone && !errors.phone">
               <uni-icons type="checkmarkempty" size="14" color="#10B981"></uni-icons>
-              <text class="hint-success">Valid UK mobile number</text>
+              <text class="hint-success">Will be saved as {{ formattedPhone }}</text>
             </view>
-            <text class="input-hint" v-else>UK format: starts with 07, 11 digits total</text>
+            <text class="input-hint" v-else>Select a country code and enter the local phone number. Example: {{ selectedCountry.code }} {{ selectedCountry.example }}</text>
           </view>
 
           <!-- Password -->
@@ -217,12 +235,24 @@ import { ref, reactive, computed } from 'vue'
 import { register as registerApi } from '@/api/user.js'
 import BaseLayout from '@/pages/BaseLayout.vue'
 
+const countryCodeOptions = [
+  { label: 'China Mainland (+86)', shortLabel: 'China', code: '+86', example: '13800138000' },
+  { label: 'Hong Kong (+852)', shortLabel: 'Hong Kong', code: '+852', example: '51234567' },
+  { label: 'Singapore (+65)', shortLabel: 'Singapore', code: '+65', example: '81234567' },
+  { label: 'Japan (+81)', shortLabel: 'Japan', code: '+81', example: '9012345678' },
+  { label: 'South Korea (+82)', shortLabel: 'Korea', code: '+82', example: '1012345678' },
+  { label: 'United Kingdom (+44)', shortLabel: 'UK', code: '+44', example: '7123456789' },
+  { label: 'United States (+1)', shortLabel: 'US', code: '+1', example: '4155550123' },
+  { label: 'Australia (+61)', shortLabel: 'Australia', code: '+61', example: '412345678' }
+]
+
 // ─── Form fields ───────────────────────────────────────────────
 const username        = ref('')
 const email           = ref('')
 const phone           = ref('')
 const password        = ref('')
 const confirmPassword = ref('')
+const selectedCountryIndex = ref(0)
 const showPwd         = ref(false)
 const showConfirmPwd  = ref(false)
 const agreeTerms      = ref(false)
@@ -254,7 +284,19 @@ const pwdStrength = computed(() => {
 
 // ─── Helpers ───────────────────────────────────────────────────
 const validateEmail = v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)
-const validatePhone = v => /^07\d{9}$/.test(v)
+const digitsOnly = (value) => String(value || '').replace(/\D/g, '')
+const selectedCountry = computed(() => countryCodeOptions[selectedCountryIndex.value] || countryCodeOptions[0])
+const formattedPhone = computed(() => {
+  const localDigits = digitsOnly(phone.value)
+  return localDigits ? `${selectedCountry.value.code} ${localDigits}` : ''
+})
+const validatePhone = (value) => {
+  const localDigits = digitsOnly(value)
+  const countryDigits = digitsOnly(selectedCountry.value.code)
+
+  if (localDigits.length < 6 || localDigits.length > 14) return false
+  return (localDigits.length + countryDigits.length) <= 15
+}
 
 const fieldState = (field) => {
   if (!touched[field]) return ''
@@ -266,6 +308,16 @@ const iconColor = (field) => {
 }
 
 const clearError = (field) => { errors[field] = '' }
+
+const handlePhoneInput = (event) => {
+  phone.value = digitsOnly(event?.detail?.value ?? phone.value)
+  clearError('phone')
+}
+
+const handleCountryCodeChange = (event) => {
+  selectedCountryIndex.value = Number(event?.detail?.value || 0)
+  if (touched.phone) validateField('phone')
+}
 
 const validateField = (field) => {
   touched[field] = true
@@ -291,10 +343,10 @@ const validateField = (field) => {
         errors.email = ''
       break
     case 'phone':
-      if (!phone.value.trim())
+      if (!digitsOnly(phone.value))
         errors.phone = 'Phone number is required'
-      else if (!validatePhone(phone.value.trim()))
-        errors.phone = 'Must start with 07 and be exactly 11 digits (e.g. 07123456789)'
+      else if (!validatePhone(phone.value))
+        errors.phone = `Enter 6 to 14 digits for the local number. It will be saved with ${selectedCountry.value.code}.`
       else
         errors.phone = ''
       break
@@ -354,7 +406,7 @@ const handleSignup = async () => {
     await registerApi({
       username:     username.value.trim(),
       email:        email.value.trim(),
-      phoneNumber:  phone.value.trim(),
+      phone:        formattedPhone.value,
       passwordHash: password.value,
     })
     uni.showToast({ title: 'Account created successfully! 🎉', icon: 'success', duration: 2000 })
@@ -462,6 +514,65 @@ const goToLogin = () => { uni.navigateTo({ url: '/pages/login' }) }
   position: relative;
   display: flex;
   align-items: center;
+}
+
+.phone-field-row {
+  display: flex;
+  gap: 16rpx;
+  align-items: stretch;
+}
+
+.country-code-picker {
+  width: 260rpx;
+  flex-shrink: 0;
+}
+
+.country-code-pill {
+  height: 110rpx;
+  border: 2rpx solid #E5E7EB;
+  border-radius: 60rpx;
+  background: #fff;
+  padding: 0 28rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+  transition: all 0.3s;
+}
+
+.country-code-copy {
+  min-width: 0;
+}
+
+.country-code-value {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #1F2937;
+}
+
+.country-code-label {
+  display: block;
+  margin-top: 4rpx;
+  font-size: 22rpx;
+  color: #6B7280;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.phone-input-wrap {
+  flex: 1;
+}
+
+.phone-field-row.input-error .country-code-pill {
+  border-color: #EF4444;
+  background: #FFF5F5;
+}
+
+.phone-field-row.input-success .country-code-pill {
+  border-color: #10B981;
+  background: #F0FDF4;
 }
 
 .input-wrapper.input-error .input-pill {
@@ -640,5 +751,7 @@ const goToLogin = () => { uni.navigateTo({ url: '/pages/login' }) }
 @media (max-width: 750px) {
   .signup-card    { padding: 60rpx 40rpx; }
   .main-container { padding: 40rpx 30rpx; }
+  .phone-field-row { flex-direction: column; }
+  .country-code-picker { width: 100%; }
 }
 </style>

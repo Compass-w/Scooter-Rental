@@ -11,7 +11,7 @@
       <view class="hero-content">
         <view class="hero-badge">
           <view class="badge-dot"></view>
-          <text class="badge-text"> Now available in 12+ cities</text>
+          <text class="badge-text"> Now available in 18+ cities</text>
         </view>
         <text class="hero-title">Ride Smart,<br/>Ride <text class="hero-title-accent">Green</text></text>
         <text class="hero-subtitle">
@@ -32,7 +32,7 @@
           </view>
           <view class="stat-divider"></view>
           <view class="stat-item">
-            <text class="stat-number">12</text>
+            <text class="stat-number">18</text>
             <text class="stat-label">Cities</text>
           </view>
           <view class="stat-divider"></view>
@@ -387,7 +387,7 @@
           <text class="section-badge-text">Locations</text>
         </view>
         <text class="section-title white">Available in your city</text>
-        <text class="section-subtitle white-muted">Expanding across the UK and Europe. More cities launching every month.</text>
+        <text class="section-subtitle white-muted">Growing across China, Asia, Europe, and major global commuter hubs. More cities launch every month.</text>
         <view class="cities-grid">
           <view class="city-card" v-for="city in cities" :key="city.name">
             <text class="city-flag">{{ city.flag }}</text>
@@ -450,18 +450,24 @@ import { ref } from 'vue'
 import BaseLayout from '@/pages/BaseLayout.vue'
 
 const cities = ref([
+  { name: 'Shanghai',   flag: '', live: true  },
+  { name: 'Beijing',    flag: '', live: true  },
+  { name: 'Shenzhen',   flag: '', live: true  },
+  { name: 'Guangzhou',  flag: '', live: true  },
+  { name: 'Hangzhou',   flag: '', live: true  },
+  { name: 'Chengdu',    flag: '', live: true  },
+  { name: 'Nanjing',    flag: '', live: true  },
+  { name: 'Suzhou',     flag: '', live: true  },
+  { name: 'Hong Kong',  flag: '', live: true  },
+  { name: 'Singapore',  flag: '', live: true  },
+  { name: 'Tokyo',      flag: '', live: true  },
   { name: 'London',     flag: '', live: true  },
-  { name: 'Manchester', flag: '', live: true  },
-  { name: 'Birmingham', flag: '', live: true  },
-  { name: 'Edinburgh',  flag: '', live: true  },
-  { name: 'Bristol',    flag: '', live: true  },
-  { name: 'Leeds',      flag: '', live: true  },
-  { name: 'Liverpool',  flag: '', live: false },
-  { name: 'Amsterdam',  flag: '', live: false },
-  { name: 'Paris',      flag: '', live: false },
-  { name: 'Berlin',     flag: '', live: false },
-  { name: 'Dublin',     flag: '', live: false },
-  { name: 'Barcelona',  flag: '', live: false },
+  { name: 'Chongqing',  flag: '', live: false },
+  { name: 'Wuhan',      flag: '', live: false },
+  { name: "Xi'an",      flag: '', live: false },
+  { name: 'Seoul',      flag: '', live: false },
+  { name: 'Bangkok',    flag: '', live: false },
+  { name: 'Dubai',      flag: '', live: false },
 ])
 
 const reviews = ref([

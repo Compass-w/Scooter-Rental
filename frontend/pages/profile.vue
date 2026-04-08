@@ -125,7 +125,7 @@
                 <text class="dform-label">Phone</text>
                 <view class="dform-input-wrap">
                   <uni-icons type="phone" size="17" color="#CBD5E1" class="dform-icon"></uni-icons>
-                  <input class="dform-input" v-model="editForm.phone" placeholder="07xxxxxxxxx"/>
+                  <input class="dform-input" v-model="editForm.phone" placeholder="e.g. +86 13800138000"/>
                 </view>
               </view>
               <view class="dform-group">
