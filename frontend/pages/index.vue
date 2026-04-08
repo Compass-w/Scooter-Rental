@@ -345,7 +345,7 @@
                 <text class="plan-feature-text white">Priority scooter reservation</text>
               </view>
             </view>
-            <button class="btn-white-pill plan-btn" @tap="goToSignup">Start Monthly Pass</button>
+            <button class="btn-white-pill plan-btn" @tap="startMonthlyPass">Start Monthly Pass</button>
           </view>
 
           <!-- Business -->
@@ -390,8 +390,10 @@
         <text class="section-subtitle white-muted">Growing across China, Asia, Europe, and major global commuter hubs. More cities launch every month.</text>
         <view class="cities-grid">
           <view class="city-card" v-for="city in cities" :key="city.name">
-            <text class="city-flag">{{ city.flag }}</text>
-            <text class="city-name">{{ city.name }}</text>
+            <view class="city-main">
+              <text v-if="city.flag" class="city-flag">{{ city.flag }}</text>
+              <text class="city-name">{{ city.name }}</text>
+            </view>
             <view class="city-status" :class="city.live ? 'live' : 'soon'">
               <view class="city-dot"></view>
               <text class="city-status-text">{{ city.live ? 'Live' : 'Coming soon' }}</text>
@@ -491,12 +493,65 @@ const reviews = ref([
   },
 ])
 
+const hasActiveSession = () => {
+  try {
+    return Boolean(uni.getStorageSync('token') || uni.getStorageSync('userToken'))
+  } catch {
+    return false
+  }
+}
+
+const openFindScooter = () => {
+  uni.navigateTo({ url: '/pages/find-scooter' })
+}
+
+const openProfile = () => {
+  uni.navigateTo({ url: '/pages/profile' })
+}
+
 const goToSignup = () => {
+  if (hasActiveSession()) {
+    uni.showToast({
+      title: 'Welcome back. Choose a scooter to ride.',
+      icon: 'none'
+    })
+    openFindScooter()
+    return
+  }
+
   uni.navigateTo({ url: '/pages/signup' })
 }
 
 const goToLogin = () => {
+  if (hasActiveSession()) {
+    uni.showToast({
+      title: 'You are already signed in.',
+      icon: 'none'
+    })
+    openProfile()
+    return
+  }
+
   uni.navigateTo({ url: '/pages/login' })
+}
+
+const startMonthlyPass = () => {
+  if (!hasActiveSession()) {
+    uni.navigateTo({ url: '/pages/signup' })
+    return
+  }
+
+  uni.showModal({
+    title: 'Monthly Pass',
+    content: 'You are already signed in. Monthly Pass checkout is coming soon. Open the scooter map instead?',
+    confirmText: 'Open Map',
+    cancelText: 'Later',
+    success: ({ confirm }) => {
+      if (confirm) {
+        openFindScooter()
+      }
+    }
+  })
 }
 
 const scrollToHowItWorks = () => {
@@ -1307,7 +1362,7 @@ const contactSales = () => {
 
 .cities-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300rpx, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(340rpx, 1fr));
   gap: 24rpx;
 }
 
@@ -1318,18 +1373,33 @@ const contactSales = () => {
   padding: 36rpx 40rpx;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 20rpx;
+  min-width: 0;
+}
+
+.city-main {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  min-width: 0;
+  flex: 1;
 }
 
 .city-flag {
   font-size: 36rpx;
+  flex-shrink: 0;
 }
 
 .city-name {
   flex: 1;
+  min-width: 0;
   font-size: 32rpx;
   font-weight: 600;
   color: white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .city-status {
@@ -1337,7 +1407,8 @@ const contactSales = () => {
   align-items: center;
   gap: 10rpx;
   border-radius: 30rpx;
-  padding: 8rpx 24rpx;
+  padding: 8rpx 20rpx;
+  flex-shrink: 0;
 }
 
 .city-status.live {
@@ -1363,7 +1434,7 @@ const contactSales = () => {
 }
 
 .city-status-text {
-  font-size: 22rpx;
+  font-size: 20rpx;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -1603,7 +1674,7 @@ const contactSales = () => {
     display: none;
   }
   .cities-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
   }
   .cta-title {
     font-size: 56rpx;
