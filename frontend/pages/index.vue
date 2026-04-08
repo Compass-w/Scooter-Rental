@@ -800,6 +800,8 @@ const contactSales = () => {
   padding: 0 60rpx;
   height: 110rpx;
   line-height: 110rpx;
+  cursor: pointer;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, filter 0.22s ease;
 }
 
 .btn-primary-pill::after {
@@ -817,6 +819,8 @@ const contactSales = () => {
   height: 110rpx;
   line-height: 110rpx;
   box-shadow: 0 4rpx 12rpx rgba(37, 99, 235, 0.08);
+  cursor: pointer;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, background 0.22s ease, border-color 0.22s ease;
 }
 
 .btn-outline-pill::after {
@@ -1000,6 +1004,7 @@ const contactSales = () => {
   box-shadow: 0 4rpx 20rpx rgba(37, 99, 235, 0.06);
   position: relative;
   overflow: hidden;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
 }
 
 .step-number {
@@ -1086,7 +1091,7 @@ const contactSales = () => {
   padding: 60rpx 50rpx;
   border: 1rpx solid #E5E7EB;
   box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.04);
-  transition: box-shadow 0.3s, transform 0.3s;
+  transition: box-shadow 0.22s ease, transform 0.22s ease, border-color 0.22s ease;
 }
 
 .feature-card:active {
@@ -1194,6 +1199,7 @@ const contactSales = () => {
   border: 1rpx solid #E5E7EB;
   box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.04);
   position: relative;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
 }
 
 .pricing-card-featured {
@@ -1351,6 +1357,8 @@ const contactSales = () => {
   font-weight: 700;
   border: none;
   box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, filter 0.22s ease;
 }
 
 .btn-white-pill::after {
@@ -1371,16 +1379,17 @@ const contactSales = () => {
   border: 1rpx solid rgba(255, 255, 255, 0.1);
   border-radius: 24rpx;
   padding: 36rpx 40rpx;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   gap: 20rpx;
   min-width: 0;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, background 0.22s ease, border-color 0.22s ease;
 }
 
 .city-main {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 20rpx;
   min-width: 0;
   flex: 1;
@@ -1397,9 +1406,10 @@ const contactSales = () => {
   font-size: 32rpx;
   font-weight: 600;
   color: white;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.3;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
 }
 
 .city-status {
@@ -1409,6 +1419,7 @@ const contactSales = () => {
   border-radius: 30rpx;
   padding: 8rpx 20rpx;
   flex-shrink: 0;
+  justify-self: end;
 }
 
 .city-status.live {
@@ -1461,6 +1472,7 @@ const contactSales = () => {
   border: 1rpx solid #E5E7EB;
   border-radius: 40rpx;
   padding: 60rpx 50rpx;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
 }
 
 .review-stars {
@@ -1597,12 +1609,65 @@ const contactSales = () => {
   padding: 0 80rpx;
   height: 110rpx;
   line-height: 110rpx;
+  cursor: pointer;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, background 0.22s ease, border-color 0.22s ease;
 }
 
 .btn-outline-white-pill::after {
   border: none;
 }
 
+
+@media (hover: hover) {
+  .btn-primary-pill:hover,
+  .btn-white-pill:hover {
+    transform: translateY(-4rpx);
+    filter: brightness(1.03);
+  }
+
+  .btn-primary-pill:hover {
+    box-shadow: 0 14rpx 32rpx rgba(37, 99, 235, 0.34);
+  }
+
+  .btn-outline-pill:hover {
+    transform: translateY(-4rpx);
+    background: #EFF6FF;
+    border-color: #1D4ED8;
+    box-shadow: 0 12rpx 26rpx rgba(37, 99, 235, 0.12);
+  }
+
+  .btn-white-pill:hover {
+    box-shadow: 0 14rpx 30rpx rgba(15, 23, 42, 0.16);
+  }
+
+  .btn-outline-white-pill:hover {
+    transform: translateY(-4rpx);
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.78);
+    box-shadow: 0 14rpx 30rpx rgba(15, 23, 42, 0.12);
+  }
+
+  .step-card:hover,
+  .feature-card:hover,
+  .pricing-card:hover,
+  .review-card:hover,
+  .city-card:hover {
+    transform: translateY(-6rpx);
+    box-shadow: 0 18rpx 38rpx rgba(15, 23, 42, 0.12);
+  }
+
+  .step-card:hover,
+  .feature-card:hover,
+  .pricing-card:hover,
+  .review-card:hover {
+    border-color: rgba(37, 99, 235, 0.16);
+  }
+
+  .city-card:hover {
+    background: rgba(255, 255, 255, 0.09);
+    border-color: rgba(147, 197, 253, 0.26);
+  }
+}
 
 /* ========== Responsive ========== */
 
@@ -1663,6 +1728,15 @@ const contactSales = () => {
   }
   .section-inner {
     padding: 0 40rpx;
+  }
+
+  .city-card {
+    grid-template-columns: 1fr;
+    align-items: flex-start;
+  }
+
+  .city-status {
+    justify-self: start;
   }
 }
 

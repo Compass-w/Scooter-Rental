@@ -2913,6 +2913,137 @@ const confirmLogout = () => {
   color: #EF4444;
 }
 
+.drawer-close-btn,
+.drawer-row,
+.dform-btn-ghost,
+.dform-btn-primary,
+.toggle-switch,
+.modal-close-btn,
+.btn-ghost,
+.btn-danger-pill,
+.wm-topup-btn,
+.wm-action-btn,
+.wm-add-card-header,
+.ph-back-btn,
+.ph-nav-btn,
+.ph-avatar-wrap,
+.ph-stat-tap,
+.pc-card,
+.pc-pkg-buy-btn,
+.pc-pkg-item,
+.pc-menu-item,
+.pc-cancel-btn,
+.pc-receipt-btn,
+.pc-empty-btn,
+.pc-view-all,
+.pc-trip-row,
+.pc-logout-row {
+  transition: transform 0.22s ease, box-shadow 0.22s ease, background 0.22s ease, border-color 0.22s ease, opacity 0.22s ease;
+}
+
+@media (hover: hover) {
+  .drawer-close-btn:hover,
+  .modal-close-btn:hover {
+    transform: translateY(-2rpx);
+    background: #E2E8F0;
+  }
+
+  .drawer-row:hover {
+    background: #F8FAFC;
+  }
+
+  .dform-btn-ghost:hover,
+  .btn-ghost:hover {
+    transform: translateY(-3rpx);
+    background: #E2E8F0;
+    box-shadow: 0 10rpx 22rpx rgba(148, 163, 184, 0.18);
+  }
+
+  .dform-btn-primary:hover,
+  .btn-danger-pill:hover,
+  .pc-empty-btn:hover {
+    transform: translateY(-4rpx);
+    box-shadow: 0 14rpx 28rpx rgba(37, 99, 235, 0.24);
+  }
+
+  .toggle-switch:hover {
+    transform: scale(1.04);
+  }
+
+  .wm-topup-btn:hover {
+    transform: translateY(-3rpx);
+    background: rgba(255, 255, 255, 0.3);
+    box-shadow: 0 10rpx 24rpx rgba(5, 150, 105, 0.18);
+  }
+
+  .wm-action-btn:hover,
+  .wm-add-card-header:hover {
+    transform: translateY(-3rpx);
+    background: #EFF6FF;
+    border-color: #BFDBFE;
+    box-shadow: 0 12rpx 24rpx rgba(59, 130, 246, 0.12);
+  }
+
+  .ph-back-btn:hover,
+  .ph-nav-btn:hover {
+    transform: translateY(-2rpx);
+    background: rgba(255, 255, 255, 0.22);
+  }
+
+  .ph-avatar-wrap:hover {
+    transform: translateY(-4rpx) scale(1.015);
+  }
+
+  .ph-stat-tap:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .pc-card:hover {
+    box-shadow:
+      0 14rpx 34rpx rgba(15, 23, 42, 0.09),
+      0 2rpx 8rpx rgba(15, 23, 42, 0.06);
+  }
+
+  .pc-ride-card:hover,
+  .pc-pkg-buy-btn:hover,
+  .pc-pkg-item:hover,
+  .pc-menu-item:hover,
+  .pc-trip-row:hover,
+  .pc-logout-row:hover,
+  .pc-view-all:hover,
+  .pc-cancel-btn:hover,
+  .pc-receipt-btn:hover {
+    transform: translateY(-3rpx);
+  }
+
+  .pc-pkg-buy-btn:hover,
+  .pc-empty-btn:hover,
+  .pc-receipt-btn:hover {
+    box-shadow: 0 12rpx 24rpx rgba(59, 130, 246, 0.18);
+  }
+
+  .pc-menu-item:hover,
+  .pc-trip-row:hover {
+    background: #F8FAFC;
+  }
+
+  .pc-cancel-btn:hover {
+    background: #FEE2E2;
+  }
+
+  .pc-receipt-btn:hover {
+    background: #DBEAFE;
+  }
+
+  .pc-view-all:hover .pc-view-all-text {
+    color: #1D4ED8;
+  }
+
+  .pc-logout-row:hover {
+    box-shadow: 0 14rpx 30rpx rgba(239, 68, 68, 0.08);
+  }
+}
+
 /* ========== Responsive Adjustments ========== */
 @media (max-width: 750px) {
   .settings-drawer {

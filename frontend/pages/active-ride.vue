@@ -29,9 +29,12 @@
         background-color="#EFF6FF"
       />
 
-      <uni-load-more v-if="syncing && !activeRide" status="loading" />
+      <view v-if="syncing && !activeRide" class="syncing-banner">
+        <view class="syncing-dot"></view>
+        <text class="syncing-text">Checking your latest booking details...</text>
+      </view>
 
-      <view v-else-if="activeRide && isTripPage" class="dashboard-stack">
+      <view v-if="activeRide && isTripPage" class="dashboard-stack">
         <uni-card
           title="Remaining Rental Time"
           sub-title="Live countdown for your current booking"
@@ -911,6 +914,45 @@ onUnload(() => {
   font-size: 24rpx;
   color: #1D4ED8;
   font-weight: 700;
+}
+
+.syncing-banner {
+  display: inline-flex;
+  align-items: center;
+  gap: 12rpx;
+  margin: 0 0 24rpx;
+  padding: 14rpx 18rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1rpx solid rgba(37, 99, 235, 0.12);
+  box-shadow: 0 14rpx 32rpx rgba(37, 99, 235, 0.08);
+}
+
+.syncing-dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  background: #2563EB;
+  box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.28);
+  animation: syncing-pulse 1.4s ease-in-out infinite;
+}
+
+.syncing-text {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #1E3A8A;
+}
+
+@keyframes syncing-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.28);
+  }
+  50% {
+    transform: scale(0.82);
+    box-shadow: 0 0 0 10rpx rgba(37, 99, 235, 0.08);
+  }
 }
 
 .dashboard-stack {

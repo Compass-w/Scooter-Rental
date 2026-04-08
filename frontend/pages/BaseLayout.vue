@@ -347,6 +347,7 @@ const goToProfile = () => {
   gap: 20rpx;
   cursor: pointer;
   flex-shrink: 0;
+  transition: transform 0.22s ease, opacity 0.22s ease;
 }
 
 .logo-icon {
@@ -454,6 +455,7 @@ const goToProfile = () => {
   line-height: 2;
   display: flex;
   align-items: center;
+  cursor: pointer;
 }
 
 .nav-pill-btn-text {
@@ -470,7 +472,7 @@ const goToProfile = () => {
 .user-avatar-wrap {
   position: relative;
   cursor: pointer;
-  transition: transform 0.2s;
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
 }
 
 .user-avatar-wrap:active {
@@ -731,6 +733,37 @@ const goToProfile = () => {
 /* Simple Footer */
 .footer-simple {
   min-height: 100rpx;
+}
+
+.social-icon {
+  transition: all 0.22s ease;
+}
+
+@media (hover: hover) {
+  .logo-container:hover {
+    transform: translateY(-2rpx);
+    opacity: 0.92;
+  }
+
+  .nav-pill-btn:hover {
+    transform: translateY(-3rpx);
+    box-shadow: 0 12rpx 28rpx rgba(37, 99, 235, 0.28);
+  }
+
+  .user-avatar-wrap:hover {
+    transform: translateY(-3rpx) scale(1.02);
+    box-shadow: 0 10rpx 24rpx rgba(37, 99, 235, 0.18);
+  }
+
+  .social-icon:hover {
+    background: #2563EB;
+    border-color: #2563EB;
+    transform: translateY(-3rpx);
+  }
+
+  .social-icon:hover .icon-svg {
+    fill: white !important;
+  }
 }
 
 /* Responsive adjustments for smaller screens */
