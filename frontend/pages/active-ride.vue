@@ -4,7 +4,7 @@
     <!-- ═══════════════ MY RIDE PAGE (trip) ═══════════════ -->
     <view v-if="isTripPage" class="trip-page">
 
-      <!-- Dark immersive hero with timer -->
+      <!-- Light hero card with timer -->
       <view class="trip-hero">
         <view class="trip-hero-bg">
           <view class="trip-hero-ring ring-1"></view>
@@ -21,6 +21,15 @@
           </view>
         </view>
 
+        <view class="trip-hero-copy">
+          <view class="trip-hero-chip">
+            <view class="trip-hero-chip-dot"></view>
+            <text class="trip-hero-chip-text">{{ heroChip }}</text>
+          </view>
+          <text class="trip-hero-title">{{ heroTitle }}</text>
+          <text class="trip-hero-subtitle">{{ heroSubtitle }}</text>
+        </view>
+
         <!-- Big countdown timer display -->
         <view v-if="activeRide" class="trip-timer-section">
           <text class="trip-timer-label">Time Remaining</text>
@@ -28,6 +37,7 @@
             <text class="trip-timer-value">{{ countdownText }}</text>
           </view>
           <text class="trip-timer-hint">Ends at {{ plannedEndTime }}</text>
+          <text class="trip-timer-note">{{ countdownHint }}</text>
         </view>
         <view v-else class="trip-timer-section">
           <text class="trip-timer-label">Ready to Ride</text>
@@ -159,11 +169,16 @@
     <!-- ═══════════════ BOOK & RIDING PAGE (booking) ═══════════════ -->
     <view v-else class="booking-page">
 
-      <!-- Light top header bar -->
+      <!-- Booking overview header -->
       <view class="booking-header">
         <view class="booking-header-left">
-          <text class="booking-header-title">Book & Riding</text>
-          <text class="booking-header-sub">{{ activeRide ? 'Booking confirmed' : 'No active booking' }}</text>
+          <view class="booking-hero-chip">
+            <view class="booking-hero-chip-dot"></view>
+            <text class="booking-hero-chip-text">{{ heroChip }}</text>
+          </view>
+          <text class="booking-header-title">Book & Details</text>
+          <text class="booking-header-sub">{{ heroTitle }}</text>
+          <text class="booking-header-desc">{{ heroSubtitle }}</text>
         </view>
         <view class="booking-status-badge" :class="activeRide ? 'booking-badge-active' : 'booking-badge-idle'">
           <view class="booking-badge-dot"></view>
@@ -962,37 +977,81 @@ onUnload(() => {
 .btn-secondary { background: #F1F5F9; color: #475569; border: 2rpx solid #E2E8F0; }
 .btn[disabled] { opacity: 0.6; }
 
+.trip-status-pill,
+.trip-sync-badge,
+.trip-hero,
+.trip-scooter-strip,
+.trip-card,
+.trip-empty-state,
+.trip-extend-chip,
+.trip-btn-extend,
+.trip-action-btn,
+.trip-btn-find,
+.trip-preview-tile,
+.booking-header,
+.booking-status-badge,
+.booking-sync-bar,
+.booking-order-card,
+.booking-info-section,
+.booking-info-cell,
+.booking-extend-section,
+.booking-extend-chip,
+.booking-btn-extend,
+.booking-btn-secondary,
+.booking-btn-danger,
+.booking-btn-primary-cta,
+.booking-btn-ghost,
+.booking-empty-card,
+.booking-info-preview-cell {
+  transition: transform 0.22s ease, box-shadow 0.22s ease, background 0.22s ease, border-color 0.22s ease, color 0.22s ease, opacity 0.22s ease;
+}
+
 /* ═══════════════════════════════════════════════
    MY RIDE PAGE — Dark immersive dashboard style
 ═══════════════════════════════════════════════ */
 .trip-page {
   min-height: calc(100vh - 160rpx);
-  background: #0F172A;
-  padding-bottom: 48rpx;
+  background: linear-gradient(180deg, #F4F8FF 0%, #F8FAFC 42%, #FFFFFF 100%);
+  padding: 24rpx 24rpx 48rpx;
 }
 
-/* Hero: full-bleed dark section with rings */
+/* Hero: light card section with subtle rings */
 .trip-hero {
   position: relative;
-  background: linear-gradient(160deg, #0F172A 0%, #1E3A8A 60%, #1D4ED8 100%);
-  padding: 48rpx 32rpx 56rpx;
+  background: linear-gradient(145deg, #EFF6FF 0%, #F8FBFF 48%, #FFFFFF 100%);
+  padding: 36rpx 30rpx 40rpx;
+  border-radius: 36rpx;
   overflow: hidden;
+  border: 1rpx solid rgba(191, 219, 254, 0.95);
+  box-shadow: 0 18rpx 44rpx rgba(37,99,235,0.12);
+}
+.trip-hero::before {
+  content: '';
+  position: absolute;
+  width: 320rpx;
+  height: 320rpx;
+  right: -60rpx;
+  bottom: -120rpx;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(37,99,235,0.18) 0%, rgba(37,99,235,0) 72%);
+  pointer-events: none;
 }
 .trip-hero-bg { position: absolute; inset: 0; pointer-events: none; }
 .trip-hero-ring {
   position: absolute;
   border-radius: 50%;
-  border: 1rpx solid rgba(147, 197, 253, 0.12);
+  border: 1rpx solid rgba(37,99,235,0.1);
 }
 .ring-1 { width: 500rpx; height: 500rpx; top: -180rpx; right: -120rpx; }
-.ring-2 { width: 340rpx; height: 340rpx; top: -80rpx; right: -30rpx; border-color: rgba(147,197,253,0.08); }
-.ring-3 { width: 700rpx; height: 700rpx; bottom: -400rpx; left: -200rpx; border-color: rgba(96,165,250,0.06); }
+.ring-2 { width: 340rpx; height: 340rpx; top: -80rpx; right: -30rpx; border-color: rgba(37,99,235,0.08); }
+.ring-3 { width: 700rpx; height: 700rpx; bottom: -400rpx; left: -200rpx; border-color: rgba(147,197,253,0.1); }
 
 .trip-hero-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 40rpx;
+  gap: 16rpx;
+  margin-bottom: 28rpx;
   position: relative;
   z-index: 1;
 }
@@ -1002,11 +1061,12 @@ onUnload(() => {
   gap: 10rpx;
   padding: 10rpx 22rpx;
   border-radius: 999rpx;
-  border: 1rpx solid rgba(255,255,255,0.18);
-  background: rgba(255,255,255,0.1);
+  border: 1rpx solid #DBEAFE;
+  background: rgba(255,255,255,0.82);
   backdrop-filter: blur(8rpx);
+  box-shadow: 0 10rpx 24rpx rgba(148,163,184,0.12);
 }
-.trip-status-active { border-color: rgba(74,222,128,0.4); background: rgba(74,222,128,0.12); }
+.trip-status-active { border-color: #BBF7D0; background: rgba(240,253,244,0.95); }
 .trip-status-dot {
   width: 14rpx; height: 14rpx; border-radius: 50%;
   background: #94A3B8;
@@ -1018,34 +1078,103 @@ onUnload(() => {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.6; transform: scale(0.85); }
 }
-.trip-status-text { font-size: 22rpx; font-weight: 700; color: #fff; letter-spacing: 0.02em; }
-.trip-sync-badge { padding: 8rpx 18rpx; border-radius: 999rpx; background: rgba(255,255,255,0.1); }
-.trip-sync-text { font-size: 20rpx; color: rgba(255,255,255,0.6); font-weight: 600; }
+.trip-status-text { font-size: 22rpx; font-weight: 700; color: #0F172A; letter-spacing: 0.02em; }
+.trip-sync-badge {
+  padding: 8rpx 18rpx;
+  border-radius: 999rpx;
+  background: rgba(255,255,255,0.82);
+  border: 1rpx solid #E2E8F0;
+  box-shadow: 0 10rpx 24rpx rgba(148,163,184,0.12);
+}
+.trip-sync-text { font-size: 20rpx; color: #2563EB; font-weight: 700; }
+
+.trip-hero-copy {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 30rpx;
+}
+.trip-hero-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 10rpx;
+  padding: 10rpx 20rpx;
+  border-radius: 999rpx;
+  background: rgba(37,99,235,0.08);
+  border: 1rpx solid rgba(37,99,235,0.12);
+  margin-bottom: 18rpx;
+}
+.trip-hero-chip-dot {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 50%;
+  background: #2563EB;
+  box-shadow: 0 0 0 8rpx rgba(37,99,235,0.1);
+}
+.trip-hero-chip-text {
+  font-size: 22rpx;
+  font-weight: 700;
+  color: #1D4ED8;
+  letter-spacing: 0.02em;
+}
+.trip-hero-title {
+  display: block;
+  max-width: 92%;
+  font-size: 48rpx;
+  line-height: 1.16;
+  font-weight: 900;
+  color: #0F172A;
+  letter-spacing: -0.02em;
+  margin-bottom: 14rpx;
+}
+.trip-hero-subtitle {
+  display: block;
+  max-width: 90%;
+  font-size: 26rpx;
+  line-height: 1.7;
+  color: #64748B;
+}
 
 /* Timer display */
 .trip-timer-section { text-align: center; position: relative; z-index: 1; padding: 20rpx 0 28rpx; }
-.trip-timer-label { display: block; font-size: 22rpx; font-weight: 700; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 18rpx; }
+.trip-timer-label {
+  display: block;
+  font-size: 22rpx;
+  font-weight: 800;
+  color: #2563EB;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 18rpx;
+}
 .trip-timer-display {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 28rpx 52rpx;
   border-radius: 32rpx;
-  background: rgba(255,255,255,0.07);
-  border: 1rpx solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.88);
+  border: 2rpx solid rgba(37,99,235,0.12);
   backdrop-filter: blur(12rpx);
   margin-bottom: 18rpx;
+  box-shadow: 0 20rpx 38rpx rgba(37,99,235,0.14);
 }
-.timer-expired { border-color: rgba(251,113,133,0.4); background: rgba(251,113,133,0.1); }
+.timer-expired { border-color: #FECDD3; background: #FFF1F2; }
 .trip-timer-value {
   font-size: 72rpx;
   font-weight: 900;
-  color: #fff;
+  color: #0F172A;
   letter-spacing: 0.06em;
   font-variant-numeric: tabular-nums;
 }
-.timer-expired .trip-timer-value { color: #FB7185; }
-.trip-timer-hint { display: block; font-size: 24rpx; color: rgba(255,255,255,0.5); font-weight: 500; }
+.timer-expired .trip-timer-value { color: #E11D48; }
+.trip-timer-hint { display: block; font-size: 24rpx; color: #475569; font-weight: 600; }
+.trip-timer-note {
+  display: block;
+  max-width: 92%;
+  margin: 14rpx auto 0;
+  font-size: 22rpx;
+  line-height: 1.6;
+  color: #64748B;
+}
 
 /* Alert banner inside hero */
 .trip-alert-banner {
@@ -1055,61 +1184,65 @@ onUnload(() => {
   margin-top: 24rpx;
   padding: 18rpx 24rpx;
   border-radius: 20rpx;
-  background: rgba(251,113,133,0.15);
-  border: 1rpx solid rgba(251,113,133,0.3);
+  background: #FFF1F2;
+  border: 1rpx solid #FECDD3;
   position: relative;
   z-index: 1;
+  box-shadow: 0 12rpx 30rpx rgba(225,29,72,0.08);
 }
 .trip-alert-icon { font-size: 28rpx; }
-.trip-alert-text { font-size: 24rpx; font-weight: 700; color: #FCA5A5; flex: 1; }
+.trip-alert-text { font-size: 24rpx; font-weight: 700; color: #BE123C; flex: 1; }
 
 /* Scooter info strip */
 .trip-scooter-strip {
   display: flex;
   align-items: center;
   gap: 20rpx;
-  padding: 24rpx 32rpx;
-  background: rgba(255,255,255,0.05);
-  border-bottom: 1rpx solid rgba(255,255,255,0.06);
+  margin-top: 20rpx;
+  padding: 24rpx 28rpx;
+  background: rgba(255,255,255,0.9);
+  border: 1rpx solid #E2E8F0;
+  border-radius: 28rpx;
+  box-shadow: 0 12rpx 30rpx rgba(15,23,42,0.06);
 }
 .trip-scooter-icon {
   width: 72rpx; height: 72rpx;
   border-radius: 20rpx;
-  background: rgba(37,99,235,0.2);
-  border: 1rpx solid rgba(96,165,250,0.3);
+  background: linear-gradient(180deg, #EFF6FF, #DBEAFE);
+  border: 1rpx solid #BFDBFE;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
 .trip-scooter-info { flex: 1; min-width: 0; }
-.trip-scooter-id { display: block; font-size: 26rpx; font-weight: 700; color: #fff; }
-.trip-scooter-since { display: block; font-size: 22rpx; color: rgba(255,255,255,0.45); margin-top: 4rpx; }
+.trip-scooter-id { display: block; font-size: 26rpx; font-weight: 800; color: #0F172A; }
+.trip-scooter-since { display: block; font-size: 22rpx; color: #64748B; margin-top: 4rpx; }
 .trip-scooter-cost { text-align: right; flex-shrink: 0; }
-.trip-scooter-cost-value { display: block; font-size: 30rpx; font-weight: 800; color: #93C5FD; }
-.trip-scooter-cost-label { display: block; font-size: 20rpx; color: rgba(255,255,255,0.4); margin-top: 2rpx; }
+.trip-scooter-cost-value { display: block; font-size: 30rpx; font-weight: 900; color: #2563EB; }
+.trip-scooter-cost-label { display: block; font-size: 20rpx; color: #94A3B8; margin-top: 2rpx; }
 
 /* Content area */
-.trip-content { padding: 28rpx 28rpx 48rpx; display: flex; flex-direction: column; gap: 20rpx; }
+.trip-content { padding: 20rpx 0 0; display: flex; flex-direction: column; gap: 18rpx; }
 
-/* Card on dark background */
+/* Main ride card */
 .trip-card {
-  background: rgba(255,255,255,0.06);
-  border: 1rpx solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.92);
+  border: 1rpx solid #E2E8F0;
   border-radius: 28rpx;
   padding: 28rpx;
-  backdrop-filter: blur(8rpx);
+  box-shadow: 0 14rpx 34rpx rgba(15,23,42,0.06);
 }
 .trip-card-header { display: flex; align-items: center; gap: 16rpx; margin-bottom: 22rpx; }
 .trip-card-icon-wrap {
   width: 56rpx; height: 56rpx;
   border-radius: 16rpx;
-  background: rgba(37,99,235,0.2);
-  border: 1rpx solid rgba(96,165,250,0.25);
+  background: linear-gradient(180deg, #EFF6FF, #DBEAFE);
+  border: 1rpx solid #BFDBFE;
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
-.trip-card-title { font-size: 30rpx; font-weight: 800; color: #fff; }
-.trip-section-label { display: block; font-size: 22rpx; color: rgba(255,255,255,0.45); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 16rpx; }
+.trip-card-title { font-size: 30rpx; font-weight: 800; color: #0F172A; }
+.trip-section-label { display: block; font-size: 22rpx; color: #94A3B8; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 16rpx; }
 
 /* Extend time chips */
 .trip-extend-grid { display: flex; gap: 14rpx; margin-bottom: 22rpx; }
@@ -1121,34 +1254,34 @@ onUnload(() => {
   justify-content: center;
   padding: 24rpx 12rpx;
   border-radius: 20rpx;
-  background: rgba(255,255,255,0.05);
-  border: 2rpx solid rgba(255,255,255,0.1);
+  background: linear-gradient(180deg, #F8FBFF 0%, #FFFFFF 100%);
+  border: 2rpx solid #E2E8F0;
   cursor: pointer;
-  transition: all 0.18s ease;
 }
 .trip-extend-chip-active {
-  background: rgba(37,99,235,0.3);
+  transform: translateY(-4rpx);
+  background: linear-gradient(180deg, #EFF6FF 0%, #FFFFFF 100%);
   border-color: #2563EB;
-  box-shadow: 0 0 0 4rpx rgba(37,99,235,0.2);
+  box-shadow: 0 16rpx 30rpx rgba(37,99,235,0.16), 0 0 0 4rpx rgba(37,99,235,0.08);
 }
-.trip-extend-chip-time { display: block; font-size: 38rpx; font-weight: 900; color: #fff; line-height: 1; }
-.trip-extend-chip-unit { display: block; font-size: 20rpx; color: rgba(255,255,255,0.45); font-weight: 600; margin-top: 4rpx; text-transform: uppercase; }
-.trip-extend-chip-active .trip-extend-chip-time { color: #93C5FD; }
-.trip-extend-chip-active .trip-extend-chip-unit { color: rgba(147,197,253,0.7); }
+.trip-extend-chip-time { display: block; font-size: 38rpx; font-weight: 900; color: #0F172A; line-height: 1; }
+.trip-extend-chip-unit { display: block; font-size: 20rpx; color: #94A3B8; font-weight: 700; margin-top: 4rpx; text-transform: uppercase; }
+.trip-extend-chip-active .trip-extend-chip-time { color: #1D4ED8; }
+.trip-extend-chip-active .trip-extend-chip-unit { color: #2563EB; }
 
 /* Extend preview */
 .trip-extend-preview {
-  background: rgba(255,255,255,0.04);
-  border: 1rpx solid rgba(255,255,255,0.08);
+  background: linear-gradient(180deg, #F8FBFF 0%, #FFFFFF 100%);
+  border: 1rpx solid #E2E8F0;
   border-radius: 20rpx;
   padding: 20rpx 24rpx;
   margin-bottom: 22rpx;
 }
 .trip-preview-row { display: flex; justify-content: space-between; align-items: center; }
-.trip-preview-divider { height: 1rpx; background: rgba(255,255,255,0.08); margin: 14rpx 0; }
-.trip-preview-label { font-size: 22rpx; color: rgba(255,255,255,0.45); font-weight: 600; }
-.trip-preview-value { font-size: 26rpx; color: #fff; font-weight: 700; }
-.trip-preview-cost { color: #4ADE80; }
+.trip-preview-divider { height: 1rpx; background: #E2E8F0; margin: 14rpx 0; }
+.trip-preview-label { font-size: 22rpx; color: #64748B; font-weight: 700; }
+.trip-preview-value { font-size: 26rpx; color: #0F172A; font-weight: 800; }
+.trip-preview-cost { color: #059669; }
 
 /* Buttons */
 .trip-btn-extend {
@@ -1170,41 +1303,50 @@ onUnload(() => {
 .trip-action-row { display: flex; gap: 16rpx; }
 .trip-action-btn {
   flex: 1;
-  height: 90rpx;
+  height: 92rpx;
   border-radius: 999rpx;
-  border: none;
+  border: 2rpx solid transparent;
   display: flex; align-items: center; justify-content: center; gap: 10rpx;
   font-size: 26rpx; font-weight: 700;
+  box-shadow: 0 10rpx 24rpx rgba(15,23,42,0.05);
 }
 .trip-action-btn::after { border: none; }
-.trip-action-report { background: rgba(255,255,255,0.1); color: #fff; border: 1rpx solid rgba(255,255,255,0.15); }
-.trip-action-end { background: rgba(239,68,68,0.15); color: #FCA5A5; border: 1rpx solid rgba(239,68,68,0.3); }
+.trip-action-report { background: #FFFFFF; color: #2563EB; border-color: #BFDBFE; }
+.trip-action-end { background: #FFFFFF; color: #E11D48; border-color: #FECDD3; }
 .trip-action-btn[disabled] { opacity: 0.5; }
 
 /* Empty state */
-.trip-empty-state { text-align: center; padding: 20rpx 0; }
+.trip-empty-state {
+  text-align: center;
+  padding: 44rpx 28rpx;
+  background: rgba(255,255,255,0.92);
+  border: 1rpx solid #E2E8F0;
+  border-radius: 28rpx;
+  box-shadow: 0 14rpx 34rpx rgba(15,23,42,0.06);
+}
 .trip-empty-illustration {
   width: 160rpx; height: 160rpx;
   border-radius: 50%;
-  background: rgba(37,99,235,0.12);
-  border: 2rpx solid rgba(96,165,250,0.2);
+  background: linear-gradient(180deg, #EFF6FF 0%, #DBEAFE 100%);
+  border: 2rpx solid #BFDBFE;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 28rpx;
+  box-shadow: 0 14rpx 28rpx rgba(37,99,235,0.12);
 }
-.trip-empty-title { display: block; font-size: 36rpx; font-weight: 800; color: #fff; margin-bottom: 12rpx; }
-.trip-empty-desc { display: block; font-size: 26rpx; line-height: 1.65; color: rgba(255,255,255,0.45); margin-bottom: 36rpx; padding: 0 16rpx; }
+.trip-empty-title { display: block; font-size: 36rpx; font-weight: 800; color: #0F172A; margin-bottom: 12rpx; }
+.trip-empty-desc { display: block; font-size: 26rpx; line-height: 1.65; color: #64748B; margin-bottom: 36rpx; padding: 0 16rpx; }
 .trip-btn-find {
   height: 96rpx;
   border-radius: 999rpx;
-  background: #fff;
-  color: #1D4ED8;
+  background: linear-gradient(135deg, #2563EB, #1D4ED8);
+  color: #FFFFFF;
   font-size: 30rpx;
   font-weight: 800;
   border: none;
   padding: 0 64rpx;
-  box-shadow: 0 12rpx 28rpx rgba(0,0,0,0.25);
+  box-shadow: 0 14rpx 30rpx rgba(37,99,235,0.26);
   display: inline-flex; align-items: center; justify-content: center;
   margin-bottom: 40rpx;
 }
@@ -1213,58 +1355,117 @@ onUnload(() => {
 .trip-preview-tile {
   padding: 22rpx;
   border-radius: 20rpx;
-  background: rgba(255,255,255,0.05);
-  border: 1rpx solid rgba(255,255,255,0.08);
+  background: linear-gradient(180deg, #F8FBFF 0%, #FFFFFF 100%);
+  border: 1rpx solid #E2E8F0;
+  box-shadow: 0 8rpx 20rpx rgba(15,23,42,0.04);
   text-align: left;
 }
 .trip-ptile-icon { display: block; font-size: 32rpx; margin-bottom: 10rpx; }
-.trip-ptile-label { display: block; font-size: 24rpx; color: rgba(255,255,255,0.6); font-weight: 600; }
+.trip-ptile-label { display: block; font-size: 24rpx; color: #475569; font-weight: 700; }
 
 /* ═══════════════════════════════════════════════
    BOOK & RIDING PAGE — Light card order style
 ═══════════════════════════════════════════════ */
 .booking-page {
   min-height: calc(100vh - 160rpx);
-  background: #F0F4F8;
-  padding-bottom: 60rpx;
+  background: linear-gradient(180deg, #F4F8FF 0%, #F8FAFC 42%, #FFFFFF 100%);
+  padding: 24rpx 24rpx 60rpx;
 }
 
-/* Header bar */
+/* Header card */
 .booking-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  padding: 36rpx 32rpx 24rpx;
-  background: #fff;
-  border-bottom: 1rpx solid #E8EDF3;
+  gap: 20rpx;
+  padding: 32rpx 28rpx;
+  background: linear-gradient(145deg, #EFF6FF 0%, #F8FBFF 52%, #FFFFFF 100%);
+  border: 1rpx solid #DBEAFE;
+  border-radius: 32rpx;
+  box-shadow: 0 18rpx 40rpx rgba(37,99,235,0.12);
+  position: relative;
+  overflow: hidden;
 }
-.booking-header-title { display: block; font-size: 38rpx; font-weight: 900; color: #0F172A; }
-.booking-header-sub { display: block; font-size: 24rpx; color: #94A3B8; margin-top: 4rpx; }
+.booking-header::before {
+  content: '';
+  position: absolute;
+  width: 320rpx;
+  height: 320rpx;
+  right: -80rpx;
+  top: -120rpx;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(37,99,235,0.16) 0%, rgba(37,99,235,0) 72%);
+  pointer-events: none;
+}
+.booking-header-left {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  z-index: 1;
+}
+.booking-hero-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 10rpx;
+  padding: 10rpx 20rpx;
+  border-radius: 999rpx;
+  background: rgba(37,99,235,0.08);
+  border: 1rpx solid rgba(37,99,235,0.12);
+  margin-bottom: 18rpx;
+}
+.booking-hero-chip-dot {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 50%;
+  background: #2563EB;
+  box-shadow: 0 0 0 8rpx rgba(37,99,235,0.08);
+}
+.booking-hero-chip-text {
+  font-size: 22rpx;
+  font-weight: 700;
+  color: #1D4ED8;
+}
+.booking-header-title { display: block; font-size: 42rpx; font-weight: 900; color: #0F172A; line-height: 1.12; letter-spacing: -0.02em; }
+.booking-header-sub { display: block; font-size: 28rpx; color: #1E293B; margin-top: 10rpx; font-weight: 800; line-height: 1.45; }
+.booking-header-desc { display: block; font-size: 24rpx; color: #64748B; margin-top: 12rpx; line-height: 1.65; max-width: 92%; }
 .booking-status-badge {
   display: inline-flex;
   align-items: center;
   gap: 10rpx;
   padding: 12rpx 22rpx;
   border-radius: 999rpx;
+  border: 1rpx solid #DBEAFE;
+  background: rgba(255,255,255,0.84);
+  box-shadow: 0 10rpx 24rpx rgba(148,163,184,0.12);
+  position: relative;
+  z-index: 1;
 }
-.booking-badge-active { background: #DCFCE7; }
-.booking-badge-idle { background: #F1F5F9; }
+.booking-badge-active { background: rgba(240,253,244,0.95); border-color: #BBF7D0; }
+.booking-badge-idle { background: rgba(248,250,252,0.95); border-color: #E2E8F0; }
 .booking-badge-dot { width: 12rpx; height: 12rpx; border-radius: 50%; background: #94A3B8; }
 .booking-badge-active .booking-badge-dot { background: #22C55E; }
 .booking-badge-text { font-size: 20rpx; font-weight: 800; color: #64748B; letter-spacing: 0.06em; }
 .booking-badge-active .booking-badge-text { color: #15803D; }
 
-.booking-sync-bar { padding: 16rpx 32rpx; background: #EFF6FF; border-bottom: 1rpx solid #DBEAFE; }
+.booking-sync-bar {
+  margin-top: 16rpx;
+  padding: 16rpx 24rpx;
+  background: linear-gradient(180deg, #EFF6FF 0%, #FFFFFF 100%);
+  border: 1rpx solid #DBEAFE;
+  border-radius: 18rpx;
+  box-shadow: 0 10rpx 24rpx rgba(37,99,235,0.08);
+}
 .booking-sync-text { font-size: 24rpx; color: #2563EB; font-weight: 600; }
 
 /* Content */
-.booking-content { padding: 24rpx 24rpx 0; display: flex; flex-direction: column; gap: 18rpx; }
+.booking-content { padding: 20rpx 0 0; display: flex; flex-direction: column; gap: 18rpx; }
 
 /* Order card — Meituan style white card with accent */
 .booking-order-card {
   background: #fff;
   border-radius: 28rpx;
-  box-shadow: 0 4rpx 20rpx rgba(15,23,42,0.06);
+  border: 1rpx solid #E2E8F0;
+  box-shadow: 0 14rpx 34rpx rgba(15,23,42,0.06);
   overflow: hidden;
 }
 .booking-order-top {
@@ -1311,13 +1512,13 @@ onUnload(() => {
 .booking-tl-desc { display: block; font-size: 22rpx; color: #94A3B8; margin-top: 4rpx; }
 
 /* Info section */
-.booking-info-section { background: #fff; border-radius: 28rpx; padding: 24rpx 24rpx 28rpx; box-shadow: 0 4rpx 20rpx rgba(15,23,42,0.06); }
+.booking-info-section { background: #fff; border-radius: 28rpx; padding: 24rpx 24rpx 28rpx; border: 1rpx solid #E2E8F0; box-shadow: 0 14rpx 34rpx rgba(15,23,42,0.06); }
 .booking-section-title { display: block; font-size: 26rpx; font-weight: 800; color: #0F172A; margin-bottom: 18rpx; }
 .booking-info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14rpx; }
 .booking-info-cell {
   padding: 20rpx;
   border-radius: 20rpx;
-  background: #F8FBFF;
+  background: linear-gradient(180deg, #F8FBFF 0%, #FFFFFF 100%);
   border: 1rpx solid #E8EDF3;
 }
 .booking-info-icon { display: block; font-size: 30rpx; margin-bottom: 8rpx; }
@@ -1325,24 +1526,29 @@ onUnload(() => {
 .booking-info-value { display: block; font-size: 26rpx; color: #0F172A; font-weight: 700; }
 
 /* Extend section */
-.booking-extend-section { background: #fff; border-radius: 28rpx; padding: 24rpx; box-shadow: 0 4rpx 20rpx rgba(15,23,42,0.06); }
+.booking-extend-section { background: #fff; border-radius: 28rpx; padding: 24rpx; border: 1rpx solid #E2E8F0; box-shadow: 0 14rpx 34rpx rgba(15,23,42,0.06); }
 .booking-extend-chips { display: flex; gap: 12rpx; margin-bottom: 16rpx; }
 .booking-extend-chip {
   flex: 1;
   height: 76rpx;
   border-radius: 18rpx;
-  background: #F8FBFF;
+  background: linear-gradient(180deg, #F8FBFF 0%, #FFFFFF 100%);
   border: 2rpx solid #E2E8F0;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer;
 }
-.booking-chip-active { background: #EFF6FF; border-color: #2563EB; }
+.booking-chip-active {
+  transform: translateY(-4rpx);
+  background: linear-gradient(180deg, #EFF6FF 0%, #FFFFFF 100%);
+  border-color: #2563EB;
+  box-shadow: 0 16rpx 30rpx rgba(37,99,235,0.14), 0 0 0 4rpx rgba(37,99,235,0.08);
+}
 .booking-chip-text { font-size: 26rpx; font-weight: 700; color: #64748B; }
 .booking-chip-active .booking-chip-text { color: #2563EB; }
 .booking-extend-preview {
   padding: 16rpx 20rpx;
   border-radius: 16rpx;
-  background: #F8FBFF;
+  background: linear-gradient(180deg, #F8FBFF 0%, #FFFFFF 100%);
   border: 1rpx solid #E8EDF3;
 }
 .booking-ext-preview-text { font-size: 24rpx; color: #64748B; font-weight: 500; line-height: 1.6; }
@@ -1366,50 +1572,54 @@ onUnload(() => {
 .booking-btn-secondary {
   flex: 1; height: 90rpx;
   border-radius: 999rpx;
-  background: #F1F5F9;
-  color: #475569;
+  background: #FFFFFF;
+  color: #2563EB;
   font-size: 27rpx; font-weight: 700;
-  border: 2rpx solid #E2E8F0;
+  border: 2rpx solid #DBEAFE;
   display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 10rpx 24rpx rgba(37,99,235,0.08);
 }
 .booking-btn-secondary::after { border: none; }
 .booking-btn-danger {
   flex: 1; height: 90rpx;
   border-radius: 999rpx;
-  background: #FFF1F2;
+  background: #FFFFFF;
   color: #E11D48;
   font-size: 27rpx; font-weight: 700;
   border: 2rpx solid #FECDD3;
   display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 10rpx 24rpx rgba(225,29,72,0.08);
 }
 .booking-btn-danger::after { border: none; }
 .booking-btn-danger[disabled] { opacity: 0.55; }
 
 /* Empty booking state */
-.booking-empty { padding: 24rpx; display: flex; flex-direction: column; gap: 18rpx; }
+.booking-empty { padding: 20rpx 0 0; display: flex; flex-direction: column; gap: 18rpx; }
 .booking-empty-card {
   background: #fff;
   border-radius: 28rpx;
   padding: 40rpx 32rpx;
-  box-shadow: 0 4rpx 20rpx rgba(15,23,42,0.06);
+  border: 1rpx solid #E2E8F0;
+  box-shadow: 0 14rpx 34rpx rgba(15,23,42,0.06);
   text-align: center;
 }
 .booking-empty-art {
   width: 140rpx; height: 140rpx;
   border-radius: 50%;
-  background: #EFF6FF;
+  background: linear-gradient(180deg, #EFF6FF 0%, #DBEAFE 100%);
   border: 2rpx solid #DBEAFE;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 28rpx;
+  box-shadow: 0 14rpx 28rpx rgba(37,99,235,0.1);
 }
 .booking-empty-title { display: block; font-size: 36rpx; font-weight: 800; color: #0F172A; margin-bottom: 12rpx; }
 .booking-empty-desc { display: block; font-size: 26rpx; line-height: 1.65; color: #64748B; margin-bottom: 32rpx; }
 
 /* Checklist */
 .booking-empty-checklist { text-align: left; margin-bottom: 36rpx; display: flex; flex-direction: column; gap: 18rpx; }
-.booking-checklist-item { display: flex; align-items: center; gap: 18rpx; padding: 16rpx 20rpx; background: #F8FBFF; border-radius: 16rpx; border: 1rpx solid #E8EDF3; }
+.booking-checklist-item { display: flex; align-items: center; gap: 18rpx; padding: 16rpx 20rpx; background: linear-gradient(180deg, #F8FBFF 0%, #FFFFFF 100%); border-radius: 16rpx; border: 1rpx solid #E8EDF3; }
 .booking-check-icon { font-size: 24rpx; color: #CBD5E1; flex-shrink: 0; }
 .booking-check-text { font-size: 26rpx; color: #475569; font-weight: 600; }
 
@@ -1428,11 +1638,12 @@ onUnload(() => {
 .booking-btn-ghost {
   width: 100%; height: 88rpx;
   border-radius: 999rpx;
-  background: transparent;
+  background: #FFFFFF;
   color: #2563EB;
   font-size: 28rpx; font-weight: 700;
   border: 2rpx solid #DBEAFE;
   display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 10rpx 24rpx rgba(37,99,235,0.08);
 }
 .booking-btn-ghost::after { border: none; }
 
@@ -1440,20 +1651,121 @@ onUnload(() => {
 .booking-empty-info-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 14rpx;
+  gap: 16rpx;
 }
 .booking-info-preview-cell {
   background: #fff;
   border-radius: 20rpx;
   padding: 24rpx 20rpx;
-  box-shadow: 0 2rpx 10rpx rgba(15,23,42,0.04);
+  border: 1rpx solid #E2E8F0;
+  box-shadow: 0 10rpx 24rpx rgba(15,23,42,0.05);
 }
 .booking-info-preview-icon { display: block; font-size: 32rpx; margin-bottom: 10rpx; }
 .booking-info-preview-label { display: block; font-size: 20rpx; color: #94A3B8; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8rpx; }
 .booking-info-preview-value { display: block; font-size: 22rpx; color: #475569; font-weight: 600; line-height: 1.4; }
 
+@media (hover: hover) {
+  .trip-status-pill:hover,
+  .trip-sync-badge:hover,
+  .booking-status-badge:hover {
+    transform: translateY(-2rpx);
+    box-shadow: 0 12rpx 26rpx rgba(148,163,184,0.16);
+  }
+
+  .trip-hero:hover,
+  .trip-scooter-strip:hover,
+  .trip-card:hover,
+  .trip-empty-state:hover,
+  .trip-preview-tile:hover,
+  .booking-header:hover,
+  .booking-order-card:hover,
+  .booking-info-section:hover,
+  .booking-extend-section:hover,
+  .booking-empty-card:hover,
+  .booking-info-preview-cell:hover {
+    transform: translateY(-4rpx);
+    box-shadow: 0 20rpx 42rpx rgba(15,23,42,0.08);
+  }
+
+  .trip-extend-chip:hover,
+  .booking-extend-chip:hover {
+    transform: translateY(-4rpx);
+    border-color: #93C5FD;
+    box-shadow: 0 16rpx 30rpx rgba(37,99,235,0.12);
+  }
+
+  .trip-btn-extend:hover,
+  .trip-btn-find:hover,
+  .booking-btn-extend:hover,
+  .booking-btn-primary-cta:hover {
+    transform: translateY(-4rpx);
+    filter: brightness(1.03);
+    box-shadow: 0 18rpx 34rpx rgba(37,99,235,0.3);
+  }
+
+  .trip-action-report:hover,
+  .booking-btn-secondary:hover,
+  .booking-btn-ghost:hover {
+    transform: translateY(-3rpx);
+    background: #EFF6FF;
+    border-color: #93C5FD;
+    box-shadow: 0 14rpx 28rpx rgba(37,99,235,0.14);
+  }
+
+  .trip-action-end:hover,
+  .booking-btn-danger:hover {
+    transform: translateY(-3rpx);
+    background: #FFF1F2;
+    border-color: #FDA4AF;
+    box-shadow: 0 14rpx 28rpx rgba(225,29,72,0.12);
+  }
+
+  .booking-info-cell:hover {
+    transform: translateY(-3rpx);
+    border-color: #BFDBFE;
+    box-shadow: 0 12rpx 24rpx rgba(37,99,235,0.1);
+  }
+}
+
+.trip-extend-chip:active,
+.booking-extend-chip:active,
+.trip-btn-extend:active,
+.trip-btn-find:active,
+.trip-action-btn:active,
+.booking-btn-extend:active,
+.booking-btn-secondary:active,
+.booking-btn-danger:active,
+.booking-btn-primary-cta:active,
+.booking-btn-ghost:active {
+  transform: translateY(1rpx) scale(0.985);
+}
+
 /* Responsive */
 @media (max-width: 750px) {
+  .trip-page,
+  .booking-page {
+    padding-left: 20rpx;
+    padding-right: 20rpx;
+  }
+
+  .trip-hero,
+  .booking-header {
+    padding-left: 24rpx;
+    padding-right: 24rpx;
+  }
+
+  .trip-hero-top,
+  .booking-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .trip-hero-title,
+  .trip-hero-subtitle,
+  .booking-header-desc {
+    max-width: 100%;
+  }
+
   .trip-timer-value { font-size: 58rpx; }
   .trip-extend-grid { gap: 10rpx; }
   .booking-info-grid { grid-template-columns: 1fr; }
