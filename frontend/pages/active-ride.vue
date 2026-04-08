@@ -145,19 +145,19 @@
           </button>
           <view class="trip-preview-tiles">
             <view class="trip-preview-tile">
-              <text class="trip-ptile-icon">⏱</text>
+              <image class="trip-ptile-icon" src="/static/icons/ride/biao.svg" mode="aspectFit" />
               <text class="trip-ptile-label">Live countdown</text>
             </view>
             <view class="trip-preview-tile">
-              <text class="trip-ptile-icon">🛴</text>
+              <image class="trip-ptile-icon" src="/static/icons/ride/pos.svg" mode="aspectFit" />
               <text class="trip-ptile-label">Scooter info</text>
             </view>
             <view class="trip-preview-tile">
-              <text class="trip-ptile-icon">⚡</text>
+              <image class="trip-ptile-icon" src="/static/icons/ride/card.svg" mode="aspectFit" />
               <text class="trip-ptile-label">Extend ride</text>
             </view>
             <view class="trip-preview-tile">
-              <text class="trip-ptile-icon">🔧</text>
+              <image class="trip-ptile-icon" src="/static/icons/ride/bank.svg" mode="aspectFit" />
               <text class="trip-ptile-label">Report issues</text>
             </view>
           </view>
@@ -237,22 +237,22 @@
           <text class="booking-section-title">Trip Details</text>
           <view class="booking-info-grid">
             <view class="booking-info-cell">
-              <text class="booking-info-icon">🕐</text>
+              <image class="booking-info-icon" src="/static/icons/ride/biao.svg" mode="aspectFit" />
               <text class="booking-info-label">Duration</text>
               <text class="booking-info-value">{{ durationLabel }}</text>
             </view>
             <view class="booking-info-cell">
-              <text class="booking-info-icon">💳</text>
+              <image class="booking-info-icon" src="/static/icons/ride/bank.svg" mode="aspectFit" />
               <text class="booking-info-label">Reserved</text>
               <text class="booking-info-value">{{ formatMoney(activeRide.totalCost) }}</text>
             </view>
             <view class="booking-info-cell" v-if="activeRide.cardLast4">
-              <text class="booking-info-icon">🏦</text>
+              <image class="booking-info-icon" src="/static/icons/ride/card.svg" mode="aspectFit" />
               <text class="booking-info-label">Payment</text>
               <text class="booking-info-value">···· {{ activeRide.cardLast4 }}</text>
             </view>
             <view class="booking-info-cell">
-              <text class="booking-info-icon">📍</text>
+              <image class="booking-info-icon" src="/static/icons/ride/pos.svg" mode="aspectFit" />
               <text class="booking-info-label">Status</text>
               <text class="booking-info-value">{{ activeRide.status || 'Active' }}</text>
             </view>
@@ -329,22 +329,22 @@
         </view>
         <view class="booking-empty-info-grid">
           <view class="booking-info-preview-cell">
-            <text class="booking-info-preview-icon">🛴</text>
+            <image class="booking-info-preview-icon" src="/static/icons/ride/pos.svg" mode="aspectFit" />
             <text class="booking-info-preview-label">Scooter</text>
             <text class="booking-info-preview-value">Assigned after map selection</text>
           </view>
           <view class="booking-info-preview-cell">
-            <text class="booking-info-preview-icon">⏱</text>
+            <image class="booking-info-preview-icon" src="/static/icons/ride/biao.svg" mode="aspectFit" />
             <text class="booking-info-preview-label">Plan</text>
             <text class="booking-info-preview-value">Duration & rate you choose</text>
           </view>
           <view class="booking-info-preview-cell">
-            <text class="booking-info-preview-icon">💳</text>
+            <image class="booking-info-preview-icon" src="/static/icons/ride/card.svg" mode="aspectFit" />
             <text class="booking-info-preview-label">Payment</text>
             <text class="booking-info-preview-value">Card or saved method</text>
           </view>
           <view class="booking-info-preview-cell">
-            <text class="booking-info-preview-icon">📋</text>
+            <image class="booking-info-preview-icon" src="/static/icons/ride/bank.svg" mode="aspectFit" />
             <text class="booking-info-preview-label">Status</text>
             <text class="booking-info-preview-value">Booked, active, or completed</text>
           </view>
@@ -1361,7 +1361,12 @@ onUnload(() => {
   box-shadow: 0 8rpx 20rpx rgba(15,23,42,0.04);
   text-align: left;
 }
-.trip-ptile-icon { display: block; font-size: 32rpx; margin-bottom: 10rpx; }
+.trip-ptile-icon {
+  display: block;
+  width: 34rpx;
+  height: 34rpx;
+  margin-bottom: 10rpx;
+}
 .trip-ptile-label { display: block; font-size: 24rpx; color: #475569; font-weight: 700; }
 
 /* ═══════════════════════════════════════════════
@@ -1543,7 +1548,12 @@ onUnload(() => {
   background: linear-gradient(180deg, #F8FBFF 0%, #FFFFFF 100%);
   border: 1rpx solid #E8EDF3;
 }
-.booking-info-icon { display: block; font-size: 30rpx; margin-bottom: 8rpx; }
+.booking-info-icon {
+  display: block;
+  width: 30rpx;
+  height: 30rpx;
+  margin-bottom: 8rpx;
+}
 .booking-info-label { display: block; font-size: 20rpx; color: #94A3B8; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6rpx; }
 .booking-info-value { display: block; font-size: 26rpx; color: #0F172A; font-weight: 700; }
 
@@ -1682,7 +1692,12 @@ onUnload(() => {
   border: 1rpx solid #E2E8F0;
   box-shadow: 0 10rpx 24rpx rgba(15,23,42,0.05);
 }
-.booking-info-preview-icon { display: block; font-size: 32rpx; margin-bottom: 10rpx; }
+.booking-info-preview-icon {
+  display: block;
+  width: 32rpx;
+  height: 32rpx;
+  margin-bottom: 10rpx;
+}
 .booking-info-preview-label { display: block; font-size: 20rpx; color: #94A3B8; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8rpx; }
 .booking-info-preview-value { display: block; font-size: 22rpx; color: #475569; font-weight: 600; line-height: 1.4; }
 
