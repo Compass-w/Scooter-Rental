@@ -44,4 +44,8 @@ public interface BookingMapper {
             "duration_minutes = #{durationMinutes}, status = #{status} " +
             "WHERE booking_id = #{bookingId}")
     int completeBooking(Booking booking);
+
+    @Update("UPDATE bookings SET duration_minutes = #{durationMinutes}, total_cost = #{totalCost} " +
+            "WHERE booking_id = #{bookingId} AND status = 'ACTIVE'")
+    int extendActiveBooking(Booking booking);
 }

@@ -1265,7 +1265,7 @@ const toggleAutoTopUp  = () => {
  * Navigation helpers
  */
 const goToFindScooter    = () => uni.navigateTo({ url: '/pages/find-scooter' })
-const viewAllTrips       = () => uni.navigateTo({ url: '/pages/trip' })
+const viewAllTrips       = () => uni.navigateTo({ url: '/pages/active-ride?source=trip' })
 /**
  * Navigate to the change password page
  * Passes source=profile so the reset-password page skips token verification

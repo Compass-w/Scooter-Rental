@@ -226,6 +226,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import BaseLayout from '@/pages/BaseLayout.vue'
 import BookingOptions from '@/components/BookingOptions.vue'
 import { getAllScooters, startRide as startRideApi } from '@/api/scooter.js'
+import { setStoredActiveRide } from '@/utils/activeRide.js'
 
 /**
  * Reactive state variables
@@ -537,6 +538,20 @@ const confirmRideStart = async (paymentData) => {
     })
 
     updateScooterStatus(bookingScooter.value.id, 'IN_USE')
+    setStoredActiveRide({
+      ...booking,
+      bookingId: booking?.bookingId,
+      userId,
+      scooterId: bookingScooter.value.id,
+      scooterModel: bookingScooter.value.model,
+      startTime: new Date().toISOString(),
+      durationMinutes: booking?.durationMinutes ?? paymentData.durationMinutes,
+      totalCost: booking?.estimatedCost ?? paymentData.totalPrice,
+      basePrice: bookingScooter.value.basePrice,
+      pricePerMinute: bookingScooter.value.pricePerMin,
+      cardLast4: paymentData.cardLast4,
+      status: booking?.bookingStatus ?? 'ACTIVE'
+    })
     bookingOptionsVisible.value = false
     bookingScooter.value = null
     selectedScooter.value = null

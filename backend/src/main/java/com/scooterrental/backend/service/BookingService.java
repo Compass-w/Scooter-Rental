@@ -15,6 +15,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.Locale;
 import java.util.List;
 import java.util.Map;
@@ -125,6 +126,44 @@ public class BookingService {
                 booking.getEndTime(),
                 booking.getStatus(),
                 scooter.getStatus());
+    }
+
+    @Transactional
+    public Map<String, Object> extendRide(Integer bookingId, Integer extraMinutes) {
+        if (extraMinutes == null || extraMinutes <= 0) {
+            throw new IllegalArgumentException("Extension time must be greater than 0 minutes");
+        }
+
+        Booking booking = bookingMapper.selectByBookingId(bookingId);
+        if (booking == null) {
+            throw new IllegalArgumentException("Booking not found");
+        }
+        if (!BOOKING_ACTIVE.equalsIgnoreCase(booking.getStatus())) {
+            throw new IllegalStateException("Booking is not currently active");
+        }
+
+        Scooter scooter = scooterMapper.selectById(booking.getScooterId());
+        if (scooter == null) {
+            throw new IllegalArgumentException("Scooter not found");
+        }
+
+        int currentDuration = booking.getDurationMinutes() != null ? booking.getDurationMinutes() : 0;
+        int nextDuration = currentDuration + extraMinutes;
+        BigDecimal updatedCost = calculateCost(scooter, nextDuration);
+
+        booking.setDurationMinutes(nextDuration);
+        booking.setTotalCost(updatedCost);
+        bookingMapper.extendActiveBooking(booking);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("bookingId", booking.getBookingId());
+        response.put("scooterId", booking.getScooterId());
+        response.put("addedMinutes", extraMinutes);
+        response.put("durationMinutes", booking.getDurationMinutes());
+        response.put("totalCost", booking.getTotalCost());
+        response.put("plannedEndTime", booking.getStartTime().plusMinutes(booking.getDurationMinutes()));
+        response.put("bookingStatus", booking.getStatus());
+        return response;
     }
 
     private void validateStartRideRequest(StartRideRequest request) {

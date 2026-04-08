@@ -15,11 +15,11 @@
 
       <view class="scooter-summary">
         <view class="summary-pill">
-          <uni-icons type="navigate" size="16" color="#0F766E"></uni-icons>
+          <uni-icons type="navigate" size="16" color="#2563EB"></uni-icons>
           <text class="summary-text">{{ scooter.model || 'Scooter' }}</text>
         </view>
         <view class="summary-pill">
-          <uni-icons type="wallet" size="16" color="#0F766E"></uni-icons>
+          <uni-icons type="wallet" size="16" color="#2563EB"></uni-icons>
           <text class="summary-text">Base £{{ formatMoney(basePrice) }} + £{{ formatMoney(pricePerMinute) }}/min</text>
         </view>
       </view>
@@ -257,20 +257,24 @@ const handleConfirm = async () => {
   inset: 0;
   background: rgba(15, 23, 42, 0.56);
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: center;
-  z-index: 900;
-  padding: 24rpx;
+  z-index: 1200;
+  padding: calc(env(safe-area-inset-top) + 150rpx) 24rpx calc(env(safe-area-inset-bottom) + 24rpx);
   box-sizing: border-box;
+  overflow-y: auto;
 }
 
 .booking-sheet {
   width: 100%;
   max-width: 860rpx;
-  background: linear-gradient(180deg, #f8fffd 0%, #ffffff 35%);
+  background: linear-gradient(180deg, #F8FBFF 0%, #FFFFFF 35%);
   border-radius: 36rpx;
   padding: 24rpx 28rpx 36rpx;
-  box-shadow: 0 -20rpx 60rpx rgba(15, 23, 42, 0.18);
+  box-shadow: 0 24rpx 60rpx rgba(15, 23, 42, 0.18);
+  max-height: calc(100vh - env(safe-area-inset-top) - 190rpx);
+  overflow-y: auto;
+  margin: 0 auto;
 }
 
 .sheet-handle {
@@ -307,7 +311,7 @@ const handleConfirm = async () => {
   width: 68rpx;
   height: 68rpx;
   border-radius: 18rpx;
-  background: #eef2ff;
+  background: #EFF6FF;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -327,12 +331,13 @@ const handleConfirm = async () => {
   gap: 8rpx;
   padding: 14rpx 18rpx;
   border-radius: 999rpx;
-  background: #ecfeff;
+  background: #EFF6FF;
+  border: 1rpx solid rgba(37, 99, 235, 0.14);
 }
 
 .summary-text {
   font-size: 24rpx;
-  color: #0f766e;
+  color: #1D4ED8;
   font-weight: 600;
 }
 
@@ -369,9 +374,9 @@ const handleConfirm = async () => {
 }
 
 .plan-card-active {
-  border-color: #0f766e;
-  background: linear-gradient(180deg, #ecfeff 0%, #f0fdfa 100%);
-  box-shadow: 0 10rpx 24rpx rgba(15, 118, 110, 0.12);
+  border-color: #1D4ED8;
+  background: linear-gradient(180deg, #EFF6FF 0%, #F8FBFF 100%);
+  box-shadow: 0 10rpx 24rpx rgba(37, 99, 235, 0.14);
 }
 
 .plan-label {
@@ -393,19 +398,19 @@ const handleConfirm = async () => {
   margin-top: 14rpx;
   font-size: 30rpx;
   font-weight: 700;
-  color: #0f766e;
+  color: #1D4ED8;
 }
 
 .demo-badge {
   margin-bottom: 18rpx;
   padding: 10rpx 16rpx;
-  background: #dcfce7;
+  background: #DBEAFE;
   border-radius: 999rpx;
 }
 
 .demo-badge-text {
   font-size: 22rpx;
-  color: #166534;
+  color: #1D4ED8;
   font-weight: 600;
 }
 
@@ -450,6 +455,7 @@ const handleConfirm = async () => {
   border: 2rpx solid #e2e8f0;
   padding: 0 24rpx;
   box-sizing: border-box;
+  overflow-y: auto;
   font-size: 28rpx;
   color: #0f172a;
 }
@@ -457,7 +463,7 @@ const handleConfirm = async () => {
 .pricing-card {
   background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
   border-radius: 28rpx;
-  padding: 24rpx;
+  padding: calc(env(safe-area-inset-top) + 150rpx) 24rpx calc(env(safe-area-inset-bottom) + 24rpx);
 }
 
 .pricing-row {
@@ -504,11 +510,11 @@ const handleConfirm = async () => {
   height: 96rpx;
   line-height: 96rpx;
   border-radius: 999rpx;
-  background: linear-gradient(135deg, #0f766e 0%, #115e59 100%);
+  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
   color: #fff;
   font-size: 30rpx;
   font-weight: 700;
-  box-shadow: 0 12rpx 24rpx rgba(15, 118, 110, 0.22);
+  box-shadow: 0 12rpx 24rpx rgba(37, 99, 235, 0.22);
 }
 
 .confirm-button::after {
@@ -519,3 +525,4 @@ const handleConfirm = async () => {
   opacity: 0.68;
 }
 </style>
+

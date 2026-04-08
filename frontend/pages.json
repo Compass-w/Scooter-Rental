@@ -21,6 +21,13 @@
       }
     },
     {
+      "path": "pages/active-ride",
+      "style": {
+        "navigationBarTitleText": "Active Ride",
+        "navigationStyle": "custom"
+      }
+    },
+    {
       "path": "pages/login",
       "style": {
         "navigationBarTitleText": "Login",

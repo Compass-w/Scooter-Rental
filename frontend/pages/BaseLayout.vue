@@ -291,11 +291,11 @@ const goToFindScooter = () => {
 }
 
 const goToBooking = () => {
-  uni.navigateTo({ url: '/pages/booking' })
+  uni.navigateTo({ url: '/pages/active-ride?source=booking' })
 }
 
 const goToTrip = () => {
-  uni.navigateTo({ url: '/pages/trip' })
+  uni.navigateTo({ url: '/pages/active-ride?source=trip' })
 }
 
 const goToProfile = () => {

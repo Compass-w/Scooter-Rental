@@ -76,4 +76,18 @@ public class BookingController {
         }
         return endRide(bookingId);
     }
+
+    @PostMapping("/{bookingId}/extend")
+    @Operation(summary = "Extend Ride", description = "Add more time to an active booking")
+    public ResponseEntity<Result<Map<String, Object>>> extendRide(
+            @PathVariable Integer bookingId,
+            @RequestBody Map<String, Integer> request
+    ) {
+        try {
+            return ResponseEntity.ok(Result.success(bookingService.extendRide(bookingId, request.get("extraMinutes"))));
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Result.error(400, ex.getMessage()));
+        }
+    }
 }
