@@ -1,266 +1,269 @@
 <template>
   <BaseLayout nav-type="default" :show-menu="true" :show-footer="false" :current-page="currentNavPage">
-    <view class="ride-page">
-      <view class="hero">
-        <text class="eyebrow">{{ isBookingPage ? 'Booking Overview' : 'My Ride Dashboard' }}</text>
-        <text class="title">{{ heroTitle }}</text>
-        <text class="subtitle">{{ heroSubtitle }}</text>
-        <view class="hero-chip">
-          <view class="hero-chip-dot"></view>
-          <text class="hero-chip-text">{{ heroChip }}</text>
+    <view class="ride-page" :style="ui.page">
+      <view class="hero" :style="ui.hero">
+        <text class="eyebrow" :style="ui.eyebrow">{{ isBookingPage ? 'Booking Overview' : 'My Ride Dashboard' }}</text>
+        <text class="title" :style="ui.title">{{ heroTitle }}</text>
+        <text class="subtitle" :style="ui.subtitle">{{ heroSubtitle }}</text>
+        <view class="hero-chip" :style="ui.heroChip">
+          <view class="hero-chip-dot" :style="ui.heroChipDot"></view>
+          <text class="hero-chip-text" :style="ui.heroChipText">{{ heroChip }}</text>
         </view>
       </view>
 
-      <view v-if="activeRide && countdownExpired" class="banner banner-alert">
-        <text class="banner-text">Your reserved time has ended. Extend the booking or end the ride to keep things clear.</text>
+      <view v-if="activeRide && countdownExpired" class="banner banner-alert" :style="[ui.banner, ui.bannerAlert]">
+        <text class="banner-text" :style="ui.bannerText">Your reserved time has ended. Extend the booking or end the ride to keep things clear.</text>
       </view>
-      <view v-else-if="activeRide" class="banner">
-        <text class="banner-text">{{ countdownHint }}</text>
-      </view>
-
-      <view v-if="syncing" class="banner">
-        <view class="sync-dot"></view>
-        <text class="banner-text">Checking your latest booking details...</text>
+      <view v-else-if="activeRide" class="banner" :style="ui.banner">
+        <text class="banner-text" :style="ui.bannerText">{{ countdownHint }}</text>
       </view>
 
-      <view v-if="activeRide && isTripPage" class="stack">
-        <view class="card">
-          <view class="card-head">
+      <view v-if="syncing" class="banner" :style="ui.banner">
+        <view class="sync-dot" :style="ui.heroChipDot"></view>
+        <text class="banner-text" :style="ui.bannerText">Checking your latest booking details...</text>
+      </view>
+
+      <view v-if="activeRide && isTripPage" class="stack" :style="ui.stack">
+        <view class="card" :style="ui.card">
+          <view class="card-head" :style="ui.cardHead">
             <view>
-              <text class="card-title">Remaining Rental Time</text>
-              <text class="card-sub">Live countdown for your current booking</text>
+              <text class="card-title" :style="ui.cardTitle">Remaining Rental Time</text>
+              <text class="card-sub" :style="ui.cardSub">Live countdown for your current booking</text>
             </view>
-            <text class="badge">ACTIVE</text>
+            <text class="badge" :style="ui.badge">ACTIVE</text>
           </view>
-          <view class="timer-box">
-            <text class="timer-text">{{ countdownText }}</text>
+          <view class="timer-box" :style="ui.timerBox">
+            <text class="timer-text" :style="ui.timerText">{{ countdownText }}</text>
           </view>
-          <view class="grid">
-            <view class="tile">
-              <text class="tile-label">Scooter</text>
-              <text class="tile-value">#{{ activeRide.scooterId }} {{ activeRide.scooterModel }}</text>
+          <view class="grid" :style="ui.grid">
+            <view class="tile" :style="ui.tile">
+              <text class="tile-label" :style="ui.tileLabel">Scooter</text>
+              <text class="tile-value" :style="ui.tileValue">#{{ activeRide.scooterId }} {{ activeRide.scooterModel }}</text>
             </view>
-            <view class="tile">
-              <text class="tile-label">Started</text>
-              <text class="tile-value">{{ formatDateTime(activeRide.startTime) }}</text>
+            <view class="tile" :style="ui.tile">
+              <text class="tile-label" :style="ui.tileLabel">Started</text>
+              <text class="tile-value" :style="ui.tileValue">{{ formatDateTime(activeRide.startTime) }}</text>
             </view>
-            <view class="tile">
-              <text class="tile-label">Planned finish</text>
-              <text class="tile-value">{{ plannedEndTime }}</text>
+            <view class="tile" :style="ui.tile">
+              <text class="tile-label" :style="ui.tileLabel">Planned finish</text>
+              <text class="tile-value" :style="ui.tileValue">{{ plannedEndTime }}</text>
             </view>
-            <view class="tile">
-              <text class="tile-label">Reserved total</text>
-              <text class="tile-value">{{ formatMoney(activeRide.totalCost) }}</text>
+            <view class="tile" :style="ui.tile">
+              <text class="tile-label" :style="ui.tileLabel">Reserved total</text>
+              <text class="tile-value" :style="ui.tileValue">{{ formatMoney(activeRide.totalCost) }}</text>
             </view>
           </view>
         </view>
 
-        <view class="card">
-          <view class="card-head">
+        <view class="card" :style="ui.card">
+          <view class="card-head" :style="ui.cardHead">
             <view>
-              <text class="card-title">Ride Actions</text>
-              <text class="card-sub">Extend, report an issue, or end the ride here.</text>
+              <text class="card-title" :style="ui.cardTitle">Ride Actions</text>
+              <text class="card-sub" :style="ui.cardSub">Extend, report an issue, or end the ride here.</text>
             </view>
           </view>
-          <text class="section-label">Extend booking</text>
-          <view class="chips">
+          <text class="section-label" :style="ui.tileLabel">Extend booking</text>
+          <view class="chips" :style="ui.chips">
             <view
               v-for="(label, index) in extensionLabels"
               :key="label"
               :class="['chip', selectedExtensionIndex === index ? 'chip-active' : '']"
+              :style="[ui.chip, selectedExtensionIndex === index ? ui.chipActive : null]"
               @tap="selectedExtensionIndex = index"
             >
-              <text :class="['chip-text', selectedExtensionIndex === index ? 'chip-text-active' : '']">{{ label }}</text>
+              <text :class="['chip-text', selectedExtensionIndex === index ? 'chip-text-active' : '']" :style="[ui.chipText, selectedExtensionIndex === index ? ui.chipTextActive : null]">{{ label }}</text>
             </view>
           </view>
-          <view class="grid preview-grid">
-            <view class="tile">
-              <text class="tile-label">New planned finish</text>
-              <text class="tile-value">{{ projectedEndTime }}</text>
+          <view class="grid preview-grid" :style="[ui.grid, { marginTop: '14px', marginBottom: '14px' }]">
+            <view class="tile" :style="ui.tile">
+              <text class="tile-label" :style="ui.tileLabel">New planned finish</text>
+              <text class="tile-value" :style="ui.tileValue">{{ projectedEndTime }}</text>
             </view>
-            <view class="tile">
-              <text class="tile-label">Updated reserved total</text>
-              <text class="tile-value">{{ projectedTotalCost }}</text>
+            <view class="tile" :style="ui.tile">
+              <text class="tile-label" :style="ui.tileLabel">Updated reserved total</text>
+              <text class="tile-value" :style="ui.tileValue">{{ projectedTotalCost }}</text>
             </view>
           </view>
-          <view class="actions">
-            <button class="btn btn-primary" :disabled="busyAction === 'extend'" @tap="handleExtendRide">
+          <view class="actions" :style="ui.actions">
+            <button class="btn btn-primary" :style="[ui.button, ui.buttonPrimary]" :disabled="busyAction === 'extend'" @tap="handleExtendRide">
               <text>{{ busyAction === 'extend' ? 'Extending booking...' : `Extend by ${extensionMinutes} min` }}</text>
             </button>
-            <button class="btn btn-secondary" @tap="openIssuePopup">
+            <button class="btn btn-secondary" :style="[ui.button, ui.buttonSecondary]" @tap="openIssuePopup">
               <text>Report Issue</text>
             </button>
-            <button class="btn btn-danger" :disabled="busyAction === 'end'" @tap="handleEndRide">
+            <button class="btn btn-danger" :style="[ui.button, ui.buttonDanger]" :disabled="busyAction === 'end'" @tap="handleEndRide">
               <text>{{ busyAction === 'end' ? 'Ending ride...' : 'End Ride' }}</text>
             </button>
           </view>
         </view>
       </view>
 
-      <view v-else-if="activeRide && isBookingPage" class="stack">
-        <view class="card">
-          <view class="card-head">
+      <view v-else-if="activeRide && isBookingPage" class="stack" :style="ui.stack">
+        <view class="card" :style="ui.card">
+          <view class="card-head" :style="ui.cardHead">
             <view>
-              <text class="card-title">Booking Snapshot</text>
-              <text class="card-sub">Current reservation details for this ride</text>
+              <text class="card-title" :style="ui.cardTitle">Booking Snapshot</text>
+              <text class="card-sub" :style="ui.cardSub">Current reservation details for this ride</text>
             </view>
-            <text class="badge">ACTIVE</text>
+            <text class="badge" :style="ui.badge">ACTIVE</text>
           </view>
-          <view class="grid">
-            <view class="tile">
-              <text class="tile-label">Booking</text>
-              <text class="tile-value">#{{ activeRide.bookingId || 'Pending' }}</text>
+          <view class="grid" :style="ui.grid">
+            <view class="tile" :style="ui.tile">
+              <text class="tile-label" :style="ui.tileLabel">Booking</text>
+              <text class="tile-value" :style="ui.tileValue">#{{ activeRide.bookingId || 'Pending' }}</text>
             </view>
-            <view class="tile">
-              <text class="tile-label">Scooter</text>
-              <text class="tile-value">#{{ activeRide.scooterId }} {{ activeRide.scooterModel }}</text>
+            <view class="tile" :style="ui.tile">
+              <text class="tile-label" :style="ui.tileLabel">Scooter</text>
+              <text class="tile-value" :style="ui.tileValue">#{{ activeRide.scooterId }} {{ activeRide.scooterModel }}</text>
             </view>
-            <view class="tile">
-              <text class="tile-label">Booked from</text>
-              <text class="tile-value">{{ formatDateTime(activeRide.startTime) }}</text>
+            <view class="tile" :style="ui.tile">
+              <text class="tile-label" :style="ui.tileLabel">Booked from</text>
+              <text class="tile-value" :style="ui.tileValue">{{ formatDateTime(activeRide.startTime) }}</text>
             </view>
-            <view class="tile">
-              <text class="tile-label">Planned finish</text>
-              <text class="tile-value">{{ plannedEndTime }}</text>
+            <view class="tile" :style="ui.tile">
+              <text class="tile-label" :style="ui.tileLabel">Planned finish</text>
+              <text class="tile-value" :style="ui.tileValue">{{ plannedEndTime }}</text>
             </view>
-            <view class="tile">
-              <text class="tile-label">Duration</text>
-              <text class="tile-value">{{ durationLabel }}</text>
+            <view class="tile" :style="ui.tile">
+              <text class="tile-label" :style="ui.tileLabel">Duration</text>
+              <text class="tile-value" :style="ui.tileValue">{{ durationLabel }}</text>
             </view>
-            <view class="tile">
-              <text class="tile-label">Reserved total</text>
-              <text class="tile-value">{{ formatMoney(activeRide.totalCost) }}</text>
+            <view class="tile" :style="ui.tile">
+              <text class="tile-label" :style="ui.tileLabel">Reserved total</text>
+              <text class="tile-value" :style="ui.tileValue">{{ formatMoney(activeRide.totalCost) }}</text>
             </view>
           </view>
         </view>
 
-        <view class="card">
-          <view class="card-head">
+        <view class="card" :style="ui.card">
+          <view class="card-head" :style="ui.cardHead">
             <view>
-              <text class="card-title">Booking Controls</text>
-              <text class="card-sub">Everything important stays here even before the ride starts.</text>
+              <text class="card-title" :style="ui.cardTitle">Booking Controls</text>
+              <text class="card-sub" :style="ui.cardSub">Everything important stays here even before the ride starts.</text>
             </view>
           </view>
-          <view class="detail-list">
-            <text class="detail-item">Status {{ activeRide.status || 'ACTIVE' }}</text>
-            <text class="detail-item">{{ durationLabel }}</text>
-            <text class="detail-item">Finish {{ plannedEndTime }}</text>
-            <text v-if="activeRide.cardLast4" class="detail-item">Card ending {{ activeRide.cardLast4 }}</text>
+          <view class="detail-list" :style="ui.detailList">
+            <text class="detail-item" :style="ui.detailItem">Status {{ activeRide.status || 'ACTIVE' }}</text>
+            <text class="detail-item" :style="ui.detailItem">{{ durationLabel }}</text>
+            <text class="detail-item" :style="ui.detailItem">Finish {{ plannedEndTime }}</text>
+            <text v-if="activeRide.cardLast4" class="detail-item" :style="ui.detailItem">Card ending {{ activeRide.cardLast4 }}</text>
           </view>
-          <view class="actions">
-            <button class="btn btn-primary" :disabled="busyAction === 'extend'" @tap="handleExtendRide">
+          <view class="actions" :style="ui.actions">
+            <button class="btn btn-primary" :style="[ui.button, ui.buttonPrimary]" :disabled="busyAction === 'extend'" @tap="handleExtendRide">
               <text>{{ busyAction === 'extend' ? 'Extending booking...' : `Extend by ${extensionMinutes} min` }}</text>
             </button>
-            <button class="btn btn-secondary" @tap="goToRideDashboard">
+            <button class="btn btn-secondary" :style="[ui.button, ui.buttonSecondary]" @tap="goToRideDashboard">
               <text>Open My Ride</text>
             </button>
-            <button class="btn btn-danger" :disabled="busyAction === 'end'" @tap="handleEndRide">
+            <button class="btn btn-danger" :style="[ui.button, ui.buttonDanger]" :disabled="busyAction === 'end'" @tap="handleEndRide">
               <text>{{ busyAction === 'end' ? 'Ending ride...' : 'End Ride' }}</text>
             </button>
           </view>
         </view>
       </view>
 
-      <view v-else-if="isTripPage" class="stack">
-        <view class="card empty-card">
-          <text class="empty-mark">R</text>
-          <text class="card-title">My Ride is standing by</text>
-          <text class="card-sub centered">
+      <view v-else-if="isTripPage" class="stack" :style="ui.stack">
+        <view class="card empty-card" :style="[ui.card, ui.emptyCard]">
+          <text class="empty-mark" :style="ui.emptyMark">R</text>
+          <text class="card-title" :style="ui.cardTitle">My Ride is standing by</text>
+          <text class="card-sub centered" :style="[ui.cardSub, ui.centered]">
             Start a booking from the scooter map and this page will turn into your live ride dashboard.
           </text>
-          <view class="actions">
-            <button class="btn btn-primary" @tap="goToFindScooter">
+          <view class="actions" :style="ui.actions">
+            <button class="btn btn-primary" :style="[ui.button, ui.buttonPrimary]" @tap="goToFindScooter">
               <text>Find a Scooter</text>
             </button>
           </view>
         </view>
-        <view class="grid">
-          <view class="tile">
-            <text class="tile-label">Live timer</text>
-            <text class="tile-value">Countdown and time left</text>
+        <view class="grid" :style="ui.grid">
+          <view class="tile" :style="ui.tile">
+            <text class="tile-label" :style="ui.tileLabel">Live timer</text>
+            <text class="tile-value" :style="ui.tileValue">Countdown and time left</text>
           </view>
-          <view class="tile">
-            <text class="tile-label">Scooter info</text>
-            <text class="tile-value">Model, ID, and start time</text>
+          <view class="tile" :style="ui.tile">
+            <text class="tile-label" :style="ui.tileLabel">Scooter info</text>
+            <text class="tile-value" :style="ui.tileValue">Model, ID, and start time</text>
           </view>
-          <view class="tile">
-            <text class="tile-label">Ride controls</text>
-            <text class="tile-value">Extend time or end ride</text>
+          <view class="tile" :style="ui.tile">
+            <text class="tile-label" :style="ui.tileLabel">Ride controls</text>
+            <text class="tile-value" :style="ui.tileValue">Extend time or end ride</text>
           </view>
-          <view class="tile">
-            <text class="tile-label">Support</text>
-            <text class="tile-value">Issue reporting tools</text>
+          <view class="tile" :style="ui.tile">
+            <text class="tile-label" :style="ui.tileLabel">Support</text>
+            <text class="tile-value" :style="ui.tileValue">Issue reporting tools</text>
           </view>
         </view>
       </view>
 
-      <view v-else class="stack">
-        <view class="card empty-card">
-          <text class="empty-mark">B</text>
-          <text class="card-title">Book & Details is ready for your next order</text>
-          <text class="card-sub centered">
+      <view v-else class="stack" :style="ui.stack">
+        <view class="card empty-card" :style="[ui.card, ui.emptyCard]">
+          <text class="empty-mark" :style="ui.emptyMark">B</text>
+          <text class="card-title" :style="ui.cardTitle">Book & Details is ready for your next order</text>
+          <text class="card-sub centered" :style="[ui.cardSub, ui.centered]">
             Once you choose a scooter and confirm a plan, this page will keep the booking essentials together before and during the ride.
           </text>
-          <view class="actions">
-            <button class="btn btn-primary" @tap="goToFindScooter">
+          <view class="actions" :style="ui.actions">
+            <button class="btn btn-primary" :style="[ui.button, ui.buttonPrimary]" @tap="goToFindScooter">
               <text>Book a Scooter</text>
             </button>
-            <button class="btn btn-secondary" @tap="goToRideDashboard">
+            <button class="btn btn-secondary" :style="[ui.button, ui.buttonSecondary]" @tap="goToRideDashboard">
               <text>Open My Ride</text>
             </button>
           </view>
         </view>
-        <view class="grid">
-          <view class="tile">
-            <text class="tile-label">Scooter</text>
-            <text class="tile-value">Assigned after you choose on the map</text>
+        <view class="grid" :style="ui.grid">
+          <view class="tile" :style="ui.tile">
+            <text class="tile-label" :style="ui.tileLabel">Scooter</text>
+            <text class="tile-value" :style="ui.tileValue">Assigned after you choose on the map</text>
           </view>
-          <view class="tile">
-            <text class="tile-label">Plan</text>
-            <text class="tile-value">Your selected duration and rate</text>
+          <view class="tile" :style="ui.tile">
+            <text class="tile-label" :style="ui.tileLabel">Plan</text>
+            <text class="tile-value" :style="ui.tileValue">Your selected duration and rate</text>
           </view>
-          <view class="tile">
-            <text class="tile-label">Payment</text>
-            <text class="tile-value">Saved card or payment summary</text>
+          <view class="tile" :style="ui.tile">
+            <text class="tile-label" :style="ui.tileLabel">Payment</text>
+            <text class="tile-value" :style="ui.tileValue">Saved card or payment summary</text>
           </view>
-          <view class="tile">
-            <text class="tile-label">Status</text>
-            <text class="tile-value">Booked, active, or completed</text>
+          <view class="tile" :style="ui.tile">
+            <text class="tile-label" :style="ui.tileLabel">Status</text>
+            <text class="tile-value" :style="ui.tileValue">Booked, active, or completed</text>
           </view>
         </view>
       </view>
 
-      <view v-if="issuePanelOpen" class="overlay" @tap="closeIssuePopup">
-        <view class="sheet" @tap.stop>
-          <view class="card-head">
+      <view v-if="issuePanelOpen" class="overlay" :style="ui.overlay" @tap="closeIssuePopup">
+        <view class="sheet" :style="ui.sheet" @tap.stop>
+          <view class="card-head" :style="ui.cardHead">
             <view>
-              <text class="card-title">Report an issue</text>
-              <text class="card-sub">Tell us what went wrong so we can help quickly.</text>
+              <text class="card-title" :style="ui.cardTitle">Report an issue</text>
+              <text class="card-sub" :style="ui.cardSub">Tell us what went wrong so we can help quickly.</text>
             </view>
           </view>
-          <text class="section-label">Fault category</text>
-          <view class="chips">
+          <text class="section-label" :style="ui.tileLabel">Fault category</text>
+          <view class="chips" :style="ui.chips">
             <view
               v-for="category in issueCategories"
               :key="category.value"
               :class="['chip', issueForm.category === category.value ? 'chip-active' : '']"
+              :style="[ui.chip, issueForm.category === category.value ? ui.chipActive : null]"
               @tap="issueForm.category = category.value"
             >
-              <text :class="['chip-text', issueForm.category === category.value ? 'chip-text-active' : '']">{{ category.label }}</text>
+              <text :class="['chip-text', issueForm.category === category.value ? 'chip-text-active' : '']" :style="[ui.chipText, issueForm.category === category.value ? ui.chipTextActive : null]">{{ category.label }}</text>
             </view>
           </view>
-          <text class="section-label">Description</text>
+          <text class="section-label" :style="ui.tileLabel">Description</text>
           <textarea
             v-model="issueForm.description"
             class="textarea"
+            :style="ui.textarea"
             maxlength="300"
             placeholder="Describe the fault, unusual noise, brake issue, battery issue, or anything else we should know."
           />
-          <view class="actions">
-            <button class="btn btn-secondary" @tap="closeIssuePopup">
+          <view class="actions" :style="ui.actions">
+            <button class="btn btn-secondary" :style="[ui.button, ui.buttonSecondary]" @tap="closeIssuePopup">
               <text>Cancel</text>
             </button>
-            <button class="btn btn-primary" :disabled="busyAction === 'issue'" @tap="submitIssue">
+            <button class="btn btn-primary" :style="[ui.button, ui.buttonPrimary]" :disabled="busyAction === 'issue'" @tap="submitIssue">
               <text>{{ busyAction === 'issue' ? 'Submitting...' : 'Submit Report' }}</text>
             </button>
           </view>
@@ -298,6 +301,284 @@ const issuePanelOpen = ref(false)
 const issueForm = ref({ category: 'OTHER', description: '' })
 const nowTick = ref(Date.now())
 let timer = null
+
+const ui = Object.freeze({
+  page: {
+    minHeight: 'calc(100vh - 160px)',
+    padding: '24px 18px 32px',
+    background: 'radial-gradient(circle at top right, rgba(59, 130, 246, 0.18), transparent 36%), linear-gradient(180deg, #F8FBFF 0%, #EEF5FF 48%, #F8FBFF 100%)'
+  },
+  hero: {
+    padding: '22px',
+    borderRadius: '22px',
+    background: 'linear-gradient(135deg, #1D4ED8 0%, #2563EB 55%, #60A5FA 100%)',
+    color: '#FFFFFF',
+    marginBottom: '18px',
+    boxShadow: '0 18px 40px rgba(37, 99, 235, 0.18)'
+  },
+  eyebrow: {
+    display: 'inline-block',
+    padding: '6px 10px',
+    borderRadius: '999px',
+    background: 'rgba(255, 255, 255, 0.16)',
+    fontSize: '12px',
+    fontWeight: '700',
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase'
+  },
+  title: {
+    display: 'block',
+    marginTop: '12px',
+    fontSize: '28px',
+    lineHeight: '1.2',
+    fontWeight: '800'
+  },
+  subtitle: {
+    display: 'block',
+    marginTop: '10px',
+    fontSize: '15px',
+    lineHeight: '1.65',
+    color: 'rgba(255, 255, 255, 0.86)'
+  },
+  heroChip: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
+    marginTop: '16px',
+    padding: '10px 14px',
+    borderRadius: '999px',
+    background: 'rgba(255, 255, 255, 0.92)'
+  },
+  heroChipDot: {
+    width: '10px',
+    height: '10px',
+    borderRadius: '50%',
+    background: '#2563EB'
+  },
+  heroChipText: {
+    fontSize: '13px',
+    fontWeight: '700',
+    color: '#1D4ED8'
+  },
+  banner: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    marginBottom: '14px',
+    padding: '12px 14px',
+    borderRadius: '14px',
+    background: 'rgba(255, 255, 255, 0.92)',
+    border: '1px solid rgba(37, 99, 235, 0.12)',
+    boxShadow: '0 10px 22px rgba(37, 99, 235, 0.08)'
+  },
+  bannerAlert: {
+    background: '#DBEAFE'
+  },
+  bannerText: {
+    fontSize: '14px',
+    fontWeight: '700',
+    color: '#1D4ED8',
+    lineHeight: '1.6'
+  },
+  stack: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '14px'
+  },
+  card: {
+    background: 'rgba(255, 255, 255, 0.97)',
+    border: '1px solid rgba(148, 163, 184, 0.14)',
+    boxShadow: '0 16px 38px rgba(15, 23, 42, 0.06)',
+    padding: '20px',
+    borderRadius: '20px'
+  },
+  cardHead: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: '12px',
+    marginBottom: '14px'
+  },
+  cardTitle: {
+    display: 'block',
+    fontSize: '22px',
+    fontWeight: '800',
+    color: '#0F172A'
+  },
+  cardSub: {
+    display: 'block',
+    marginTop: '6px',
+    fontSize: '14px',
+    lineHeight: '1.6',
+    color: '#64748B'
+  },
+  badge: {
+    flexShrink: '0',
+    padding: '8px 12px',
+    borderRadius: '999px',
+    background: '#EFF6FF',
+    color: '#1D4ED8',
+    fontSize: '12px',
+    fontWeight: '700'
+  },
+  timerBox: {
+    display: 'flex',
+    justifyContent: 'center',
+    padding: '18px 14px',
+    marginBottom: '14px',
+    borderRadius: '16px',
+    background: 'linear-gradient(180deg, #F8FBFF 0%, #EFF6FF 100%)',
+    border: '1px solid rgba(59, 130, 246, 0.16)'
+  },
+  timerText: {
+    fontSize: '30px',
+    fontWeight: '800',
+    color: '#1D4ED8',
+    letterSpacing: '0.06em'
+  },
+  grid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: '12px'
+  },
+  tile: {
+    padding: '14px',
+    borderRadius: '14px',
+    background: 'linear-gradient(180deg, #F8FBFF 0%, #EEF6FF 100%)',
+    border: '1px solid rgba(37, 99, 235, 0.10)'
+  },
+  tileLabel: {
+    display: 'block',
+    fontSize: '12px',
+    color: '#64748B',
+    marginBottom: '6px',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: '0.04em'
+  },
+  tileValue: {
+    display: 'block',
+    fontSize: '16px',
+    lineHeight: '1.5',
+    color: '#0F172A',
+    fontWeight: '700'
+  },
+  chips: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '10px'
+  },
+  chip: {
+    padding: '10px 14px',
+    borderRadius: '999px',
+    background: '#F1F5F9',
+    border: '1px solid #E2E8F0'
+  },
+  chipActive: {
+    background: 'linear-gradient(135deg, #DBEAFE, #BFDBFE)',
+    border: '1px solid rgba(37, 99, 235, 0.18)'
+  },
+  chipText: {
+    fontSize: '14px',
+    fontWeight: '700',
+    color: '#64748B'
+  },
+  chipTextActive: {
+    color: '#1D4ED8'
+  },
+  detailList: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '10px',
+    marginBottom: '14px'
+  },
+  detailItem: {
+    padding: '10px 14px',
+    borderRadius: '999px',
+    background: '#EFF6FF',
+    border: '1px solid rgba(37, 99, 235, 0.12)',
+    fontSize: '13px',
+    fontWeight: '600',
+    color: '#1E3A8A'
+  },
+  actions: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '12px'
+  },
+  button: {
+    minHeight: '48px',
+    borderRadius: '999px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '15px',
+    fontWeight: '700',
+    flex: '1 1 180px',
+    border: 'none'
+  },
+  buttonPrimary: {
+    background: 'linear-gradient(135deg, #2563EB, #1D4ED8)',
+    color: '#FFFFFF',
+    boxShadow: '0 10px 20px rgba(37, 99, 235, 0.18)'
+  },
+  buttonSecondary: {
+    background: '#EFF6FF',
+    color: '#1D4ED8',
+    border: '1px solid rgba(37, 99, 235, 0.14)'
+  },
+  buttonDanger: {
+    background: 'linear-gradient(135deg, #1E3A8A, #1D4ED8)',
+    color: '#FFFFFF'
+  },
+  emptyCard: {
+    textAlign: 'center'
+  },
+  emptyMark: {
+    display: 'inline-flex',
+    width: '64px',
+    height: '64px',
+    borderRadius: '50%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    margin: '0 auto 16px',
+    background: 'radial-gradient(circle, rgba(59, 130, 246, 0.16), rgba(191, 219, 254, 0.5))',
+    color: '#1D4ED8',
+    fontSize: '22px',
+    fontWeight: '800'
+  },
+  centered: {
+    textAlign: 'center'
+  },
+  overlay: {
+    position: 'fixed',
+    inset: '0',
+    background: 'rgba(15, 23, 42, 0.48)',
+    zIndex: '1200',
+    display: 'flex',
+    alignItems: 'flex-end'
+  },
+  sheet: {
+    width: '100%',
+    padding: '24px 18px 30px',
+    borderRadius: '24px 24px 0 0',
+    background: 'linear-gradient(180deg, #F8FBFF 0%, #FFFFFF 28%)',
+    boxShadow: '0 -12px 30px rgba(15, 23, 42, 0.18)'
+  },
+  textarea: {
+    width: '100%',
+    minHeight: '140px',
+    padding: '14px',
+    boxSizing: 'border-box',
+    borderRadius: '14px',
+    background: '#FFFFFF',
+    border: '1px solid #D7E3F9',
+    fontSize: '14px',
+    lineHeight: '1.6',
+    color: '#0F172A',
+    marginBottom: '14px'
+  }
+})
 
 const isBookingPage = computed(() => currentNavPage.value === 'booking')
 const isTripPage = computed(() => !isBookingPage.value)

@@ -460,7 +460,7 @@ const cities = ref([
   { name: 'Chengdu',    flag: '', live: true  },
   { name: 'Nanjing',    flag: '', live: true  },
   { name: 'Suzhou',     flag: '', live: true  },
-  { name: 'Hong Kong',  flag: '', live: true  },
+  { name: 'HongKong',   flag: '', live: true  },
   { name: 'Singapore',  flag: '', live: true  },
   { name: 'Tokyo',      flag: '', live: true  },
   { name: 'London',     flag: '', live: true  },
