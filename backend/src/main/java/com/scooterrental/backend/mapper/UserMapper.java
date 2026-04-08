@@ -7,19 +7,19 @@ import org.apache.ibatis.annotations.*;
 public interface UserMapper {
 
         // Find user by username for login
-        @Select("SELECT user_id AS userId, username, email, phone, password_hash AS passwordHash, role, " +
+        @Select("SELECT user_id AS userId, username, email, phone, city, password_hash AS passwordHash, role, " +
                         "total_riding_minutes AS totalRidingMinutes, achievements, created_at AS createdAt " +
                         "FROM users WHERE username = #{username}")
         User findByUsername(@Param("username") String username);
 
         // Register: Insert new user
-        @Insert("INSERT INTO users(username, email, phone, password_hash, role) " +
-                        "VALUES(#{username}, #{email}, #{phone}, #{passwordHash}, 'customer')")
+        @Insert("INSERT INTO users(username, email, phone, city, password_hash, role) " +
+                        "VALUES(#{username}, #{email}, #{phone}, #{city}, #{passwordHash}, 'customer')")
         @Options(useGeneratedKeys = true, keyProperty = "userId")
         void insert(User user);
 
         // Get user profile by ID
-        @Select("SELECT user_id AS userId, username, email, phone, role, " +
+        @Select("SELECT user_id AS userId, username, email, phone, city, role, " +
                         "total_riding_minutes AS totalRidingMinutes, achievements, created_at AS createdAt " +
                         "FROM users WHERE user_id = #{userId}")
         User selectById(@Param("userId") Integer userId);
@@ -27,7 +27,12 @@ public interface UserMapper {
         /**
          * Update user profile information (email and phone) [ID: user.js]
          */
-        @Update("UPDATE users SET username = #{username}, email = #{email}, phone = #{phone}, city = #{city} WHERE user_id = #{userId}")
+        @Update("UPDATE users SET " +
+                        "username = COALESCE(#{username}, username), " +
+                        "email = COALESCE(#{email}, email), " +
+                        "phone = COALESCE(#{phone}, phone), " +
+                        "city = COALESCE(#{city}, city) " +
+                        "WHERE user_id = #{userId}")
         int updateUser(User user);
 
         // Update achievements for gamification [ID: 22]

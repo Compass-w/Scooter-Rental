@@ -20,6 +20,9 @@ public class User {
     @Schema(description = "Phone Number", example = "07123456789")
     private String phone;
 
+    @Schema(description = "City of residence", example = "Leeds")
+    private String city;
+
     @Schema(description = "Encrypted Password", hidden = true)
     private String passwordHash;
 

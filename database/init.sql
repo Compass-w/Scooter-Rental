@@ -11,6 +11,7 @@ CREATE TABLE users (
     username VARCHAR(50) UNIQUE NOT NULL,
     email VARCHAR(100),
     phone VARCHAR(20),
+    city VARCHAR(100),
     password_hash VARCHAR(255) NOT NULL,
     role VARCHAR(20) DEFAULT 'customer',
     total_riding_minutes INT DEFAULT 0, -- Track total riding time for stats
@@ -59,8 +60,8 @@ CREATE TABLE bank_cards (
 -- 6. Insert Mock Data for Testing
 
 -- Insert Test User (Password is '123456' hashed via BCrypt)
-INSERT INTO users (username, email, phone, password_hash, role, total_riding_minutes, achievements) 
-VALUES ('student1', 'student1@leeds.ac.uk', '07123456789', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOcd.g/w2.H4q', 'customer', 80, 'Eco-Warrior,Newcomer');
+INSERT INTO users (username, email, phone, city, password_hash, role, total_riding_minutes, achievements) 
+VALUES ('student1', 'student1@leeds.ac.uk', '07123456789', 'Leeds', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOcd.g/w2.H4q', 'customer', 80, 'Eco-Warrior,Newcomer');
 
 -- Insert Test Scooters
 INSERT INTO scooters (model, latitude, longitude, battery_level, status, base_price, price_per_min) 

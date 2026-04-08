@@ -43,7 +43,7 @@ public class UserService {
      * @return true if update was successful.
      */
     public boolean updateUser(User user) {
-        return userMapper.updateProfile(user) > 0;
+        return userMapper.updateUser(user) > 0;
     }
 
     /**
