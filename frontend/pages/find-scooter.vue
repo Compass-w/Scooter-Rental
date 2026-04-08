@@ -33,14 +33,15 @@
         <!-- Search Bar -->
         <view class="search-bar-wrapper">
           <view class="search-bar">
-            <view class="search-icon">
+            <view class="search-icon" @tap="onSearch">
               <uni-icons type="search" size="20" color="#2563EB"></uni-icons>
             </view>
             <input
               class="search-input"
               v-model="searchQuery"
-              placeholder="Search scooter ID or location..."
-              @input="onSearch"
+              placeholder="Search scooter ID, location, or city..."
+              confirm-type="search"
+              @confirm="onSearch"
             />
             <view v-if="searchQuery" class="search-clear" @tap="clearSearch">
               <uni-icons type="clear" size="18" color="#9CA3AF"></uni-icons>
@@ -243,6 +244,27 @@ const mapReady        = ref(false)
 const bookingOptionsVisible = ref(false)
 const bookingScooter  = ref(null)
 
+const locationAliases = [
+  { label: 'Shanghai', names: ['shanghai', 'sh', '\u4e0a\u6d77'], lat: 31.2304, lng: 121.4737, zoom: 13, radiusKm: 18 },
+  { label: 'Beijing', names: ['beijing', 'bj', '\u5317\u4eac'], lat: 39.9042, lng: 116.4074, zoom: 12, radiusKm: 20 },
+  { label: 'Shenzhen', names: ['shenzhen', 'sz', '\u6df1\u5733'], lat: 22.5431, lng: 114.0579, zoom: 13, radiusKm: 18 },
+  { label: 'Guangzhou', names: ['guangzhou', 'gz', '\u5e7f\u5dde'], lat: 23.1291, lng: 113.2644, zoom: 13, radiusKm: 18 },
+  { label: 'Hangzhou', names: ['hangzhou', 'hz', '\u676d\u5dde'], lat: 30.2741, lng: 120.1551, zoom: 13, radiusKm: 18 },
+  { label: 'Chengdu', names: ['chengdu', 'cd', '\u6210\u90fd'], lat: 30.5728, lng: 104.0668, zoom: 13, radiusKm: 18 },
+  { label: 'Nanjing', names: ['nanjing', 'nj', '\u5357\u4eac'], lat: 32.0603, lng: 118.7969, zoom: 13, radiusKm: 18 },
+  { label: 'Suzhou', names: ['suzhou', '\u82cf\u5dde'], lat: 31.2989, lng: 120.5853, zoom: 13, radiusKm: 18 },
+  { label: 'Chongqing', names: ['chongqing', 'cq', '\u91cd\u5e86'], lat: 29.4316, lng: 106.9123, zoom: 12, radiusKm: 22 },
+  { label: 'Wuhan', names: ['wuhan', 'wh', '\u6b66\u6c49'], lat: 30.5928, lng: 114.3055, zoom: 12, radiusKm: 20 },
+  { label: "Xi'an", names: ["xian", "xi'an", '\u897f\u5b89'], lat: 34.3416, lng: 108.9398, zoom: 12, radiusKm: 18 },
+  { label: 'Hong Kong', names: ['hongkong', 'hong kong', 'hk', '\u9999\u6e2f'], lat: 22.3193, lng: 114.1694, zoom: 12, radiusKm: 16 },
+  { label: 'Singapore', names: ['singapore', 'sg'], lat: 1.3521, lng: 103.8198, zoom: 12, radiusKm: 16 },
+  { label: 'Tokyo', names: ['tokyo', '\u4e1c\u4eac'], lat: 35.6762, lng: 139.6503, zoom: 12, radiusKm: 20 },
+  { label: 'Seoul', names: ['seoul', '\u9996\u5c14'], lat: 37.5665, lng: 126.9780, zoom: 12, radiusKm: 18 },
+  { label: 'Bangkok', names: ['bangkok', '\u66fc\u8c37'], lat: 13.7563, lng: 100.5018, zoom: 12, radiusKm: 18 },
+  { label: 'Dubai', names: ['dubai', '\u8fea\u62dc'], lat: 25.2048, lng: 55.2708, zoom: 12, radiusKm: 18 },
+  { label: 'London', names: ['london', '\u4f26\u6566'], lat: 51.5072, lng: -0.1276, zoom: 12, radiusKm: 20 },
+]
+
 // Leaflet map HTML path — place scooter-map.html inside /static/
 const mapSrc = ref('/static/scooter-map.html')
 
@@ -262,6 +284,81 @@ const availableCount = computed(() =>
   scooters.value.filter(s => s.status === 'AVAILABLE').length
 )
 
+const normalizeSearchTerm = (value = '') =>
+  String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s'.-]+/g, '')
+
+const getScooterCoordinates = (scooter) => {
+  const lat = Number(scooter?.latitude ?? scooter?.lat)
+  const lng = Number(scooter?.longitude ?? scooter?.lng)
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return null
+  }
+
+  return { lat, lng }
+}
+
+const resolveSearchLocationAlias = (normalizedQuery) => {
+  if (!normalizedQuery) return null
+
+  return locationAliases.find(location =>
+    location.names.some(name => normalizeSearchTerm(name).includes(normalizedQuery))
+  ) || null
+}
+
+const calculateDistanceKm = (from, to) => {
+  const earthRadiusKm = 6371
+  const toRadians = value => (value * Math.PI) / 180
+  const deltaLat = toRadians(to.lat - from.lat)
+  const deltaLng = toRadians(to.lng - from.lng)
+  const lat1 = toRadians(from.lat)
+  const lat2 = toRadians(to.lat)
+
+  const a =
+    Math.sin(deltaLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLng / 2) ** 2
+
+  return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+const matchesSearchText = (value, normalizedQuery) =>
+  normalizeSearchTerm(value).includes(normalizedQuery)
+
+const matchesScooterQuery = (scooter, normalizedQuery, locationAlias = null) => {
+  if (!normalizedQuery) return true
+
+  const directMatch =
+    matchesSearchText(scooter?.id, normalizedQuery) ||
+    matchesSearchText(scooter?.model, normalizedQuery) ||
+    matchesSearchText(scooter?.location, normalizedQuery)
+
+  if (directMatch) return true
+  if (!locationAlias) return false
+
+  const coordinates = getScooterCoordinates(scooter)
+  if (!coordinates) return false
+
+  return calculateDistanceKm(coordinates, locationAlias) <= (locationAlias.radiusKm || 15)
+}
+
+const focusScooter = (scooter, zoom = 17) => {
+  if (!scooter) return false
+
+  selectedScooter.value = scooter
+  drawerOpen.value = false
+
+  const coordinates = getScooterCoordinates(scooter)
+  if (!coordinates) {
+    return false
+  }
+
+  sendToMap('flyTo', { ...coordinates, zoom })
+  return true
+}
+
 /**
  * Computed: filtered scooter list based on search query and availability filter
  */
@@ -270,13 +367,10 @@ const filteredScooters = computed(() => {
   if (filterAvailable.value) {
     list = list.filter(s => s.status === 'AVAILABLE')
   }
-  if (searchQuery.value) {
-    const q = searchQuery.value.toLowerCase()
-    list = list.filter(s =>
-      String(s.id).includes(q) ||
-      (s.model || '').toLowerCase().includes(q) ||
-      (s.location || '').toLowerCase().includes(q)
-    )
+  const normalizedQuery = normalizeSearchTerm(searchQuery.value)
+  if (normalizedQuery) {
+    const locationAlias = resolveSearchLocationAlias(normalizedQuery)
+    list = list.filter(scooter => matchesScooterQuery(scooter, normalizedQuery, locationAlias))
   }
   return list
 })
@@ -450,11 +544,7 @@ const closeDrawer = () => {
  * @param {Object} scooter - Scooter data object
  */
 const selectScooterFromList = (scooter) => {
-  selectedScooter.value = scooter
-  drawerOpen.value = false
-  if (scooter.latitude && scooter.longitude) {
-    sendToMap('flyTo', { lat: scooter.latitude, lng: scooter.longitude, zoom: 17 })
-  }
+  focusScooter(scooter)
 }
 
 /**
@@ -608,16 +698,55 @@ const startRide = async (scooter) => {
 }
 
 /**
- * Handle search input change
- * Filtering is handled reactively by filteredScooters computed
+ * Search scooters or supported city aliases and move the map accordingly.
  */
-const onSearch = () => {}
+const onSearch = () => {
+  const normalizedQuery = normalizeSearchTerm(searchQuery.value)
+  if (!normalizedQuery) {
+    selectedScooter.value = null
+    return
+  }
+
+  const matches = filteredScooters.value
+  if (matches.length) {
+    focusScooter(matches[0], matches.length > 1 ? 15 : 17)
+    if (matches.length > 1) {
+      uni.showToast({
+        title: `${matches.length} scooters found`,
+        icon: 'none'
+      })
+    }
+    return
+  }
+
+  const locationAlias = resolveSearchLocationAlias(normalizedQuery)
+  if (locationAlias) {
+    selectedScooter.value = null
+    drawerOpen.value = false
+    sendToMap('flyTo', {
+      lat: locationAlias.lat,
+      lng: locationAlias.lng,
+      zoom: locationAlias.zoom || 13
+    })
+    uni.showToast({
+      title: `Moved to ${locationAlias.label}`,
+      icon: 'none'
+    })
+    return
+  }
+
+  uni.showToast({
+    title: 'No scooter or city found',
+    icon: 'none'
+  })
+}
 
 /**
  * Clear search input
  */
 const clearSearch = () => {
   searchQuery.value = ''
+  selectedScooter.value = null
 }
 
 /**
