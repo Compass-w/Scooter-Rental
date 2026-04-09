@@ -16,11 +16,9 @@
           <view class="error-icon">
             <uni-icons type="closeempty" size="60" color="#EF4444"></uni-icons>
           </view>
-          <text class="error-title">Invalid or Expired Link</text>
-          <text class="error-message">
-            This password reset link is invalid or has expired. Please request a new one.
-          </text>
-          <button class="btn-secondary-pill" @tap="goToForget">Request New Link</button>
+          <text class="error-title">{{ errorTitle }}</text>
+          <text class="error-message">{{ errorMessage }}</text>
+          <button class="btn-secondary-pill" @tap="handleInvalidStateAction">{{ invalidActionLabel }}</button>
         </view>
 
         <!-- Reset Password Form -->
@@ -113,7 +111,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { resetPassword, verifyResetToken } from '@/api/user.js'
+import { forgotPassword, resetPassword, verifyResetToken } from '@/api/user.js'
 import BaseLayout from '@/pages/BaseLayout.vue'
 
 // Reactive state variables
@@ -126,6 +124,10 @@ const verifying = ref(true)
 const tokenInvalid = ref(false)
 const resetToken = ref('')
 const userEmail = ref('')
+const pageSource = ref('')
+const errorTitle = ref('Invalid or Expired Link')
+const errorMessage = ref('This password reset link is invalid or has expired. Please request a new one.')
+const invalidActionLabel = ref('Request New Link')
 
 /**
  * Component mounted lifecycle hook
@@ -136,12 +138,22 @@ onMounted(async () => {
   const pages = getCurrentPages()
   const currentPage = pages[pages.length - 1]
   const options = currentPage.options || {}
-  
+  pageSource.value = options.source || ''
+
+  if (pageSource.value === 'profile') {
+    await bootstrapProfileReset()
+    return
+  }
+
   resetToken.value = options.token || ''
   
   if (!resetToken.value) {
     // No token provided in URL
-    tokenInvalid.value = true
+    markResetFlowInvalid(
+      'Invalid or Expired Link',
+      'This password reset link is invalid or has expired. Please request a new one.',
+      'Request New Link'
+    )
     verifying.value = false
     return
   }
@@ -149,6 +161,61 @@ onMounted(async () => {
   // Verify token with backend
   await verifyToken()
 })
+
+const readStoredUserInfo = () => {
+  try {
+    const cached = uni.getStorageSync('userInfo')
+    return typeof cached === 'string' ? JSON.parse(cached) : (cached || {})
+  } catch (error) {
+    console.error('Failed to read stored user info:', error)
+    return {}
+  }
+}
+
+const markResetFlowInvalid = (title, message, actionLabel = 'Request New Link') => {
+  errorTitle.value = title
+  errorMessage.value = message
+  invalidActionLabel.value = actionLabel
+  tokenInvalid.value = true
+}
+
+const bootstrapProfileReset = async () => {
+  verifying.value = true
+
+  const storedUser = readStoredUserInfo()
+  const email = storedUser?.email?.trim?.() || ''
+
+  if (!email) {
+    markResetFlowInvalid(
+      'Email Required',
+      'Add an email address in your profile before changing your password from this page.',
+      'Back to Profile'
+    )
+    verifying.value = false
+    return
+  }
+
+  try {
+    const result = await forgotPassword({ email })
+    resetToken.value = result?.resetToken || ''
+    userEmail.value = result?.email || email
+
+    if (!resetToken.value) {
+      throw new Error('Reset token not returned for profile flow')
+    }
+
+    tokenInvalid.value = false
+  } catch (error) {
+    console.error('Failed to initialize profile password reset:', error)
+    markResetFlowInvalid(
+      'Unable to Start Reset',
+      'We could not prepare a secure reset session right now. Please try again from your profile.',
+      'Back to Profile'
+    )
+  } finally {
+    verifying.value = false
+  }
+}
 
 /**
  * Verify reset token validity
@@ -167,7 +234,11 @@ const verifyToken = async () => {
     tokenInvalid.value = false
   } catch (error) {
     console.error('Token verification failed:', error)
-    tokenInvalid.value = true
+    markResetFlowInvalid(
+      'Invalid or Expired Link',
+      'This password reset link is invalid or has expired. Please request a new one.',
+      'Request New Link'
+    )
   } finally {
     verifying.value = false
   }
@@ -225,6 +296,10 @@ const handleResetPassword = async () => {
   loading.value = true
   
   try {
+    if (!resetToken.value) {
+      throw new Error('Missing reset token')
+    }
+
     // Call reset password API
     await resetPassword({
       token: resetToken.value,
@@ -270,6 +345,15 @@ const goToLogin = () => {
  */
 const goToForget = () => {
   uni.redirectTo({ url: '/pages/forget-password' })
+}
+
+const handleInvalidStateAction = () => {
+  if (pageSource.value === 'profile') {
+    uni.navigateBack({ delta: 1 })
+    return
+  }
+
+  goToForget()
 }
 </script>
 

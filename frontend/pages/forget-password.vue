@@ -11,7 +11,7 @@
           <text class="title">Forgot Password?</text>
           <text class="subtitle">Don't worry, we'll help you reset it</text>
           <text class="description">
-            Enter your email address and we'll send you a link to reset your password
+            Enter your email address and we'll prepare a secure reset link for your account
           </text>
         </view>
 
@@ -31,7 +31,7 @@
                 @confirm="handleReset"
               />
             </view>
-            <text class="input-hint">We'll send a reset link to this email</text>
+            <text class="input-hint">We'll verify this email before opening the reset flow</text>
           </view>
 
           <button class="btn-primary-pill" @tap="handleReset" :disabled="loading">
@@ -42,7 +42,7 @@
           <view class="info-box">
             <uni-icons type="info" size="20" color="#2563EB"></uni-icons>
             <text class="info-text">
-              The reset link will expire in 24 hours for security purposes
+              The reset link expires in 24 hours. In this demo build, we'll open the reset page directly after verification.
             </text>
           </view>
 
@@ -87,8 +87,10 @@ const validateEmail = (email) => {
  * Sends reset link to user's email via API
  */
 const handleReset = async () => {
+  const normalizedEmail = email.value.trim()
+
   // Validate email input
-  if (!email.value) {
+  if (!normalizedEmail) {
     uni.showToast({ 
       title: 'Please enter your email address', 
       icon: 'none',
@@ -98,7 +100,7 @@ const handleReset = async () => {
   }
   
   // Validate email format
-  if (!validateEmail(email.value)) {
+  if (!validateEmail(normalizedEmail)) {
     uni.showToast({ 
       title: 'Please enter a valid email address', 
       icon: 'none',
@@ -112,17 +114,22 @@ const handleReset = async () => {
   
   try {
     // Call forgot password API
-    await forgotPassword({ email: email.value })
-    
-    // Show success message
-    uni.showToast({ 
-      title: 'Reset link sent to your email!', 
-      icon: 'success',
-      duration: 2000
+    const result = await forgotPassword({ email: normalizedEmail })
+    const resetPath = result?.resetPath || (result?.resetToken ? `/pages/reset-password?token=${encodeURIComponent(result.resetToken)}` : '')
+
+    if (!resetPath) {
+      throw new Error('Reset link was not returned by the server')
+    }
+
+    uni.showModal({
+      title: 'Reset link ready',
+      content: `We verified ${result?.email || normalizedEmail}. We'll open the secure reset page now.`,
+      showCancel: false,
+      success: () => {
+        email.value = ''
+        uni.navigateTo({ url: resetPath })
+      }
     })
-    
-    // Clear email input
-    email.value = ''
     
   } catch (error) {
     console.error('Failed to send reset link:', error)

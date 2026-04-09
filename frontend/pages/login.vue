@@ -143,7 +143,7 @@ const handleLogin = async () => {
       password: password.value
     })
 
-    const { token, userId, role } = result.data || result
+    const { token, userId, role, email, username: resolvedUsername } = result.data || result
 
     // Save authentication token
     if (token) {
@@ -153,7 +153,8 @@ const handleLogin = async () => {
     // Save user information
     const userInfo = {
       userId: userId,
-      username: username.value,
+      username: resolvedUsername || username.value,
+      email: email || '',
       role: role
     }
     setUserInfo(userInfo)

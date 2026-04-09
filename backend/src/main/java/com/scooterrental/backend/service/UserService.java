@@ -6,14 +6,25 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
 @Service
 public class UserService {
+
+    private static final long RESET_TOKEN_EXPIRY_HOURS = 24;
 
     @Autowired
     private UserMapper userMapper;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    private final Map<String, PasswordResetSession> passwordResetTokens = new ConcurrentHashMap<>();
 
     public User login(String username, String password) {
         User user = userMapper.findByUsername(username);
@@ -35,6 +46,58 @@ public class UserService {
 
     public User getUserById(Integer userId) {
         return userMapper.selectById(userId);
+    }
+
+    public Map<String, Object> createPasswordReset(String email) {
+        if (email == null || email.isBlank()) {
+            return null;
+        }
+
+        User user = userMapper.findByEmail(email.trim());
+        if (user == null || user.getUserId() == null) {
+            return null;
+        }
+
+        invalidateResetTokensForUser(user.getUserId());
+
+        String token = UUID.randomUUID().toString().replace("-", "");
+        LocalDateTime expiresAt = LocalDateTime.now().plusHours(RESET_TOKEN_EXPIRY_HOURS);
+        passwordResetTokens.put(token, new PasswordResetSession(user.getUserId(), user.getEmail(), expiresAt));
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("email", user.getEmail());
+        payload.put("resetToken", token);
+        payload.put("resetPath", "/pages/reset-password?token=" + token);
+        payload.put("expiresAt", expiresAt);
+        return payload;
+    }
+
+    public Map<String, Object> verifyPasswordResetToken(String token) {
+        PasswordResetSession session = getValidResetSession(token);
+        if (session == null) {
+            return null;
+        }
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("email", session.email());
+        payload.put("expiresAt", session.expiresAt());
+        return payload;
+    }
+
+    public boolean resetPassword(String token, String newPassword) {
+        PasswordResetSession session = getValidResetSession(token);
+        if (session == null || newPassword == null || newPassword.isBlank()) {
+            return false;
+        }
+
+        String encodedPassword = passwordEncoder.encode(newPassword);
+        int updatedRows = userMapper.updatePasswordHash(session.userId(), encodedPassword);
+        if (updatedRows > 0) {
+            invalidateResetTokensForUser(session.userId());
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -67,5 +130,30 @@ public class UserService {
         if (updated) {
             userMapper.updateAchievements(userId, current);
         }
+    }
+
+    private PasswordResetSession getValidResetSession(String token) {
+        if (token == null || token.isBlank()) {
+            return null;
+        }
+
+        PasswordResetSession session = passwordResetTokens.get(token.trim());
+        if (session == null) {
+            return null;
+        }
+
+        if (session.expiresAt().isBefore(LocalDateTime.now())) {
+            passwordResetTokens.remove(token.trim());
+            return null;
+        }
+
+        return session;
+    }
+
+    private void invalidateResetTokensForUser(Integer userId) {
+        passwordResetTokens.entrySet().removeIf(entry -> Objects.equals(entry.getValue().userId(), userId));
+    }
+
+    private record PasswordResetSession(Integer userId, String email, LocalDateTime expiresAt) {
     }
 }

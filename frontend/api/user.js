@@ -35,12 +35,12 @@ export const login = (data) => {
  * @param {string} data.email - User email address
  * @returns {Promise} - Returns send result
  * 
- * API Endpoint: POST /users/forgot-password
+ * API Endpoint: POST /auth/forgot-password
  * Request Body: { "email": "user@example.com" }
- * Response: { "code": 200, "message": "Reset link sent to email", "data": null }
+ * Response: { "code": 200, "message": "Success", "data": { resetToken, resetPath, email, expiresAt } }
  */
 export const forgotPassword = (data) => {
-  return request.post('/users/forgot-password', data)
+  return request.post('/auth/forgot-password', data)
 }
 
 /**
@@ -50,12 +50,12 @@ export const forgotPassword = (data) => {
  * @param {string} data.newPassword - New password
  * @returns {Promise} - Returns reset result
  * 
- * API Endpoint: POST /users/reset-password
+ * API Endpoint: POST /auth/reset-password
  * Request Body: { "token": "reset_token_xxx", "newPassword": "newpass123" }
  * Response: { "code": 200, "message": "Password reset successfully", "data": null }
  */
 export const resetPassword = (data) => {
-  return request.post('/users/reset-password', data)
+  return request.post('/auth/reset-password', data)
 }
 
 /**
@@ -63,11 +63,11 @@ export const resetPassword = (data) => {
  * @param {string} token - Reset token
  * @returns {Promise} - Returns verification result
  * 
- * API Endpoint: GET /users/verify-reset-token?token=xxx
+ * API Endpoint: GET /auth/verify-reset-token?token=xxx
  * Response: { "code": 200, "message": "Token is valid", "data": { "email": "user@example.com" } }
  */
 export const verifyResetToken = (token) => {
-  return request.get('/users/verify-reset-token', { token })
+  return request.get('/auth/verify-reset-token', { token })
 }
 
 /**
