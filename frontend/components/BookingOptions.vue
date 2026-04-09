@@ -20,7 +20,7 @@
         </view>
         <view class="summary-pill">
           <uni-icons type="wallet" size="16" color="#2563EB"></uni-icons>
-          <text class="summary-text">Base £{{ formatMoney(basePrice) }} + £{{ formatMoney(pricePerMinute) }}/min</text>
+          <text class="summary-text">Packages from {{ formatCny(RENTAL_PACKAGE_PRICING.oneHour) }} per hour</text>
         </view>
       </view>
 
@@ -35,7 +35,7 @@
           >
             <text class="plan-label">{{ option.label }}</text>
             <text class="plan-meta">{{ option.subtitle }}</text>
-            <text class="plan-price">£{{ formatMoney(calculatePrice(option.minutes)) }}</text>
+            <text class="plan-price">{{ formatCny(option.fixedPrice) }}</text>
           </view>
         </view>
       </view>
@@ -103,16 +103,16 @@
           <text class="pricing-value">{{ selectedOption.label }}</text>
         </view>
         <view class="pricing-row">
-          <text class="pricing-label">Unlock fee</text>
-          <text class="pricing-value">£{{ formatMoney(basePrice) }}</text>
+          <text class="pricing-label">Package price</text>
+          <text class="pricing-value">{{ formatCny(totalPrice) }}</text>
         </view>
         <view class="pricing-row">
-          <text class="pricing-label">Usage charge</text>
-          <text class="pricing-value">£{{ formatMoney(usageCharge) }}</text>
+          <text class="pricing-label">Included time</text>
+          <text class="pricing-value">{{ selectedOption.subtitle }}</text>
         </view>
         <view class="pricing-row pricing-row-total">
           <text class="pricing-total-label">Total today</text>
-          <text class="pricing-total-value">£{{ formatMoney(totalPrice) }}</text>
+          <text class="pricing-total-value">{{ formatCny(totalPrice) }}</text>
         </view>
       </view>
 
@@ -127,7 +127,7 @@
       >
         <text v-if="paymentProcessing">Authorising card...</text>
         <text v-else-if="submitting">Starting ride...</text>
-        <text v-else>Pay £{{ formatMoney(totalPrice) }} and start ride</text>
+        <text v-else>Pay {{ formatCny(totalPrice) }} and start ride</text>
       </button>
     </view>
   </view>
@@ -135,6 +135,7 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
+import { formatCny, RENTAL_PACKAGE_PRICING } from '@/utils/pricing.js'
 
 const props = defineProps({
   visible: {
@@ -148,16 +149,20 @@ const props = defineProps({
   submitting: {
     type: Boolean,
     default: false
+  },
+  preferredPlan: {
+    type: String,
+    default: '1_HOUR'
   }
 })
 
 const emit = defineEmits(['close', 'confirm'])
 
 const planOptions = [
-  { value: '1_HOUR', label: '1hr', subtitle: '60 minutes', minutes: 60 },
-  { value: '4_HOURS', label: '4hrs', subtitle: '240 minutes', minutes: 240 },
-  { value: '1_DAY', label: '1day', subtitle: '24 hours', minutes: 1440 },
-  { value: '1_WEEK', label: '1week', subtitle: '7 days', minutes: 10080 }
+  { value: '1_HOUR', label: '1 hour', subtitle: '60 minutes included', minutes: 60, fixedPrice: RENTAL_PACKAGE_PRICING.oneHour },
+  { value: '1_DAY', label: '1 day', subtitle: '24 hours included', minutes: 1440, fixedPrice: RENTAL_PACKAGE_PRICING.oneDay },
+  { value: '1_WEEK', label: '1 week', subtitle: '7 days included', minutes: 10080, fixedPrice: RENTAL_PACKAGE_PRICING.oneWeek },
+  { value: '1_MONTH', label: '1 month', subtitle: '30 days included', minutes: 43200, fixedPrice: RENTAL_PACKAGE_PRICING.oneMonth }
 ]
 
 const selectedPlan = ref('1_HOUR')
@@ -173,31 +178,22 @@ const selectedOption = computed(() =>
   planOptions.find(option => option.value === selectedPlan.value) || planOptions[0]
 )
 
-const basePrice = computed(() => Number(props.scooter?.basePrice ?? 0))
-const pricePerMinute = computed(() => Number(props.scooter?.pricePerMin ?? 0))
-const usageCharge = computed(() => calculatePrice(selectedOption.value.minutes) - basePrice.value)
-const totalPrice = computed(() => calculatePrice(selectedOption.value.minutes))
+const totalPrice = computed(() => selectedOption.value.fixedPrice)
 
 watch(
-  () => [props.visible, props.scooter?.id],
+  () => [props.visible, props.scooter?.id, props.preferredPlan],
   ([isVisible]) => {
     if (!isVisible) {
       paymentProcessing.value = false
       return
     }
 
-    selectedPlan.value = '1_HOUR'
+    selectedPlan.value = planOptions.some(option => option.value === props.preferredPlan)
+      ? props.preferredPlan
+      : '1_HOUR'
     paymentProcessing.value = false
   }
 )
-
-const calculatePrice = (minutes) => {
-  return basePrice.value + (pricePerMinute.value * minutes)
-}
-
-const formatMoney = (value) => {
-  return Number(value || 0).toFixed(2)
-}
 
 const handleBackdropClose = () => {
   if (paymentProcessing.value || props.submitting) return
@@ -245,7 +241,7 @@ const handleConfirm = async () => {
   emit('confirm', {
     planType: selectedOption.value.value,
     durationMinutes: selectedOption.value.minutes,
-    totalPrice: Number(formatMoney(totalPrice.value)),
+    totalPrice: Number(totalPrice.value.toFixed(2)),
     cardLast4: digits.slice(-4)
   })
 }
@@ -259,7 +255,7 @@ const handleConfirm = async () => {
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  z-index: 1200;
+  z-index: 1600;
   padding: calc(env(safe-area-inset-top) + 150rpx) 24rpx calc(env(safe-area-inset-bottom) + 24rpx);
   box-sizing: border-box;
   overflow-y: auto;

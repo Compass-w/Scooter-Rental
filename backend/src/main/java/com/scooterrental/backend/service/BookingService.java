@@ -27,6 +27,22 @@ public class BookingService {
     private static final String BOOKING_COMPLETED = "COMPLETED";
     private static final String SCOOTER_AVAILABLE = "AVAILABLE";
     private static final String SCOOTER_IN_USE = "IN_USE";
+    private static final String PLAN_PAY_AS_YOU_GO = "PAY_AS_YOU_GO";
+    private static final String PLAN_ONE_HOUR = "1_HOUR";
+    private static final String PLAN_FOUR_HOURS = "4_HOURS";
+    private static final String PLAN_ONE_DAY = "1_DAY";
+    private static final String PLAN_ONE_WEEK = "1_WEEK";
+    private static final String PLAN_ONE_MONTH = "1_MONTH";
+    private static final int MINUTES_ONE_HOUR = 60;
+    private static final int MINUTES_FOUR_HOURS = 240;
+    private static final int MINUTES_ONE_DAY = 1440;
+    private static final int MINUTES_ONE_WEEK = 10080;
+    private static final int MINUTES_ONE_MONTH = 43200;
+    private static final BigDecimal PRICE_ONE_HOUR = BigDecimal.valueOf(3.50);
+    private static final BigDecimal PRICE_FOUR_HOURS = BigDecimal.valueOf(12.00);
+    private static final BigDecimal PRICE_ONE_DAY = BigDecimal.valueOf(30.00);
+    private static final BigDecimal PRICE_ONE_WEEK = BigDecimal.valueOf(100.00);
+    private static final BigDecimal PRICE_ONE_MONTH = BigDecimal.valueOf(280.00);
 
     @Autowired
     private BookingMapper bookingMapper;
@@ -66,7 +82,7 @@ public class BookingService {
 
         String normalizedPlanType = normalizePlanType(request.getPlanType());
         Integer durationMinutes = resolveDurationMinutes(normalizedPlanType);
-        BigDecimal estimatedCost = calculateCost(scooter, durationMinutes);
+        BigDecimal estimatedCost = calculateCost(scooter, normalizedPlanType, durationMinutes);
 
         Booking booking = new Booking();
         booking.setUserId(request.getUserId());
@@ -112,7 +128,7 @@ public class BookingService {
         int billableMinutes = booking.getDurationMinutes() != null && booking.getDurationMinutes() > 0
                 ? booking.getDurationMinutes()
                 : actualMinutes;
-        BigDecimal finalCost = calculateCost(scooter, billableMinutes);
+        BigDecimal finalCost = calculateCost(scooter, null, billableMinutes);
 
         booking.setEndTime(endTime);
         booking.setDurationMinutes(billableMinutes);
@@ -155,7 +171,7 @@ public class BookingService {
 
         int currentDuration = booking.getDurationMinutes() != null ? booking.getDurationMinutes() : 0;
         int nextDuration = currentDuration + extraMinutes;
-        BigDecimal updatedCost = calculateCost(scooter, nextDuration);
+        BigDecimal updatedCost = calculateCost(scooter, null, nextDuration);
 
         booking.setDurationMinutes(nextDuration);
         booking.setTotalCost(updatedCost);
@@ -186,40 +202,116 @@ public class BookingService {
 
     private String normalizePlanType(String planType) {
         if (planType == null || planType.isBlank()) {
-            return "PAY_AS_YOU_GO";
+            return PLAN_PAY_AS_YOU_GO;
         }
 
         String normalized = planType.trim().toUpperCase(Locale.ROOT);
         return switch (normalized) {
-            case "1_HOUR", "1HR" -> "1_HOUR";
-            case "4_HOURS", "4_HOUR", "4HRS", "4HR" -> "4_HOURS";
-            case "1_DAY", "1DAY" -> "1_DAY";
-            case "1_WEEK", "1WEEK" -> "1_WEEK";
-            case "PAY_AS_YOU_GO" -> "PAY_AS_YOU_GO";
+            case "1_HOUR", "1HR" -> PLAN_ONE_HOUR;
+            case "4_HOURS", "4_HOUR", "4HRS", "4HR" -> PLAN_FOUR_HOURS;
+            case "1_DAY", "1DAY" -> PLAN_ONE_DAY;
+            case "1_WEEK", "1WEEK" -> PLAN_ONE_WEEK;
+            case "1_MONTH", "1MONTH", "MONTHLY", "1MO" -> PLAN_ONE_MONTH;
+            case "PAY_AS_YOU_GO" -> PLAN_PAY_AS_YOU_GO;
             default -> throw new IllegalArgumentException("Unsupported hire period: " + planType);
         };
     }
 
     private Integer resolveDurationMinutes(String planType) {
         return switch (planType) {
-            case "1_HOUR" -> 60;
-            case "4_HOURS" -> 240;
-            case "1_DAY" -> 1440;
-            case "1_WEEK" -> 10080;
-            case "PAY_AS_YOU_GO" -> null;
+            case PLAN_ONE_HOUR -> MINUTES_ONE_HOUR;
+            case PLAN_FOUR_HOURS -> MINUTES_FOUR_HOURS;
+            case PLAN_ONE_DAY -> MINUTES_ONE_DAY;
+            case PLAN_ONE_WEEK -> MINUTES_ONE_WEEK;
+            case PLAN_ONE_MONTH -> MINUTES_ONE_MONTH;
+            case PLAN_PAY_AS_YOU_GO -> null;
             default -> throw new IllegalArgumentException("Unsupported hire period: " + planType);
         };
     }
 
-    private BigDecimal calculateCost(Scooter scooter, Integer durationMinutes) {
+    private BigDecimal calculateCost(Scooter scooter, String planType, Integer durationMinutes) {
         BigDecimal basePrice = scooter.getBasePrice() != null ? scooter.getBasePrice() : BigDecimal.ZERO;
         if (durationMinutes == null) {
             return basePrice.setScale(2, RoundingMode.HALF_UP);
         }
 
+        BigDecimal packagePrice = resolvePackagePrice(planType, durationMinutes);
+        if (packagePrice != null) {
+            return packagePrice.setScale(2, RoundingMode.HALF_UP);
+        }
+
         BigDecimal pricePerMinute = scooter.getPricePerMin() != null ? scooter.getPricePerMin() : BigDecimal.ZERO;
+        BigDecimal matchedPackagePrice = resolvePackagePriceByDuration(durationMinutes);
+        if (matchedPackagePrice != null) {
+          return matchedPackagePrice.setScale(2, RoundingMode.HALF_UP);
+        }
+
+        PackageTier packageTier = resolvePackageTier(durationMinutes);
+        if (packageTier != null) {
+            int extraMinutes = durationMinutes - packageTier.durationMinutes();
+            return packageTier.price()
+                    .add(pricePerMinute.multiply(BigDecimal.valueOf(extraMinutes)))
+                    .setScale(2, RoundingMode.HALF_UP);
+        }
+
         return basePrice
                 .add(pricePerMinute.multiply(BigDecimal.valueOf(durationMinutes)))
                 .setScale(2, RoundingMode.HALF_UP);
     }
+
+    private BigDecimal resolvePackagePrice(String planType, Integer durationMinutes) {
+        if (planType == null || durationMinutes == null) {
+            return null;
+        }
+
+        return switch (planType) {
+            case PLAN_ONE_HOUR -> PRICE_ONE_HOUR;
+            case PLAN_FOUR_HOURS -> PRICE_FOUR_HOURS;
+            case PLAN_ONE_DAY -> PRICE_ONE_DAY;
+            case PLAN_ONE_WEEK -> PRICE_ONE_WEEK;
+            case PLAN_ONE_MONTH -> PRICE_ONE_MONTH;
+            default -> resolvePackagePriceByDuration(durationMinutes);
+        };
+    }
+
+    private BigDecimal resolvePackagePriceByDuration(Integer durationMinutes) {
+        if (durationMinutes == null) {
+            return null;
+        }
+
+        return switch (durationMinutes) {
+            case MINUTES_ONE_HOUR -> PRICE_ONE_HOUR;
+            case MINUTES_FOUR_HOURS -> PRICE_FOUR_HOURS;
+            case MINUTES_ONE_DAY -> PRICE_ONE_DAY;
+            case MINUTES_ONE_WEEK -> PRICE_ONE_WEEK;
+            case MINUTES_ONE_MONTH -> PRICE_ONE_MONTH;
+            default -> null;
+        };
+    }
+
+    private PackageTier resolvePackageTier(Integer durationMinutes) {
+        if (durationMinutes == null || durationMinutes <= 0) {
+            return null;
+        }
+
+        if (durationMinutes >= MINUTES_ONE_MONTH) {
+            return new PackageTier(MINUTES_ONE_MONTH, PRICE_ONE_MONTH);
+        }
+        if (durationMinutes >= MINUTES_ONE_WEEK) {
+            return new PackageTier(MINUTES_ONE_WEEK, PRICE_ONE_WEEK);
+        }
+        if (durationMinutes >= MINUTES_ONE_DAY) {
+            return new PackageTier(MINUTES_ONE_DAY, PRICE_ONE_DAY);
+        }
+        if (durationMinutes >= MINUTES_FOUR_HOURS) {
+            return new PackageTier(MINUTES_FOUR_HOURS, PRICE_FOUR_HOURS);
+        }
+        if (durationMinutes >= MINUTES_ONE_HOUR) {
+            return new PackageTier(MINUTES_ONE_HOUR, PRICE_ONE_HOUR);
+        }
+
+        return null;
+    }
+
+    private record PackageTier(int durationMinutes, BigDecimal price) {}
 }

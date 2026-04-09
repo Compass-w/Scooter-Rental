@@ -1,5 +1,5 @@
 <template>
-  <BaseLayout nav-type="default" :show-menu="true" :show-footer="false" :content-padding-top="88">
+  <BaseLayout nav-type="default" :show-menu="true" :show-footer="false" :content-padding-top="88" current-page="find-scooter">
     <!-- Page Wrapper -->
     <view class="page-wrapper">
 
@@ -97,7 +97,7 @@
             </view>
             <view class="meta-chip">
               <uni-icons type="wallet" size="16" class="meta-chip-icon-svg"></uni-icons>
-              <text class="meta-chip-val">£{{ selectedScooter.basePrice }} + £{{ selectedScooter.pricePerMin }}/min</text>
+              <text class="meta-chip-val">From {{ formatCny(RATE_CARD.hourlyPrice) }}/hour</text>
             </view>
           </view>
 
@@ -188,7 +188,7 @@
                   </view>
                   <view class="card-meta">
                     <uni-icons type="wallet" size="14" class="card-meta-icon"></uni-icons>
-                    <text class="card-meta-text">£{{ scooter.basePrice }}+£{{ scooter.pricePerMin }}/min</text>
+                    <text class="card-meta-text">{{ formatCny(RATE_CARD.hourlyPrice) }}/hour standard</text>
                   </view>
                 </view>
               </view>
@@ -241,6 +241,7 @@
       :visible="bookingOptionsVisible"
       :scooter="bookingScooter"
       :submitting="riding"
+      :preferred-plan="preferredBookingPlan"
       @close="closeBookingOptions"
       @confirm="confirmRideStart"
     />
@@ -249,11 +250,13 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { onHide, onLoad, onShow } from '@dcloudio/uni-app'
 import BaseLayout from '@/pages/BaseLayout.vue'
 import BookingOptions from '@/components/BookingOptions.vue'
 import { getAllScooters, startRide as startRideApi } from '@/api/scooter.js'
 import { getUserBookings } from '@/api/booking.js'
 import { findActiveRide, getStoredActiveRide, setStoredActiveRide } from '@/utils/activeRide.js'
+import { applyRidePricing, formatCny, HOME_PRICING } from '@/utils/pricing.js'
 
 /**
  * Reactive state variables
@@ -271,10 +274,17 @@ const locating        = ref(false)
 const refreshing      = ref(false)
 const bookingOptionsVisible = ref(false)
 const bookingScooter  = ref(null)
+const preferredBookingPlan = ref('1_HOUR')
 const currentUserLocation = ref(null)
 const hasAttemptedInitialLocate = ref(false)
 const scooterPage = ref(1)
 const scootersPerPage = 8
+const ACTIVE_RIDE_LOCATION_LABEL = 'Following your live position'
+const HIGH_ACCURACY_LOCATION_OPTIONS = {
+  type: 'wgs84',
+  isHighAccuracy: true,
+  highAccuracyExpireTime: 4000
+}
 
 const locationAliases = [
   { label: 'Shanghai', names: ['shanghai', 'sh', '\u4e0a\u6d77'], lat: 31.2304, lng: 121.4737, zoom: 13, radiusKm: 18 },
@@ -303,6 +313,7 @@ const mapSrc = ref('/static/scooter-map.html')
 // Auto-refresh timer reference
 let refreshTimer = null
 let locateRequest = null
+let rideLocationTimer = null
 
 // Cached iframe contentWindow — populated on first message from the map
 let _mapWindow = null
@@ -321,6 +332,17 @@ const mapInteractionLocked = computed(() =>
   drawerOpen.value || Boolean(selectedScooter.value) || bookingOptionsVisible.value
 )
 
+const RATE_CARD = HOME_PRICING.payAsYouGo
+const normalizeScooterEntry = (scooter = {}) => applyRidePricing(scooter)
+
+const getActiveRideSnapshot = () => {
+  const activeRide = getStoredActiveRide()
+  if (!activeRide?.scooterId || String(activeRide.status || '').toUpperCase() !== 'ACTIVE') {
+    return null
+  }
+  return activeRide
+}
+
 const normalizeSearchTerm = (value = '') =>
   String(value ?? '')
     .trim()
@@ -336,6 +358,137 @@ const getScooterCoordinates = (scooter) => {
   }
 
   return { lat, lng }
+}
+
+const getRideLocationLabel = (ride, fallbackLocation = '') =>
+  String(ride?.liveLocationLabel || fallbackLocation || ACTIVE_RIDE_LOCATION_LABEL).trim()
+
+const applyActiveRideOverlay = (list = []) => {
+  const activeRide = getActiveRideSnapshot()
+  const rideCoordinates = getScooterCoordinates(activeRide)
+
+  if (!activeRide?.scooterId || !rideCoordinates) {
+    return Array.isArray(list) ? list : []
+  }
+
+  const rideLocationLabel = getRideLocationLabel(activeRide)
+  let hasRideScooter = false
+  const patchedList = (Array.isArray(list) ? list : []).map(scooter => {
+    if (String(scooter.id) !== String(activeRide.scooterId)) {
+      return scooter
+    }
+
+    hasRideScooter = true
+    return normalizeScooterEntry({
+      ...scooter,
+      status: 'IN_USE',
+      model: activeRide.scooterModel || scooter.model,
+      basePrice: Number(activeRide.basePrice || scooter.basePrice || 0),
+      pricePerMin: Number(activeRide.pricePerMinute || scooter.pricePerMin || 0),
+      latitude: rideCoordinates.lat,
+      longitude: rideCoordinates.lng,
+      lat: rideCoordinates.lat,
+      lng: rideCoordinates.lng,
+      location: rideLocationLabel
+    })
+  })
+
+  if (hasRideScooter) {
+    return patchedList
+  }
+
+  return [
+    normalizeScooterEntry({
+      id: activeRide.scooterId,
+      model: activeRide.scooterModel || 'Scooter',
+      status: 'IN_USE',
+      batteryLevel: 100,
+      basePrice: Number(activeRide.basePrice || 0),
+      pricePerMin: Number(activeRide.pricePerMinute || 0),
+      latitude: rideCoordinates.lat,
+      longitude: rideCoordinates.lng,
+      lat: rideCoordinates.lat,
+      lng: rideCoordinates.lng,
+      location: rideLocationLabel
+    }),
+    ...patchedList
+  ]
+}
+
+const syncRideScooterToLocation = (location) => {
+  const activeRide = getActiveRideSnapshot()
+  if (!activeRide?.scooterId || !location) return false
+
+  const rideLocationLabel = getRideLocationLabel(activeRide)
+  const syncedRide = setStoredActiveRide({
+    ...activeRide,
+    latitude: location.lat,
+    longitude: location.lng,
+    lat: location.lat,
+    lng: location.lng,
+    liveLocationLabel: rideLocationLabel
+  })
+
+  scooters.value = applyActiveRideOverlay(scooters.value)
+
+  if (selectedScooter.value && String(selectedScooter.value.id) === String(syncedRide.scooterId)) {
+    selectedScooter.value = {
+      ...selectedScooter.value,
+      status: 'IN_USE',
+      latitude: location.lat,
+      longitude: location.lng,
+      lat: location.lat,
+      lng: location.lng,
+      location: rideLocationLabel
+    }
+  }
+
+  if (bookingScooter.value && String(bookingScooter.value.id) === String(syncedRide.scooterId)) {
+    bookingScooter.value = {
+      ...bookingScooter.value,
+      status: 'IN_USE',
+      latitude: location.lat,
+      longitude: location.lng,
+      lat: location.lat,
+      lng: location.lng,
+      location: rideLocationLabel
+    }
+  }
+
+  if (mapReady.value) {
+    sendToMap('updateScooters', scooters.value)
+  }
+
+  return true
+}
+
+const stopRideLocationTracking = () => {
+  if (!rideLocationTimer) return
+  clearInterval(rideLocationTimer)
+  rideLocationTimer = null
+}
+
+const startRideLocationTracking = () => {
+  const activeRide = getActiveRideSnapshot()
+  if (!activeRide?.scooterId) {
+    stopRideLocationTracking()
+    return
+  }
+
+  if (currentUserLocation.value) {
+    syncRideScooterToLocation(currentUserLocation.value)
+  } else {
+    requestUserLocation({ showErrorToast: false }).catch(() => {})
+  }
+
+  if (rideLocationTimer) return
+  rideLocationTimer = setInterval(() => {
+    if (!getActiveRideSnapshot()) {
+      stopRideLocationTracking()
+      return
+    }
+    requestUserLocation({ showErrorToast: false }).catch(() => {})
+  }, 12000)
 }
 
 const resolveSearchLocationAlias = (normalizedQuery) => {
@@ -459,8 +612,8 @@ const loadScooters = async ({ showLoadingOverlay = true } = {}) => {
   }
   errorMsg.value = ''
   try {
-    const data = await getAllScooters()
-    scooters.value = Array.isArray(data) ? data : []
+    const data = await getAllScooters(currentUserLocation.value?.lat, currentUserLocation.value?.lng)
+    scooters.value = applyActiveRideOverlay((Array.isArray(data) ? data : []).map(normalizeScooterEntry))
     if (mapReady.value) sendToMap('updateScooters', scooters.value)
     return scooters.value
   } catch (e) {
@@ -564,7 +717,7 @@ const _handleMapPayload = ({ type, data } = {}) => {
  */
 const locateMe = () => {
   uni.getLocation({
-    type: 'wgs84',
+    ...HIGH_ACCURACY_LOCATION_OPTIONS,
     success: (res) => {
       sendToMap('locate', { lat: res.latitude, lng: res.longitude })
     },
@@ -584,7 +737,7 @@ const requestUserLocation = ({ showErrorToast = true, toastOnSuccess = false } =
 
   locateRequest = new Promise((resolve, reject) => {
     uni.getLocation({
-      type: 'wgs84',
+      ...HIGH_ACCURACY_LOCATION_OPTIONS,
       success: (res) => {
         const location = {
           lat: res.latitude,
@@ -593,6 +746,7 @@ const requestUserLocation = ({ showErrorToast = true, toastOnSuccess = false } =
 
         currentUserLocation.value = location
         sendToMap('locate', location)
+        syncRideScooterToLocation(location)
 
         if (toastOnSuccess) {
           uni.showToast({
@@ -660,6 +814,13 @@ const handleManualRefresh = async () => {
     refreshing.value = false
   }
 }
+
+onLoad((options) => {
+  const incomingPlan = String(options?.plan || options?.preferredPlan || '').trim().toUpperCase()
+  if (['1_HOUR', '1_DAY', '1_WEEK', '1_MONTH'].includes(incomingPlan)) {
+    preferredBookingPlan.value = incomingPlan
+  }
+})
 
 const goToPrevScooterPage = () => {
   if (scooterPage.value <= 1) return
@@ -772,11 +933,11 @@ const promptToResumeActiveRide = (activeRide) => {
  * @param {string} nextStatus - New status value
  */
 const updateScooterStatus = (scooterId, nextStatus) => {
-  scooters.value = scooters.value.map(s =>
+  scooters.value = applyActiveRideOverlay(scooters.value.map(s =>
     String(s.id) === String(scooterId)
       ? { ...s, status: nextStatus }
       : s
-  )
+  ))
 
   if (selectedScooter.value && String(selectedScooter.value.id) === String(scooterId)) {
     selectedScooter.value = { ...selectedScooter.value, status: nextStatus }
@@ -863,17 +1024,24 @@ const confirmRideStart = async (paymentData) => {
       basePrice: bookingScooter.value.basePrice,
       pricePerMinute: bookingScooter.value.pricePerMin,
       cardLast4: paymentData.cardLast4,
+      latitude: currentUserLocation.value?.lat ?? null,
+      longitude: currentUserLocation.value?.lng ?? null,
+      lat: currentUserLocation.value?.lat ?? null,
+      lng: currentUserLocation.value?.lng ?? null,
+      liveLocationLabel: ACTIVE_RIDE_LOCATION_LABEL,
       status: booking?.bookingStatus ?? 'ACTIVE'
     })
     bookingOptionsVisible.value = false
     bookingScooter.value = null
     selectedScooter.value = null
+    syncRideScooterToLocation(currentUserLocation.value)
+    startRideLocationTracking()
 
     const estimatedCost = Number(booking?.estimatedCost ?? paymentData.totalPrice ?? 0).toFixed(2)
     const bookingLabel = booking?.bookingId ? `Booking #${booking.bookingId}` : 'Your booking'
     uni.showModal({
       title: 'Ride started',
-      content: `${bookingLabel} is now active. Reserved total: £${estimatedCost}.`,
+      content: `${bookingLabel} is now active. Reserved total: ${formatCny(estimatedCost)}.`,
       showCancel: false
     })
 
@@ -1000,9 +1168,22 @@ onMounted(() => {
   }
   loadScooters().catch(() => {})
   requestUserLocation({ showErrorToast: false }).catch(() => {})
+  startRideLocationTracking()
   refreshTimer = setInterval(() => {
     loadScooters({ showLoadingOverlay: false }).catch(() => {})
   }, 30000)
+})
+
+onShow(() => {
+  scooters.value = applyActiveRideOverlay(scooters.value)
+  if (mapReady.value && scooters.value.length) {
+    sendToMap('updateScooters', scooters.value)
+  }
+  startRideLocationTracking()
+})
+
+onHide(() => {
+  stopRideLocationTracking()
 })
 
 /**
@@ -1014,6 +1195,7 @@ onUnmounted(() => {
     window.removeEventListener('message', _onWindowMessage)
   }
   if (refreshTimer) clearInterval(refreshTimer)
+  stopRideLocationTracking()
   _mapWindow = null
 })
 </script>
@@ -1249,7 +1431,7 @@ onUnmounted(() => {
   border-radius: 32rpx;
   padding: 8rpx 36rpx 36rpx;
   box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.15);
-  z-index: 200;
+  z-index: 980;
   animation: slideUp 0.3s ease;
 }
 
@@ -1440,7 +1622,7 @@ onUnmounted(() => {
   border-radius: 40rpx 40rpx 0 0;
   padding: 20rpx 36rpx 36rpx;
   box-shadow: 0 -8rpx 32rpx rgba(0, 0, 0, 0.1);
-  z-index: 150;
+  z-index: 940;
   cursor: pointer;
 }
 
@@ -1507,7 +1689,7 @@ onUnmounted(() => {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.3);
-  z-index: 290;
+  z-index: 970;
 }
 
 .bottom-drawer {
@@ -1517,7 +1699,7 @@ onUnmounted(() => {
   bottom: 0;
   background: #fff;
   border-radius: 40rpx 40rpx 0 0;
-  z-index: 300;
+  z-index: 980;
   transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
   max-height: 80vh;
   overflow: hidden;
@@ -1868,5 +2050,18 @@ onUnmounted(() => {
   padding: 20rpx 44rpx;
   border-radius: 50rpx;
   cursor: pointer;
+}
+
+@media (max-width: 750px) {
+  .scooter-popup {
+    bottom: calc(env(safe-area-inset-bottom) + 152rpx);
+  }
+
+  .drawer-handle-area {
+    bottom: calc(env(safe-area-inset-bottom) + 118rpx);
+    left: 14rpx;
+    right: 14rpx;
+    border-radius: 36rpx;
+  }
 }
 </style>

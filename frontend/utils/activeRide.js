@@ -1,3 +1,5 @@
+import { normalizeRidePricing } from '@/utils/pricing.js'
+
 const ACTIVE_RIDE_KEY = 'activeRide'
 
 const toObject = (value) => {
@@ -15,6 +17,15 @@ const toObject = (value) => {
 const toNumber = (value, fallback = 0) => {
   const next = Number(value)
   return Number.isFinite(next) ? next : fallback
+}
+
+const toNullableNumber = (value) => {
+  if (value === null || value === undefined || String(value).trim() === '') {
+    return null
+  }
+
+  const next = Number(value)
+  return Number.isFinite(next) ? next : null
 }
 
 const toIsoString = (value, fallback = '') => {
@@ -41,6 +52,12 @@ export const normalizeActiveRide = (ride = {}, fallback = {}) => {
   const bookingId = ride.bookingId ?? ride.id ?? fallback.bookingId ?? fallback.id ?? null
   const scooterId = ride.scooterId ?? fallback.scooterId ?? null
   const durationMinutes = toNumber(ride.durationMinutes ?? fallback.durationMinutes, 0)
+  const latitudeValue = toNullableNumber(ride.latitude ?? ride.lat ?? fallback.latitude ?? fallback.lat)
+  const longitudeValue = toNullableNumber(ride.longitude ?? ride.lng ?? fallback.longitude ?? fallback.lng)
+  const normalizedPricing = normalizeRidePricing({
+    basePrice: ride.basePrice ?? fallback.basePrice,
+    pricePerMinute: ride.pricePerMinute ?? ride.pricePerMin ?? fallback.pricePerMinute ?? fallback.pricePerMin
+  })
   const totalCost = toNumber(
     ride.totalCost ?? ride.estimatedCost ?? ride.reservedTotal ?? fallback.totalCost ?? fallback.estimatedCost,
     0
@@ -54,9 +71,14 @@ export const normalizeActiveRide = (ride = {}, fallback = {}) => {
     startTime: toIsoString(ride.startTime ?? fallback.startTime, new Date().toISOString()),
     durationMinutes,
     totalCost,
-    basePrice: toNumber(ride.basePrice ?? fallback.basePrice, 0),
-    pricePerMinute: toNumber(ride.pricePerMinute ?? ride.pricePerMin ?? fallback.pricePerMinute ?? fallback.pricePerMin, 0),
+    basePrice: normalizedPricing.basePrice,
+    pricePerMinute: normalizedPricing.pricePerMinute,
     cardLast4: String(ride.cardLast4 ?? fallback.cardLast4 ?? '').trim(),
+    latitude: latitudeValue,
+    longitude: longitudeValue,
+    lat: latitudeValue,
+    lng: longitudeValue,
+    liveLocationLabel: String(ride.liveLocationLabel ?? fallback.liveLocationLabel ?? '').trim(),
     status: normalizeStatus(ride.status ?? ride.bookingStatus ?? fallback.status ?? fallback.bookingStatus),
     updatedAt: new Date().toISOString()
   }
