@@ -711,7 +711,7 @@
       <scroll-view scroll-y class="pc-scroll">
 
         <!-- Recent Ride Card -->
-        <view class="pc-card pc-ride-card" v-if="recentTrips.length > 0" @tap="viewTripDetail(recentTrips[0])">
+        <view class="pc-card pc-ride-card" v-if="featuredTrip" @tap="viewTripDetail(featuredTrip)">
           <view class="pc-ride-top">
             <view class="pc-ride-type-row">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -720,18 +720,18 @@
                 <path d="M15 6h-4l-3 7.5h10.5L15 6z"/>
                 <path d="M5.5 14V6h3"/>
               </svg>
-              <text class="pc-ride-type">E-Scooter</text>
+              <text class="pc-ride-type">{{ featuredTripIsActive ? 'Current Ride' : 'Recent Ride' }}</text>
               <view class="pc-eco-badge">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5">
                   <path d="M12 22V12M12 12C12 6 6 2 2 6c0 4 4 6 10 6zM12 12C12 6 18 2 22 6c0 4-4 6-10 6z"/>
                 </svg>
-                <text class="pc-eco-text">Booking #{{ recentTrips[0].bookingId }}</text>
+                <text class="pc-eco-text">Booking #{{ featuredTrip.bookingId }}</text>
               </view>
             </view>
             <view class="pc-ride-status-row">
-              <view class="pc-status-dot"></view>
-              <text class="pc-status-text">{{ recentTrips[0].statusLabel }}</text>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5">
+              <view class="pc-status-dot" :class="featuredTripIsActive ? 'pc-status-dot-active' : ''"></view>
+              <text class="pc-status-text" :class="featuredTripIsActive ? 'pc-status-text-active' : ''">{{ featuredTrip.statusLabel }}</text>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" :stroke="featuredTripIsActive ? '#2563EB' : '#10B981'" stroke-width="2.5">
                 <polyline points="9 18 15 12 9 6"/>
               </svg>
             </view>
@@ -739,10 +739,10 @@
           <view class="pc-ride-divider"></view>
           <view class="pc-ride-bottom">
             <view class="pc-ride-meta">
-              <text class="pc-ride-date">{{ recentTrips[0].date }} · {{ recentTrips[0].duration }} min</text>
-              <text class="pc-ride-route">{{ recentTrips[0].scooterLabel }}</text>
+              <text class="pc-ride-date">{{ featuredTrip.date }} · {{ featuredTrip.duration }} min</text>
+              <text class="pc-ride-route">{{ featuredTrip.scooterLabel }}</text>
             </view>
-            <text class="pc-ride-cost">£{{ recentTrips[0].cost }}</text>
+            <text class="pc-ride-cost">£{{ featuredTrip.cost }}</text>
           </view>
         </view>
 
@@ -954,6 +954,10 @@ const userLevel = computed(() => {
   if (r >= 20)  return '🌱 Regular Rider'
   return '🚀 New Rider'
 })
+
+const currentRide = computed(() => upcomingBookings.value[0] || null)
+const featuredTrip = computed(() => currentRide.value || recentTrips.value[0] || null)
+const featuredTripIsActive = computed(() => String(featuredTrip.value?.status || '').toUpperCase() === 'ACTIVE')
 
 /**
  * Computed: member since year derived from createdAt timestamp
@@ -1184,7 +1188,8 @@ const refreshProfilePage = () => Promise.all([
   loadStats('Month'),
   loadWallet(),
   loadRecentTrips(),
-  loadSettings()
+  loadSettings(),
+  loadBookings('upcoming')
 ])
 
 onShow(() => {
@@ -2700,10 +2705,18 @@ const confirmLogout = () => {
   background: #10B981;
 }
 
+.pc-status-dot-active {
+  background: #2563EB;
+}
+
 .pc-status-text {
   font-size: 26rpx;
   font-weight: 600;
   color: #10B981;
+}
+
+.pc-status-text-active {
+  color: #2563EB;
 }
 
 .pc-ride-divider {
