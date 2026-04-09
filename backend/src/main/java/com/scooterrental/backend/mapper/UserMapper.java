@@ -12,6 +12,11 @@ public interface UserMapper {
                         "FROM users WHERE username = #{username}")
         User findByUsername(@Param("username") String username);
 
+        @Select("SELECT user_id AS userId, username, email, phone, city, avatar_url AS avatarUrl, password_hash AS passwordHash, role, " +
+                        "total_riding_minutes AS totalRidingMinutes, achievements, created_at AS createdAt " +
+                        "FROM users WHERE LOWER(email) = LOWER(#{email})")
+        User findByEmail(@Param("email") String email);
+
         // Register: Insert new user
         @Insert("INSERT INTO users(username, email, phone, city, avatar_url, password_hash, role) " +
                         "VALUES(#{username}, #{email}, #{phone}, #{city}, #{avatarUrl}, #{passwordHash}, 'customer')")
@@ -39,4 +44,7 @@ public interface UserMapper {
         // Update achievements for gamification [ID: 22]
         @Update("UPDATE users SET achievements = #{achievements} WHERE user_id = #{userId}")
         void updateAchievements(@Param("userId") Integer userId, @Param("achievements") String achievements);
+
+        @Update("UPDATE users SET password_hash = #{passwordHash} WHERE user_id = #{userId}")
+        int updatePasswordHash(@Param("userId") Integer userId, @Param("passwordHash") String passwordHash);
 }

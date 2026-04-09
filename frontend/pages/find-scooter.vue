@@ -15,8 +15,8 @@
       <view v-if="errorMsg" class="error-banner">
         <uni-icons type="info" size="18" color="#DC2626"></uni-icons>
         <text class="error-text">{{ errorMsg }}</text>
-        <view class="error-retry" @tap="loadScooters">
-          <text class="retry-text">Retry</text>
+        <view class="error-retry" @tap="handleManualRefresh">
+          <text class="retry-text">Refresh</text>
         </view>
       </view>
 
@@ -53,15 +53,17 @@
         <view class="stats-badge">
           <view class="stats-dot"></view>
           <text class="stats-text">{{ availableCount }} available nearby</text>
-          <view class="refresh-btn" @tap="loadScooters">
-            <uni-icons type="refreshempty" size="16" color="#6B7280"></uni-icons>
-          </view>
         </view>
 
         <!-- Map Controls -->
         <view class="map-controls">
-          <view class="control-btn locate-btn" @tap="locateMe">
+          <view class="control-btn refresh-btn" :class="refreshing ? 'control-btn-loading' : ''" @tap="handleManualRefresh">
+            <uni-icons :type="refreshing ? 'spinner-cycle' : 'refreshempty'" size="18" color="#0F172A"></uni-icons>
+            <text class="control-btn-text">{{ refreshing ? 'Refreshing' : 'Refresh' }}</text>
+          </view>
+          <view class="control-btn locate-btn" :class="locating ? 'control-btn-loading' : ''" @tap="handleLocateTap">
             <uni-icons type="location-filled" size="20" color="#2563EB"></uni-icons>
+            <text class="control-btn-text">{{ locating ? 'Locating' : 'Locate Me' }}</text>
           </view>
         </view>
 
@@ -242,8 +244,12 @@ const drawerOpen      = ref(false)
 const selectedScooter = ref(null)
 const riding          = ref(false)
 const mapReady        = ref(false)
+const locating        = ref(false)
+const refreshing      = ref(false)
 const bookingOptionsVisible = ref(false)
 const bookingScooter  = ref(null)
+const currentUserLocation = ref(null)
+const hasAttemptedInitialLocate = ref(false)
 
 const locationAliases = [
   { label: 'Shanghai', names: ['shanghai', 'sh', '\u4e0a\u6d77'], lat: 31.2304, lng: 121.4737, zoom: 13, radiusKm: 18 },
@@ -271,6 +277,7 @@ const mapSrc = ref('/static/scooter-map.html')
 
 // Auto-refresh timer reference
 let refreshTimer = null
+let locateRequest = null
 
 // Cached iframe contentWindow — populated on first message from the map
 let _mapWindow = null
@@ -398,17 +405,23 @@ const statusLabel = (status) => {
  * Load scooter data from backend API
  * GET /api/scooters — returns all scooters (AVAILABLE, IN_USE, MAINTENANCE)
  */
-const loadScooters = async () => {
-  loading.value  = true
+const loadScooters = async ({ showLoadingOverlay = true } = {}) => {
+  if (showLoadingOverlay) {
+    loading.value = true
+  }
   errorMsg.value = ''
   try {
     const data = await getAllScooters()
     scooters.value = Array.isArray(data) ? data : []
     if (mapReady.value) sendToMap('updateScooters', scooters.value)
+    return scooters.value
   } catch (e) {
     errorMsg.value = 'Failed to load scooters. Check your connection.'
+    throw e
   } finally {
-    loading.value = false
+    if (showLoadingOverlay) {
+      loading.value = false
+    }
   }
 }
 
@@ -480,8 +493,11 @@ const _handleMapPayload = ({ type, data } = {}) => {
       const { cmd, data: d } = _pendingMessages.shift()
       sendToMap(cmd, d)
     }
-    // Attempt to locate user immediately
-    locateMe()
+    if (currentUserLocation.value) {
+      sendToMap('locate', currentUserLocation.value)
+    } else if (!hasAttemptedInitialLocate.value) {
+      requestUserLocation({ showErrorToast: false }).catch(() => {})
+    }
   }
 
   if (type === 'markerTap') {
@@ -508,6 +524,93 @@ const locateMe = () => {
       // Silent fail — map stays at default center (Leeds)
     }
   })
+}
+
+const requestUserLocation = ({ showErrorToast = true, toastOnSuccess = false } = {}) => {
+  if (locateRequest) {
+    return locateRequest
+  }
+
+  hasAttemptedInitialLocate.value = true
+  locating.value = true
+
+  locateRequest = new Promise((resolve, reject) => {
+    uni.getLocation({
+      type: 'wgs84',
+      success: (res) => {
+        const location = {
+          lat: res.latitude,
+          lng: res.longitude
+        }
+
+        currentUserLocation.value = location
+        sendToMap('locate', location)
+
+        if (toastOnSuccess) {
+          uni.showToast({
+            title: 'Location updated',
+            icon: 'none'
+          })
+        }
+
+        resolve(location)
+      },
+      fail: (error) => {
+        if (showErrorToast) {
+          uni.showToast({
+            title: 'Unable to get your location',
+            icon: 'none'
+          })
+        }
+
+        reject(error)
+      },
+      complete: () => {
+        locating.value = false
+        locateRequest = null
+      }
+    })
+  })
+
+  return locateRequest
+}
+
+const handleLocateTap = async () => {
+  try {
+    await requestUserLocation({
+      showErrorToast: true,
+      toastOnSuccess: true
+    })
+  } catch {
+    // Toast is handled in requestUserLocation
+  }
+}
+
+const handleManualRefresh = async () => {
+  if (refreshing.value) return
+
+  refreshing.value = true
+
+  try {
+    const [scootersResult, locationResult] = await Promise.allSettled([
+      loadScooters({ showLoadingOverlay: false }),
+      requestUserLocation({ showErrorToast: true })
+    ])
+
+    if (scootersResult.status === 'fulfilled' && locationResult.status === 'fulfilled') {
+      uni.showToast({
+        title: 'Map refreshed',
+        icon: 'none'
+      })
+    } else if (scootersResult.status === 'fulfilled') {
+      uni.showToast({
+        title: 'Scooters refreshed',
+        icon: 'none'
+      })
+    }
+  } finally {
+    refreshing.value = false
+  }
 }
 
 /**
@@ -706,7 +809,9 @@ const confirmRideStart = async (paymentData) => {
       showCancel: false
     })
 
-    setTimeout(loadScooters, 1200)
+    setTimeout(() => {
+      loadScooters().catch(() => {})
+    }, 1200)
   } catch (e) {
     console.error('Failed to start ride:', e)
   } finally {
@@ -747,7 +852,9 @@ const startRide = async (scooter) => {
     uni.showToast({ title: 'Ride started! Enjoy 🛴', icon: 'success', duration: 2000 })
     selectedScooter.value = null
     // Refresh scooter list so status updates on the map
-    setTimeout(loadScooters, 2000)
+    setTimeout(() => {
+      loadScooters().catch(() => {})
+    }, 2000)
   } catch (e) {
     // Error toast is handled by request.js
   } finally {
@@ -823,8 +930,11 @@ onMounted(() => {
   if (typeof window !== 'undefined') {
     window.addEventListener('message', _onWindowMessage)
   }
-  loadScooters()
-  refreshTimer = setInterval(loadScooters, 30000)
+  loadScooters().catch(() => {})
+  requestUserLocation({ showErrorToast: false }).catch(() => {})
+  refreshTimer = setInterval(() => {
+    loadScooters({ showLoadingOverlay: false }).catch(() => {})
+  }, 30000)
 })
 
 /**
@@ -1009,33 +1119,52 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
-.refresh-btn {
-  padding: 6rpx;
-  cursor: pointer;
-}
-
 /* ========== Map Controls ========== */
 .map-controls {
   position: absolute;
   right: 24rpx;
   top: 150rpx;
   z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+  align-items: flex-end;
 }
 
 .control-btn {
-  width: 80rpx;
-  height: 80rpx;
+  min-width: 188rpx;
+  height: 84rpx;
+  padding: 0 24rpx;
   background: rgba(255, 255, 255, 0.97);
-  border-radius: 20rpx;
+  border-radius: 22rpx;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 12rpx;
   box-shadow: 0 6rpx 20rpx rgba(0, 0, 0, 0.1);
   cursor: pointer;
 }
 
+.control-btn-text {
+  font-size: 24rpx;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.control-btn-loading {
+  opacity: 0.72;
+}
+
+.refresh-btn {
+  border: 1.5rpx solid rgba(15, 23, 42, 0.08);
+}
+
 .locate-btn {
   border: 1.5rpx solid rgba(37, 99, 235, 0.15);
+}
+
+.locate-btn .control-btn-text {
+  color: #2563EB;
 }
 
 /* ========== Scooter Popup ========== */
