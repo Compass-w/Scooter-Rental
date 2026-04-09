@@ -62,6 +62,12 @@ public class AuthController {
                     .body(Result.error(400, "Missing required fields"));
         }
 
+        String passwordValidationMessage = validatePasswordComplexity(user.getPasswordHash());
+        if (passwordValidationMessage != null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Result.error(400, passwordValidationMessage));
+        }
+
         boolean success = userService.register(user);
 
         if (success) {
@@ -119,9 +125,10 @@ public class AuthController {
                     .body(Result.error(400, "New password is required"));
         }
 
-        if (request.getNewPassword().length() < 6) {
+        String passwordValidationMessage = validatePasswordComplexity(request.getNewPassword());
+        if (passwordValidationMessage != null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Result.error(400, "Password must be at least 6 characters"));
+                    .body(Result.error(400, passwordValidationMessage));
         }
 
         boolean success = userService.resetPassword(request.getToken(), request.getNewPassword());
@@ -147,5 +154,22 @@ public class AuthController {
         } catch (NumberFormatException ignored) {
             return null;
         }
+    }
+
+    private String validatePasswordComplexity(String password) {
+        if (password == null || password.isBlank()) {
+            return "Password is required";
+        }
+
+        boolean hasMinLength = password.length() >= 8;
+        boolean hasLetter = password.matches(".*[A-Za-z].*");
+        boolean hasNumber = password.matches(".*\\d.*");
+        boolean hasSpecialCharacter = password.matches(".*[^A-Za-z0-9].*");
+
+        if (hasMinLength && hasLetter && hasNumber && hasSpecialCharacter) {
+            return null;
+        }
+
+        return "Password must be at least 8 characters and include letters, numbers, and special characters";
     }
 }

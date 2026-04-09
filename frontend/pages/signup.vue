@@ -159,7 +159,7 @@
               <uni-icons type="info" size="14" color="#EF4444"></uni-icons>
               <text class="hint-error">{{ errors.password }}</text>
             </view>
-            <text class="input-hint" v-else>Min 6 characters · Mix letters, numbers &amp; symbols for strength</text>
+            <text class="input-hint" v-else>Use at least 8 characters and include letters, numbers, and special characters</text>
           </view>
 
           <!-- Confirm Password -->
@@ -267,11 +267,11 @@ const errors  = reactive({ username: '', email: '', phone: '', password: '', con
 const pwdStrength = computed(() => {
   const p = password.value
   let score = 0
-  if (p.length >= 6)  score++
-  if (p.length >= 10) score++
-  if (/[A-Z]/.test(p)) score++
-  if (/\d/.test(p))    score++
+  if (p.length >= 8) score++
+  if (/[A-Za-z]/.test(p)) score++
+  if (/\d/.test(p)) score++
   if (/[^A-Za-z0-9]/.test(p)) score++
+  if (p.length >= 12) score++
   const map = [
     { pct: 20,  color: '#EF4444', label: 'Very Weak' },
     { pct: 40,  color: '#F97316', label: 'Weak' },
@@ -284,6 +284,16 @@ const pwdStrength = computed(() => {
 
 // ─── Helpers ───────────────────────────────────────────────────
 const validateEmail = v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)
+const hasLetter = (value) => /[A-Za-z]/.test(String(value || ''))
+const hasNumber = (value) => /\d/.test(String(value || ''))
+const hasSpecialCharacter = (value) => /[^A-Za-z0-9]/.test(String(value || ''))
+const isStrongPassword = (value) => {
+  const passwordValue = String(value || '')
+  return passwordValue.length >= 8 &&
+    hasLetter(passwordValue) &&
+    hasNumber(passwordValue) &&
+    hasSpecialCharacter(passwordValue)
+}
 const digitsOnly = (value) => String(value || '').replace(/\D/g, '')
 const selectedCountry = computed(() => countryCodeOptions[selectedCountryIndex.value] || countryCodeOptions[0])
 const formattedPhone = computed(() => {
@@ -353,8 +363,8 @@ const validateField = (field) => {
     case 'password':
       if (!password.value)
         errors.password = 'Password is required'
-      else if (password.value.length < 6)
-        errors.password = 'Password must be at least 6 characters'
+      else if (!isStrongPassword(password.value))
+        errors.password = 'Use at least 8 characters with letters, numbers, and special characters'
       else
         errors.password = ''
       // Re-validate confirm too if already touched

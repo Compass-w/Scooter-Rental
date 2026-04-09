@@ -54,7 +54,7 @@
                   <uni-icons :type="showNewPwd ? 'eye' : 'eye-slash'" size="28" color="#9CA3AF"></uni-icons>
                 </view>
               </view>
-              <text class="input-hint">At least 6 characters</text>
+              <text class="input-hint">Use at least 8 characters with letters, numbers, and special characters</text>
             </view>
 
             <view class="form-group">
@@ -78,9 +78,21 @@
 
             <view class="password-requirements">
               <text class="requirements-title">Password Requirements:</text>
-              <view class="requirement-item" :class="{ 'met': newPassword.length >= 6 }">
-                <uni-icons :type="newPassword.length >= 6 ? 'checkmarkempty' : 'closeempty'" size="18" :color="newPassword.length >= 6 ? '#10B981' : '#9CA3AF'"></uni-icons>
-                <text>At least 6 characters</text>
+              <view class="requirement-item" :class="{ 'met': hasMinLength }">
+                <uni-icons :type="hasMinLength ? 'checkmarkempty' : 'closeempty'" size="18" :color="hasMinLength ? '#10B981' : '#9CA3AF'"></uni-icons>
+                <text>At least 8 characters</text>
+              </view>
+              <view class="requirement-item" :class="{ 'met': hasLetter }">
+                <uni-icons :type="hasLetter ? 'checkmarkempty' : 'closeempty'" size="18" :color="hasLetter ? '#10B981' : '#9CA3AF'"></uni-icons>
+                <text>Contains a letter</text>
+              </view>
+              <view class="requirement-item" :class="{ 'met': hasNumber }">
+                <uni-icons :type="hasNumber ? 'checkmarkempty' : 'closeempty'" size="18" :color="hasNumber ? '#10B981' : '#9CA3AF'"></uni-icons>
+                <text>Contains a number</text>
+              </view>
+              <view class="requirement-item" :class="{ 'met': hasSpecialCharacter }">
+                <uni-icons :type="hasSpecialCharacter ? 'checkmarkempty' : 'closeempty'" size="18" :color="hasSpecialCharacter ? '#10B981' : '#9CA3AF'"></uni-icons>
+                <text>Contains a special character</text>
               </view>
               <view class="requirement-item" :class="{ 'met': newPassword === confirmPassword && newPassword.length > 0 }">
                 <uni-icons :type="(newPassword === confirmPassword && newPassword.length > 0) ? 'checkmarkempty' : 'closeempty'" size="18" :color="(newPassword === confirmPassword && newPassword.length > 0) ? '#10B981' : '#9CA3AF'"></uni-icons>
@@ -110,7 +122,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { forgotPassword, resetPassword, verifyResetToken } from '@/api/user.js'
 import { getProfile } from '@/api/profile.js'
 import BaseLayout from '@/pages/BaseLayout.vue'
@@ -129,6 +141,16 @@ const pageSource = ref('')
 const errorTitle = ref('Invalid or Expired Link')
 const errorMessage = ref('This password reset link is invalid or has expired. Please request a new one.')
 const invalidActionLabel = ref('Request New Link')
+const hasMinLength = computed(() => newPassword.value.length >= 8)
+const hasLetter = computed(() => /[A-Za-z]/.test(newPassword.value))
+const hasNumber = computed(() => /\d/.test(newPassword.value))
+const hasSpecialCharacter = computed(() => /[^A-Za-z0-9]/.test(newPassword.value))
+const isStrongPassword = computed(() =>
+  hasMinLength.value &&
+  hasLetter.value &&
+  hasNumber.value &&
+  hasSpecialCharacter.value
+)
 
 /**
  * Component mounted lifecycle hook
@@ -288,9 +310,9 @@ const handleResetPassword = async () => {
   }
   
   // Validate password length
-  if (newPassword.value.length < 6) {
+  if (!isStrongPassword.value) {
     uni.showToast({
-      title: 'Password must be at least 6 characters',
+      title: 'Use letters, numbers, and special characters',
       icon: 'none',
       duration: 2000
     })
