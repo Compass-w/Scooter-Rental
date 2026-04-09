@@ -287,6 +287,9 @@
             <button class="booking-btn-secondary" @tap="goToRideDashboard">
               <text>Open My Ride</text>
             </button>
+            <button class="booking-btn-report" :disabled="busyAction === 'issue'" @tap="openIssuePopup">
+              <text>{{ busyAction === 'issue' ? 'Submitting...' : 'Report Issue' }}</text>
+            </button>
             <button class="booking-btn-danger" :disabled="busyAction === 'end'" @tap="handleEndRide">
               <text>{{ busyAction === 'end' ? 'Ending...' : 'End Ride' }}</text>
             </button>
@@ -912,6 +915,7 @@ const submitIssue = async () => {
     await reportIssue({
       userId: getStoredUserId(),
       scooterId: activeRide.value.scooterId,
+      bookingId: activeRide.value.bookingId,
       description,
       category: issueForm.value.category
     })
@@ -1363,8 +1367,8 @@ onUnload(() => {
 }
 .trip-ptile-icon {
   display: block;
-  width: 34rpx;
-  height: 34rpx;
+  width: 37rpx;
+  height: 37rpx;
   margin-bottom: 10rpx;
 }
 .trip-ptile-label { display: block; font-size: 24rpx; color: #475569; font-weight: 700; }
@@ -1550,12 +1554,12 @@ onUnload(() => {
 }
 .booking-info-icon {
   display: block;
-  width: 30rpx;
-  height: 30rpx;
+  width: 37rpx;
+  height: 37rpx;
   margin-bottom: 8rpx;
 }
-.booking-info-label { display: block; font-size: 20rpx; color: #94A3B8; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6rpx; }
-.booking-info-value { display: block; font-size: 26rpx; color: #0F172A; font-weight: 700; }
+.booking-info-label { display: block; font-size: 27rpx; color: #94A3B8; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6rpx; }
+.booking-info-value { display: block; font-size: 32rpx; color: #0F172A; font-weight: 700; }
 
 /* Extend section */
 .booking-extend-section { background: #fff; border-radius: 28rpx; padding: 24rpx; border: 1rpx solid #E2E8F0; box-shadow: 0 14rpx 34rpx rgba(15,23,42,0.06); }
@@ -1612,6 +1616,18 @@ onUnload(() => {
   box-shadow: 0 10rpx 24rpx rgba(37,99,235,0.08);
 }
 .booking-btn-secondary::after { border: none; }
+.booking-btn-report {
+  flex: 1; height: 90rpx;
+  border-radius: 999rpx;
+  background: #FFFFFF;
+  color: #D97706;
+  font-size: 27rpx; font-weight: 700;
+  border: 2rpx solid #FDE68A;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 10rpx 24rpx rgba(217,119,6,0.08);
+}
+.booking-btn-report::after { border: none; }
+.booking-btn-report[disabled] { opacity: 0.55; }
 .booking-btn-danger {
   flex: 1; height: 90rpx;
   border-radius: 999rpx;
@@ -1698,8 +1714,8 @@ onUnload(() => {
   height: 32rpx;
   margin-bottom: 10rpx;
 }
-.booking-info-preview-label { display: block; font-size: 20rpx; color: #94A3B8; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8rpx; }
-.booking-info-preview-value { display: block; font-size: 22rpx; color: #475569; font-weight: 600; line-height: 1.4; }
+.booking-info-preview-label { display: block; font-size: 25rpx; color: #94A3B8; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8rpx; }
+.booking-info-preview-value { display: block; font-size: 29rpx; color: #475569; font-weight: 600; line-height: 1.4; }
 
 @media (hover: hover) {
   .trip-status-pill:hover,
@@ -1747,6 +1763,13 @@ onUnload(() => {
     background: #EFF6FF;
     border-color: #93C5FD;
     box-shadow: 0 14rpx 28rpx rgba(37,99,235,0.14);
+  }
+
+  .booking-btn-report:hover {
+    transform: translateY(-3rpx);
+    background: #FFFBEB;
+    border-color: #FCD34D;
+    box-shadow: 0 14rpx 28rpx rgba(217,119,6,0.12);
   }
 
   .trip-action-end:hover,

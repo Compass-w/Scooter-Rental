@@ -78,7 +78,7 @@
       <slot></slot>
     </view>
 
-    <!-- Professional Footer -->
+    <!-- Compact Footer -->
     <view v-if="showFooter" class="footer">
       <view class="footer-content">
         <!-- Footer Top Section -->
@@ -101,50 +101,60 @@
             </view>
           </view>
 
-          <view class="footer-column">
-            <text class="footer-heading">Company</text>
-            <text class="footer-link">About Us</text>
-            <text class="footer-link">How It Works</text>
-            <text class="footer-link">Careers</text>
-            <text class="footer-link">Press Kit</text>
-            <text class="footer-link">Blog</text>
-          </view>
-
-          <view class="footer-column">
+          <view class="footer-column footer-services-col">
             <text class="footer-heading">Services</text>
-            <text class="footer-link">Rent a Scooter</text>
-            <text class="footer-link">Pricing Plans</text>
-            <text class="footer-link">Locations</text>
-            <text class="footer-link">Business Solutions</text>
-            <text class="footer-link">Student Discount</text>
-          </view>
-
-          <view class="footer-column">
-            <text class="footer-heading">Support</text>
-            <text class="footer-link">Help Center</text>
-            <text class="footer-link">Safety Guidelines</text>
-            <text class="footer-link">Contact Us</text>
-            <text class="footer-link">Report Issue</text>
-            <text class="footer-link">FAQ</text>
-          </view>
-
-          <view class="footer-column">
-            <text class="footer-heading">Connect</text>
-            <view class="social-icons">
-              <view class="social-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#6B7280" class="icon-svg">
-                  <path d="M9.198 21.5h4v-8.01h3.604l.396-3.98h-4V7.5a1 1 0 0 1 1-1h3v-4h-3a5 5 0 0 0-5 5v3.01h-2.5v3.98h2.5v8.01Z"/>
-                </svg>
+            <view class="footer-services-grid">
+              <view class="footer-service-item" @tap="goToFooterService('rent')">
+                <text class="footer-service-text">Rent a Scooter</text>
               </view>
-              <view class="social-icon">
-                <uni-icons type="weibo" size="20" color="#6B7280"></uni-icons>
+              <view class="footer-service-item" @tap="goToFooterService('pricing')">
+                <text class="footer-service-text">Pricing Plans</text>
               </view>
-              <view class="social-icon">
-                <uni-icons type="email" size="20" color="#6B7280"></uni-icons>
+              <view class="footer-service-item" @tap="goToFooterService('locations')">
+                <text class="footer-service-text">Ride Locations</text>
+              </view>
+              <view class="footer-service-item" @tap="goToFooterService('business-plan')">
+                <text class="footer-service-text">Business Solutions</text>
               </view>
             </view>
-            <text class="footer-heading contact-heading">Contact</text>
+          </view>
+
+          <view class="footer-column footer-contact-col">
+            <text class="footer-heading">Contact</text>
+            <view class="footer-contact-list">
+              <view class="footer-contact-item">
+                <view class="footer-contact-icon">
+                  <uni-icons type="email" size="18" color="#2563EB"></uni-icons>
+                </view>
+                <text class="footer-contact footer-contact-stack">support@scootergo.com</text>
+              </view>
+              <view class="footer-contact-item">
+                <view class="footer-contact-icon">
+                  <uni-icons type="phone" size="18" color="#2563EB"></uni-icons>
+                </view>
+                <text class="footer-contact footer-contact-stack">+44 20 1234 5678</text>
+              </view>
+            </view>
+          </view>
+        </view>
+
+        <view class="footer-main">
+          <view class="footer-brand">
+            <view class="footer-logo">
+              <view class="footer-logo-icon">
+                <svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12.08,19H7a1,1,0,0,1,0-2h5.08a7,7,0,0,1,5.86-5.91,1,1,0,0,1,.3,2,5,5,0,0,0-4.19,4.22A2,2,0,0,1,12.08,19Z" style="fill: #93C5FD;"></path>
+                  <path d="M19.56,15.06,18,5h2a1,1,0,0,0,0-2H18a2,2,0,0,0-2,2.3l1.55,10.07a3,3,0,1,0,2-.31ZM19,19a1,1,0,1,1,1-1A1,1,0,0,1,19,19ZM5,15a3,3,0,1,0,3,3A3,3,0,0,0,5,15Zm0,4a1,1,0,1,1,1-1A1,1,0,0,1,5,19Z" style="fill: #FFFFFF;"></path>
+                </svg>
+              </view>
+              <text class="footer-logo-text">ScooterGo</text>
+            </view>
+            <text class="footer-description">Find, book, and ride electric scooters with less hassle.</text>
+          </view>
+
+          <view class="footer-contact-row">
             <text class="footer-contact">support@scootergo.com</text>
+            <text class="footer-contact-divider">•</text>
             <text class="footer-contact">+44 20 1234 5678</text>
           </view>
         </view>
@@ -290,6 +300,41 @@ const goToSignup = () => {
 
 const goToFindScooter = () => {
   uni.navigateTo({ url: '/pages/find-scooter' })
+}
+
+const getCurrentRoute = () => {
+  try {
+    const pages = getCurrentPages()
+    return pages[pages.length - 1]?.route || ''
+  } catch {
+    return ''
+  }
+}
+
+const openIndexSection = (section) => {
+  const selector = `#${section}`
+  const currentRoute = getCurrentRoute()
+  if (currentRoute === 'pages/index' || currentRoute === 'pages/index/index') {
+    uni.pageScrollTo({
+      selector,
+      duration: 400,
+      fail: () => {
+        uni.reLaunch({ url: `/pages/index?section=${encodeURIComponent(section)}` })
+      }
+    })
+    return
+  }
+
+  uni.reLaunch({ url: `/pages/index?section=${encodeURIComponent(section)}` })
+}
+
+const goToFooterService = (target) => {
+  if (target === 'rent') {
+    goToFindScooter()
+    return
+  }
+
+  openIndexSection(target)
 }
 
 const goToBooking = () => {
@@ -541,9 +586,9 @@ const goToProfile = () => {
   cursor: pointer;
 }
 
-/* ========== Professional Footer ========== */
+/* ========== Compact Footer ========== */
 .footer {
-  background: #FFFFFF;
+  background: rgba(255, 255, 255, 0.92);
   color: #374151;
   margin-top: auto;
   border-top: 1rpx solid #E5E7EB;
@@ -552,47 +597,41 @@ const goToProfile = () => {
 .footer-content {
   max-width: 2200rpx;
   margin: 0 auto;
-  padding: 100rpx 80rpx 40rpx;
+  padding: 44rpx 80rpx 28rpx;
 }
 
-.footer-top {
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr 1.2fr;
-  gap: 80rpx;
-  padding-bottom: 80rpx;
-  border-bottom: 1rpx solid #E5E7EB;
-}
-
-.footer-column {
+.footer-main {
   display: flex;
-  flex-direction: column;
-  gap: 24rpx;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28rpx;
+  padding-bottom: 24rpx;
 }
 
-/* Footer Brand Section */
 .footer-brand {
   display: flex;
   flex-direction: column;
-  gap: 20rpx;
+  gap: 12rpx;
+  min-width: 0;
 }
 
 .footer-logo {
   display: flex;
   align-items: center;
   gap: 16rpx;
-  margin-bottom: 8rpx;
 }
 
 .footer-logo-icon {
-  width: 70rpx;
-  height: 70rpx;
+  width: 56rpx;
+  height: 56rpx;
   background: linear-gradient(135deg, #2563EB, #1d4ed8);
-  border-radius: 16rpx;
+  border-radius: 14rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4rpx 12rpx rgba(37, 99, 235, 0.2);
-  padding: 12rpx;
+  box-shadow: 0 4rpx 12rpx rgba(37, 99, 235, 0.18);
+  padding: 10rpx;
+  flex-shrink: 0;
 }
 
 .footer-logo-icon svg {
@@ -601,142 +640,85 @@ const goToProfile = () => {
 }
 
 .footer-logo-text {
-  font-size: 42rpx;
+  font-size: 34rpx;
   font-weight: 700;
   color: #1F2937;
-}
-
-.footer-tagline {
-  font-size: 32rpx;
-  font-weight: 600;
-  color: #2563EB;
-  margin-top: -8rpx;
 }
 
 .footer-description {
-  font-size: 28rpx;
-  line-height: 1.6;
+  font-size: 24rpx;
+  line-height: 1.5;
   color: #6B7280;
+  max-width: 760rpx;
 }
 
-/* Footer Links */
-.footer-heading {
-  font-size: 32rpx;
-  font-weight: 700;
-  color: #1F2937;
-  margin-bottom: 8rpx;
-}
-
-.footer-link {
-  font-size: 28rpx;
-  color: #6B7280;
-  transition: color 0.3s;
-  cursor: pointer;
-}
-
-.footer-link:active {
-  color: #2563EB;
-}
-
-/* Social Icons */
-.social-icons {
-  display: flex;
-  gap: 20rpx;
-  margin-top: 8rpx;
-}
-
-.social-icon {
-  width: 72rpx;
-  height: 72rpx;
-  background: #F3F4F6;
-  border: 1rpx solid #E5E7EB;
-  border-radius: 50%;
+.footer-contact-row {
   display: flex;
   align-items: center;
-  justify-content: center;
-  transition: all 0.3s;
-}
-
-.social-icon:active {
-  background: #2563EB;
-  border-color: #2563EB;
-  transform: scale(0.95);
-}
-
-.social-icon:active uni-icons {
-  color: white !important;
-}
-
-/* SVG icon styling for Facebook */
-.icon-svg {
-  width: 40rpx;
-  height: 40rpx;
-  transition: fill 0.3s;
-}
-
-.social-icon:active .icon-svg {
-  fill: white !important;
-}
-
-/* Contact Info */
-.contact-heading {
-  margin-top: 16rpx;
+  gap: 16rpx;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .footer-contact {
-  font-size: 28rpx;
+  font-size: 24rpx;
   color: #6B7280;
+  white-space: nowrap;
 }
 
-/* Footer Bottom */
+.footer-contact-divider {
+  font-size: 24rpx;
+  color: #CBD5E1;
+  display: none;
+}
+
 .footer-bottom {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-top: 40rpx;
-  flex-wrap: wrap;
   gap: 20rpx;
+  padding-top: 22rpx;
+  border-top: 1rpx solid #E5E7EB;
+}
+
+.footer-bottom-right,
+.footer-heading,
+.footer-link,
+.footer-tagline,
+.social-icons,
+.social-icon,
+.icon-svg,
+.contact-heading,
+.footer-legal,
+.footer-divider {
+  display: none;
 }
 
 .footer-bottom-left {
-  flex: 1;
+  display: block;
 }
 
 .copyright {
-  font-size: 26rpx;
+  font-size: 0;
+  color: transparent;
+}
+
+.copyright::before {
+  content: '© 2026 ScooterGo Ltd.';
+  font-size: 24rpx;
   color: #9CA3AF;
 }
 
-.footer-bottom-right {
-  display: flex;
-  align-items: center;
-  gap: 20rpx;
-  flex-wrap: wrap;
-}
-
-.footer-legal {
-  font-size: 26rpx;
-  color: #6B7280;
-  cursor: pointer;
-  transition: color 0.3s;
-}
-
-.footer-legal:active {
-  color: #2563EB;
-}
-
-.footer-divider {
-  color: #D1D5DB;
-  font-size: 26rpx;
+.footer-caption {
+  font-size: 24rpx;
+  color: #94A3B8;
+  text-align: right;
+  display: none;
 }
 
 /* Simple Footer */
 .footer-simple {
-  min-height: 100rpx;
-}
-
-.social-icon {
-  transition: all 0.22s ease;
+  min-height: 52rpx;
 }
 
 @media (hover: hover) {
@@ -754,34 +736,12 @@ const goToProfile = () => {
     transform: translateY(-3rpx) scale(1.02);
     box-shadow: 0 10rpx 24rpx rgba(37, 99, 235, 0.18);
   }
-
-  .social-icon:hover {
-    background: #2563EB;
-    border-color: #2563EB;
-    transform: translateY(-3rpx);
-  }
-
-  .social-icon:hover .icon-svg {
-    fill: white !important;
-  }
 }
 
 /* Responsive adjustments for smaller screens */
-@media (max-width: 1200px) {
-  .footer-top {
-    grid-template-columns: 2fr 1fr 1fr 1fr;
-    gap: 60rpx;
-  }
-}
-
 @media (max-width: 900px) {
-  .footer-top {
-    grid-template-columns: 1fr 1fr;
-    gap: 50rpx;
-  }
-  
   .footer-content {
-    padding: 80rpx 60rpx 40rpx;
+    padding: 40rpx 60rpx 24rpx;
   }
 }
 
@@ -793,22 +753,326 @@ const goToProfile = () => {
   .nav-container {
     padding: 20rpx 30rpx;
   }
-  
+
+  .footer-content {
+    padding: 36rpx 40rpx 24rpx;
+  }
+
+  .footer-main {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 18rpx;
+  }
+
+  .footer-contact-row {
+    justify-content: flex-start;
+  }
+
+  .footer-bottom {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12rpx;
+  }
+
+  .footer-caption {
+    text-align: left;
+  }
+}
+
+/* ========== Footer Restore Overrides ========== */
+.footer {
+  background: #FFFFFF;
+  color: #374151;
+}
+
+.footer-content {
+  padding: 100rpx 80rpx 40rpx;
+}
+
+.footer-top {
+  display: grid;
+  grid-template-columns: 2fr 1.3fr 1.1fr;
+  gap: 80rpx;
+  padding-bottom: 80rpx;
+  border-bottom: 1rpx solid #E5E7EB;
+}
+
+.footer-column {
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+.footer-main {
+  display: none;
+}
+
+.footer-brand {
+  gap: 20rpx;
+}
+
+.footer-logo {
+  margin-bottom: 8rpx;
+}
+
+.footer-logo-icon {
+  width: 70rpx;
+  height: 70rpx;
+  border-radius: 16rpx;
+  padding: 12rpx;
+  box-shadow: 0 4rpx 12rpx rgba(37, 99, 235, 0.2);
+}
+
+.footer-logo-text {
+  font-size: 42rpx;
+}
+
+.footer-tagline {
+  display: block;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #2563EB;
+  margin-top: -8rpx;
+}
+
+.footer-description {
+  font-size: 28rpx;
+  line-height: 1.6;
+  max-width: none;
+}
+
+.footer-heading,
+.footer-link,
+.social-icons,
+.social-icon,
+.icon-svg,
+.contact-heading,
+.footer-legal,
+.footer-divider,
+.footer-bottom-right {
+  display: flex;
+}
+
+.footer-heading {
+  display: block;
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #1F2937;
+  margin-bottom: 8rpx;
+}
+
+.footer-link {
+  display: block;
+  font-size: 28rpx;
+  color: #6B7280;
+}
+
+.footer-services-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14rpx 28rpx;
+}
+
+.footer-service-item {
+  display: flex;
+  align-items: center;
+  min-height: 44rpx;
+  padding: 6rpx 0;
+  cursor: pointer;
+  transition: transform 0.22s ease, color 0.22s ease, opacity 0.22s ease;
+}
+
+.footer-service-text {
+  font-size: 25rpx;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #475569;
+  transition: color 0.22s ease;
+}
+
+.social-icons {
+  gap: 20rpx;
+  margin-top: 8rpx;
+}
+
+.social-icon {
+  width: 72rpx;
+  height: 72rpx;
+  background: #F3F4F6;
+  border: 1rpx solid #E5E7EB;
+  border-radius: 50%;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-svg {
+  width: 40rpx;
+  height: 40rpx;
+}
+
+.contact-heading {
+  display: block;
+  margin-top: 16rpx;
+}
+
+.footer-contact {
+  font-size: 28rpx;
+  white-space: normal;
+}
+
+.footer-contact-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.footer-contact-item {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 6rpx 0;
+  cursor: pointer;
+  transition: transform 0.22s ease, color 0.22s ease, opacity 0.22s ease;
+}
+
+.footer-contact-icon {
+  width: 36rpx;
+  height: 36rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.22s ease;
+}
+
+.footer-contact-stack {
+  display: block;
+}
+
+.footer-bottom {
+  padding-top: 40rpx;
+  border-top: none;
+}
+
+.footer-bottom-left {
+  flex: 1;
+  display: block;
+}
+
+.copyright {
+  font-size: 0;
+  color: transparent;
+}
+
+.copyright::before {
+  content: '© 2026 ScooterGo Ltd. All rights reserved.';
+  font-size: 26rpx;
+  color: #9CA3AF;
+}
+
+.footer-bottom-right {
+  align-items: center;
+  gap: 20rpx;
+  flex-wrap: wrap;
+}
+
+.footer-legal {
+  display: block;
+  font-size: 26rpx;
+  color: #6B7280;
+}
+
+.footer-divider {
+  display: block;
+  font-size: 0;
+  color: transparent;
+}
+
+.footer-divider::before {
+  content: '•';
+  font-size: 26rpx;
+  color: #D1D5DB;
+}
+
+.footer-caption,
+.footer-contact-row,
+.footer-contact-divider {
+  display: none;
+}
+
+.footer-simple {
+  min-height: 100rpx;
+}
+
+@media (hover: hover) {
+  .social-icon:hover {
+    background: #2563EB;
+    border-color: #2563EB;
+    transform: translateY(-3rpx);
+  }
+
+  .social-icon:hover .icon-svg {
+    fill: white !important;
+  }
+
+  .footer-service-item:hover,
+  .footer-contact-item:hover {
+    transform: translateX(8rpx);
+  }
+
+  .footer-service-item:hover .footer-service-text,
+  .footer-contact-item:hover .footer-contact {
+    color: #2563EB;
+  }
+
+  .footer-contact-item:hover .footer-contact-icon {
+    transform: scale(1.08);
+  }
+}
+
+@media (max-width: 1200px) {
+  .footer-top {
+    grid-template-columns: 1.8fr 1.2fr 1fr;
+    gap: 60rpx;
+  }
+}
+
+@media (max-width: 900px) {
+  .footer-top {
+    grid-template-columns: 1fr 1fr;
+    gap: 50rpx;
+  }
+
+  .footer-contact-col {
+    grid-column: 1 / -1;
+  }
+
+  .footer-content {
+    padding: 80rpx 60rpx 40rpx;
+  }
+}
+
+@media (max-width: 750px) {
   .footer-top {
     grid-template-columns: 1fr;
     gap: 50rpx;
   }
-  
+
+  .footer-services-grid {
+    grid-template-columns: 1fr;
+    gap: 12rpx;
+  }
+
   .footer-content {
     padding: 60rpx 40rpx 30rpx;
   }
-  
+
   .footer-bottom {
     flex-direction: column;
     text-align: center;
     gap: 30rpx;
   }
-  
+
   .footer-bottom-right {
     justify-content: center;
   }

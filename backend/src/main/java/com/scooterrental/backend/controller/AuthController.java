@@ -1,7 +1,6 @@
 package com.scooterrental.backend.controller;
 
 import com.scooterrental.backend.common.Result;
-import com.scooterrental.backend.dto.auth.ForgotPasswordRequest;
 import com.scooterrental.backend.dto.auth.ResetPasswordRequest;
 import com.scooterrental.backend.entity.User;
 import com.scooterrental.backend.service.UserService;
@@ -71,22 +70,25 @@ public class AuthController {
             return ResponseEntity.ok(Result.success(data));
         } else {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Result.error(400, "Username already exists"));
+                    .body(Result.error(400, "Username or email already exists"));
         }
     }
 
     @PostMapping("/forgot-password")
     @Operation(summary = "Create password reset token")
-    public ResponseEntity<Result<Map<String, Object>>> forgotPassword(@RequestBody ForgotPasswordRequest request) {
-        if (request == null || request.getEmail() == null || request.getEmail().isBlank()) {
+    public ResponseEntity<Result<Map<String, Object>>> forgotPassword(@RequestBody Map<String, Object> request) {
+        String email = request == null || request.get("email") == null ? null : String.valueOf(request.get("email")).trim();
+        Integer userId = parseInteger(request == null ? null : request.get("userId"));
+
+        if ((email == null || email.isBlank()) && userId == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Result.error(400, "Email is required"));
+                    .body(Result.error(400, "Email or user ID is required"));
         }
 
-        Map<String, Object> resetData = userService.createPasswordReset(request.getEmail());
+        Map<String, Object> resetData = userService.createPasswordReset(email, userId);
         if (resetData == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Result.error(404, "No account found with this email address"));
+                    .body(Result.error(404, "No matching account found for this reset request"));
         }
 
         return ResponseEntity.ok(Result.success(resetData));
@@ -129,5 +131,21 @@ public class AuthController {
         }
 
         return ResponseEntity.ok(Result.success());
+    }
+
+    private Integer parseInteger(Object rawValue) {
+        if (rawValue == null) {
+            return null;
+        }
+
+        if (rawValue instanceof Number number) {
+            return number.intValue();
+        }
+
+        try {
+            return Integer.parseInt(String.valueOf(rawValue).trim());
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
     }
 }

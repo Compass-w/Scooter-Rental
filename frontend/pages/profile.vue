@@ -1432,7 +1432,10 @@ const viewAllTrips       = () => uni.navigateTo({ url: '/pages/active-ride?sourc
  */
 const goToChangePassword = () => {
   closeDrawer()
-  uni.navigateTo({ url: '/pages/reset-password?source=profile' })
+  const emailQuery = userInfo.value.email
+    ? `&email=${encodeURIComponent(userInfo.value.email)}`
+    : ''
+  uni.navigateTo({ url: `/pages/reset-password?source=profile${emailQuery}` })
 }
 const goToHelp           = () => uni.showToast({ title: 'Help coming soon', icon: 'none' })
 const viewTripDetail     = (trip) => uni.showToast({ title: `Trip #${trip.id}`, icon: 'none' })

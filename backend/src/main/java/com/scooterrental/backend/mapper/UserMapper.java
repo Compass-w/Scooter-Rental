@@ -14,8 +14,12 @@ public interface UserMapper {
 
         @Select("SELECT user_id AS userId, username, email, phone, city, avatar_url AS avatarUrl, password_hash AS passwordHash, role, " +
                         "total_riding_minutes AS totalRidingMinutes, achievements, created_at AS createdAt " +
-                        "FROM users WHERE LOWER(email) = LOWER(#{email})")
+                        "FROM users WHERE LOWER(email) = LOWER(#{email}) " +
+                        "ORDER BY user_id DESC LIMIT 1")
         User findByEmail(@Param("email") String email);
+
+        @Select("SELECT COUNT(1) FROM users WHERE LOWER(email) = LOWER(#{email}) AND user_id <> #{userId}")
+        int countByEmailExcludingUserId(@Param("email") String email, @Param("userId") Integer userId);
 
         // Register: Insert new user
         @Insert("INSERT INTO users(username, email, phone, city, avatar_url, password_hash, role) " +

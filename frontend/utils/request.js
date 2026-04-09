@@ -79,17 +79,20 @@ const request = (options) => {
       timeout: options.timeout || TIMEOUT,
       success: (res) => {
         // Handle based on API standard response structure
-        const { code, message, data } = res.data
+        const payload = res.data || {}
+        const { code, message, data, error } = payload
+        const statusCode = Number(res.statusCode || 0)
+        const normalizedUrl = String(options.url || '')
 
         // 200 means success
         if (code === 200) {
           resolve(data)
         } 
         // 401 means unauthorized or token expired
-        else if (code === 401) {
+        else if (code === 401 || statusCode === 401) {
           clearToken()
           uni.showToast({
-            title: 'Please login again',
+            title: message || error || 'Please login again',
             icon: 'none'
           })
           // Redirect to login page
@@ -102,11 +105,21 @@ const request = (options) => {
         }
         // Other errors
         else {
+          let errorMsg = message || error || `Request failed${statusCode ? ` (${statusCode})` : ''}`
+
+          if (
+            statusCode === 404 &&
+            !message &&
+            /\/auth\/(forgot-password|verify-reset-token|reset-password)$/.test(normalizedUrl)
+          ) {
+            errorMsg = 'Reset password API unavailable. Restart backend and try again.'
+          }
+
           uni.showToast({
-            title: message || 'Request failed',
+            title: errorMsg,
             icon: 'none'
           })
-          reject(new Error(message || 'Request failed'))
+          reject(new Error(errorMsg))
         }
       },
       fail: (err) => {

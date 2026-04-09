@@ -38,6 +38,9 @@ public class UserService {
         if (userMapper.findByUsername(user.getUsername()) != null) {
             return false;
         }
+        if (user.getEmail() != null && !user.getEmail().isBlank() && userMapper.findByEmail(user.getEmail()) != null) {
+            return false;
+        }
         String encodedPassword = passwordEncoder.encode(user.getPasswordHash());
         user.setPasswordHash(encodedPassword);
         userMapper.insert(user);
@@ -48,12 +51,28 @@ public class UserService {
         return userMapper.selectById(userId);
     }
 
-    public Map<String, Object> createPasswordReset(String email) {
+    public boolean emailBelongsToAnotherUser(Integer userId, String email) {
         if (email == null || email.isBlank()) {
+            return false;
+        }
+
+        return userMapper.countByEmailExcludingUserId(email.trim(), userId == null ? -1 : userId) > 0;
+    }
+
+    public Map<String, Object> createPasswordReset(String email, Integer preferredUserId) {
+        if ((email == null || email.isBlank()) && preferredUserId == null) {
             return null;
         }
 
-        User user = userMapper.findByEmail(email.trim());
+        User user = null;
+        if (preferredUserId != null) {
+            user = userMapper.selectById(preferredUserId);
+        }
+
+        if (user == null && email != null && !email.isBlank()) {
+            user = userMapper.findByEmail(email.trim());
+        }
+
         if (user == null || user.getUserId() == null) {
             return null;
         }
@@ -106,6 +125,14 @@ public class UserService {
      * @return true if update was successful.
      */
     public boolean updateUser(User user) {
+        if (user == null || user.getUserId() == null) {
+            return false;
+        }
+
+        if (emailBelongsToAnotherUser(user.getUserId(), user.getEmail())) {
+            return false;
+        }
+
         return userMapper.updateUser(user) > 0;
     }
 

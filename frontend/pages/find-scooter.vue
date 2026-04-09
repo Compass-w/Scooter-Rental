@@ -25,7 +25,7 @@
 
         <!-- Leaflet Map (web-view) -->
         <web-view
-          class="map-webview"
+          :class="['map-webview', mapInteractionLocked ? 'map-webview-blocked' : '']"
           :src="mapSrc"
           @message="onWebViewMessage"
         />
@@ -162,7 +162,7 @@
           </view>
 
           <!-- Scooter List -->
-          <scroll-view class="scooter-list" scroll-y>
+          <scroll-view class="scooter-list" scroll-y enable-flex :show-scrollbar="false">
             <view
               v-for="scooter in filteredScooters"
               :key="scooter.id"
@@ -290,6 +290,10 @@ const _pendingMessages = []
  */
 const availableCount = computed(() =>
   scooters.value.filter(s => s.status === 'AVAILABLE').length
+)
+
+const mapInteractionLocked = computed(() =>
+  drawerOpen.value || Boolean(selectedScooter.value) || bookingOptionsVisible.value
 )
 
 const normalizeSearchTerm = (value = '') =>
@@ -1046,6 +1050,10 @@ onUnmounted(() => {
   height: 100%;
 }
 
+.map-webview-blocked {
+  pointer-events: none;
+}
+
 /* ========== Search Bar ========== */
 .search-bar-wrapper {
   position: absolute;
@@ -1448,6 +1456,7 @@ onUnmounted(() => {
   z-index: 300;
   transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
   max-height: 80vh;
+  overflow: hidden;
   box-shadow: 0 -16rpx 48rpx rgba(0, 0, 0, 0.15);
 }
 
@@ -1463,6 +1472,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   height: 80vh;
+  min-height: 0;
 }
 
 .drawer-drag-area {
@@ -1530,7 +1540,10 @@ onUnmounted(() => {
 /* ========== Scooter List ========== */
 .scooter-list {
   flex: 1;
+  height: 0;
+  min-height: 0;
   padding: 16rpx 0;
+  overscroll-behavior: contain;
 }
 
 .scooter-card {

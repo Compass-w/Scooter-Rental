@@ -11,7 +11,7 @@
       <view class="hero-content">
         <view class="hero-badge">
           <view class="badge-dot"></view>
-          <text class="badge-text"> Now available in 18+ cities</text>
+          <text class="badge-text"> Now available in 100+ cities</text>
         </view>
         <text class="hero-title">Ride Smart,<br/>Ride <text class="hero-title-accent">Green</text></text>
         <text class="hero-subtitle">
@@ -277,7 +277,7 @@
     </view>
 
     <!-- ===== PRICING ===== -->
-    <view class="section section-light">
+    <view class="section section-light" id="pricing">
       <view class="section-inner">
         <view class="section-badge">
           <text class="section-badge-text">Pricing</text>
@@ -349,7 +349,7 @@
           </view>
 
           <!-- Business -->
-          <view class="pricing-card">
+          <view class="pricing-card" id="business-plan">
             <text class="plan-name">Business</text>
             <view class="plan-price-row">
               <text class="plan-price" style="font-size: 52rpx; line-height: 1.2;">Custom</text>
@@ -381,7 +381,7 @@
     </view>
 
     <!-- ===== LOCATIONS ===== -->
-    <view class="section section-dark">
+    <view class="section section-dark" id="locations">
       <view class="section-inner">
         <view class="section-badge dark">
           <text class="section-badge-text">Locations</text>
@@ -448,8 +448,11 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { nextTick, onMounted, ref } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
 import BaseLayout from '@/pages/BaseLayout.vue'
+
+const pendingSection = ref('')
 
 const cities = ref([
   { name: 'Shanghai',   flag: '', live: true  },
@@ -555,15 +558,39 @@ const startMonthlyPass = () => {
 }
 
 const scrollToHowItWorks = () => {
+  pendingSection.value = 'how-it-works'
+  scrollToSection('how-it-works')
+}
+
+const scrollToSection = (section, attempt = 0) => {
   uni.pageScrollTo({
-    selector: '#how-it-works',
-    duration: 400
+    selector: `#${section}`,
+    duration: 400,
+    fail: () => {
+      if (attempt >= 6) return
+      setTimeout(() => {
+        scrollToSection(section, attempt + 1)
+      }, 120)
+    }
   })
 }
 
 const contactSales = () => {
   uni.showToast({ title: 'Coming soon!', icon: 'none' })
 }
+
+onLoad((options) => {
+  pendingSection.value = options?.section || ''
+})
+
+onMounted(() => {
+  if (!pendingSection.value) return
+  nextTick(() => {
+    setTimeout(() => {
+      scrollToSection(pendingSection.value)
+    }, 120)
+  })
+})
 </script>
 
 <style scoped>
