@@ -63,6 +63,10 @@ public class UserProfileController {
         user.setCity(readPayloadText(payload, "city"));
         user.setAvatarUrl(readPayloadText(payload, "avatarUrl"));
 
+        if (userService.emailBelongsToAnotherUser(userId, user.getEmail())) {
+            return Result.error(400, "Email already exists");
+        }
+
         if (userService.updateUser(user)) {
             User refreshed = userService.getUserById(userId);
             if (refreshed != null) {

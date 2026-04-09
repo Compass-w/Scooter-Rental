@@ -112,6 +112,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { forgotPassword, resetPassword, verifyResetToken } from '@/api/user.js'
+import { getProfile } from '@/api/profile.js'
 import BaseLayout from '@/pages/BaseLayout.vue'
 
 // Reactive state variables
@@ -139,9 +140,10 @@ onMounted(async () => {
   const currentPage = pages[pages.length - 1]
   const options = currentPage.options || {}
   pageSource.value = options.source || ''
+  const routeEmail = options.email ? decodeURIComponent(options.email) : ''
 
   if (pageSource.value === 'profile') {
-    await bootstrapProfileReset()
+    await bootstrapProfileReset(routeEmail)
     return
   }
 
@@ -179,11 +181,21 @@ const markResetFlowInvalid = (title, message, actionLabel = 'Request New Link') 
   tokenInvalid.value = true
 }
 
-const bootstrapProfileReset = async () => {
+const bootstrapProfileReset = async (prefilledEmail = '') => {
   verifying.value = true
 
   const storedUser = readStoredUserInfo()
-  const email = storedUser?.email?.trim?.() || ''
+  const preferredUserId = storedUser?.userId || storedUser?.id || null
+  let email = String(prefilledEmail || storedUser?.email || '').trim()
+
+  if (!email) {
+    try {
+      const profile = await getProfile()
+      email = String(profile?.email || '').trim()
+    } catch (error) {
+      console.error('Failed to fetch latest profile for password reset:', error)
+    }
+  }
 
   if (!email) {
     markResetFlowInvalid(
@@ -196,7 +208,10 @@ const bootstrapProfileReset = async () => {
   }
 
   try {
-    const result = await forgotPassword({ email })
+    const result = await forgotPassword({
+      email,
+      userId: preferredUserId
+    })
     resetToken.value = result?.resetToken || ''
     userEmail.value = result?.email || email
 

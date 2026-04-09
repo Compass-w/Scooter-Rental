@@ -3,12 +3,39 @@
  * Centralized management of API-related configuration
  */
 
+const trimTrailingSlash = (value = '') => String(value || '').replace(/\/+$/, '')
+
+const isLocalHostname = (hostname = '') =>
+  ['localhost', '127.0.0.1', '::1'].includes(String(hostname || '').toLowerCase())
+
+const resolveApiBaseUrl = () => {
+  const explicitBaseUrl = trimTrailingSlash(
+    process.env.UNI_APP_API_BASE_URL ||
+    process.env.VITE_API_BASE_URL ||
+    ''
+  )
+
+  if (explicitBaseUrl) {
+    return explicitBaseUrl
+  }
+
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    const { origin, hostname } = window.location
+
+    if (isLocalHostname(hostname)) {
+      return 'http://localhost:8080/api'
+    }
+
+    return `${trimTrailingSlash(origin)}/api`
+  }
+
+  return 'http://localhost:8080/api'
+}
+
 // API Base Configuration
 export const API_CONFIG = {
-  // Base URL - switches based on environment
-  BASE_URL: process.env.NODE_ENV === 'development' 
-    ? 'http://localhost:8080/api' 
-    : 'https://your-production-domain.com/api',
+  // Base URL - can be overridden with UNI_APP_API_BASE_URL / VITE_API_BASE_URL
+  BASE_URL: resolveApiBaseUrl(),
   
   // Request timeout (milliseconds)
   TIMEOUT: 10000,
