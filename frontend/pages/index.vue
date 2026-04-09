@@ -1,5 +1,5 @@
 <template>
-  <BaseLayout nav-type="login" :show-menu="true" :show-footer="true" :content-padding-top="88">
+  <BaseLayout nav-type="login" :show-menu="true" :show-footer="true" :content-padding-top="88" current-page="home">
 
     <!-- ===== HERO SECTION ===== -->
     <view class="hero-section">
@@ -287,30 +287,30 @@
         <view class="pricing-grid">
           <!-- Free -->
           <view class="pricing-card">
-            <text class="plan-name">Pay As You Go</text>
+            <text class="plan-name">1 Hour Pass</text>
             <view class="plan-price-row">
-              <text class="plan-currency"></text>
-              <text class="plan-price">0.15</text>
-              <text class="plan-unit">/min</text>
+              <text class="plan-currency">RMB</text>
+              <text class="plan-price">{{ HOME_PRICING.payAsYouGo.hourlyPrice.toFixed(2) }}</text>
+              <text class="plan-unit">/hour</text>
             </view>
-            <text class="plan-unlock">+ 1.00 unlock fee</text>
+            <text class="plan-unlock">Quick city hops with one simple hourly price</text>
             <view class="plan-divider"></view>
             <view class="plan-features">
               <view class="plan-feature">
                 <view class="check-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></view>
-                <text class="plan-feature-text">No monthly commitment</text>
+                <text class="plan-feature-text">Perfect for short commutes</text>
               </view>
               <view class="plan-feature">
                 <view class="check-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></view>
-                <text class="plan-feature-text">Ride whenever you want</text>
+                <text class="plan-feature-text">60 minutes included</text>
               </view>
               <view class="plan-feature">
                 <view class="check-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></view>
-                <text class="plan-feature-text">Access to all cities</text>
+                <text class="plan-feature-text">No unlock surcharge</text>
               </view>
               <view class="plan-feature disabled">
                 <view class="check-icon muted"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></view>
-                <text class="plan-feature-text muted">No unlock fee waiver</text>
+                <text class="plan-feature-text muted">Not built for all-day riding</text>
               </view>
             </view>
             <button class="btn-outline-pill plan-btn" @tap="goToSignup">Get Started Free</button>
@@ -321,28 +321,28 @@
             <view class="plan-badge-popular">Most Popular</view>
             <text class="plan-name white">Monthly Pass</text>
             <view class="plan-price-row">
-              <text class="plan-currency white"></text>
-              <text class="plan-price white">24.99</text>
+              <text class="plan-currency white">RMB</text>
+              <text class="plan-price white">{{ HOME_PRICING.monthlyPass.monthlyPrice.toFixed(2) }}</text>
               <text class="plan-unit white">/mo</text>
             </view>
-            <text class="plan-unlock white-muted">Unlock fee waived | 0.09/min</text>
+            <text class="plan-unlock white-muted">Best for daily riders | about RMB {{ HOME_PRICING.monthlyPass.averageDailyPrice.toFixed(2) }}/day</text>
             <view class="plan-divider light"></view>
             <view class="plan-features">
               <view class="plan-feature">
                 <view class="check-icon white"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></view>
-                <text class="plan-feature-text white">Everything in Pay As You Go</text>
+                <text class="plan-feature-text white">30 days included</text>
               </view>
               <view class="plan-feature">
                 <view class="check-icon white"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></view>
-                <text class="plan-feature-text white">No unlock fee, ever</text>
+                <text class="plan-feature-text white">Lowest long-term cost</text>
               </view>
               <view class="plan-feature">
                 <view class="check-icon white"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></view>
-                <text class="plan-feature-text white">40% lower per-minute rate</text>
+                <text class="plan-feature-text white">Predictable monthly budget</text>
               </view>
               <view class="plan-feature">
                 <view class="check-icon white"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></view>
-                <text class="plan-feature-text white">Priority scooter reservation</text>
+                <text class="plan-feature-text white">Priority booking convenience</text>
               </view>
             </view>
             <button class="btn-white-pill plan-btn" @tap="startMonthlyPass">Start Monthly Pass</button>
@@ -350,31 +350,33 @@
 
           <!-- Business -->
           <view class="pricing-card" id="business-plan">
-            <text class="plan-name">Business</text>
+            <text class="plan-name">Day & Week Passes</text>
             <view class="plan-price-row">
-              <text class="plan-price" style="font-size: 52rpx; line-height: 1.2;">Custom</text>
+              <text class="plan-currency">RMB</text>
+              <text class="plan-price" style="font-size: 52rpx; line-height: 1.2;">{{ HOME_PRICING.dailyPass.dailyPrice.toFixed(0) }}</text>
+              <text class="plan-unit">/day</text>
             </view>
-            <text class="plan-unlock">Tailored to your team</text>
+            <text class="plan-unlock">Or RMB {{ HOME_PRICING.dailyPass.weeklyPrice.toFixed(0) }}/week for longer trips</text>
             <view class="plan-divider"></view>
             <view class="plan-features">
               <view class="plan-feature">
                 <view class="check-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></view>
-                <text class="plan-feature-text">Team billing & management</text>
+                <text class="plan-feature-text">RMB {{ HOME_PRICING.dailyPass.dailyPrice.toFixed(0) }} for 24 hours</text>
               </view>
               <view class="plan-feature">
                 <view class="check-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></view>
-                <text class="plan-feature-text">Dedicated account manager</text>
+                <text class="plan-feature-text">RMB {{ HOME_PRICING.dailyPass.weeklyPrice.toFixed(0) }} for 7 days</text>
               </view>
               <view class="plan-feature">
                 <view class="check-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></view>
-                <text class="plan-feature-text">Volume discounts</text>
+                <text class="plan-feature-text">Better value than stacking hours</text>
               </view>
               <view class="plan-feature">
                 <view class="check-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></view>
-                <text class="plan-feature-text">Custom reporting & invoicing</text>
+                <text class="plan-feature-text">Great for travel and weekend use</text>
               </view>
             </view>
-            <button class="btn-outline-pill plan-btn" @tap="contactSales">Contact Sales</button>
+            <button class="btn-outline-pill plan-btn" @tap="goToSignup">Choose a Pass</button>
           </view>
         </view>
       </view>
@@ -386,19 +388,29 @@
         <view class="section-badge dark">
           <text class="section-badge-text">Locations</text>
         </view>
-        <text class="section-title white">Available in your city</text>
-        <text class="section-subtitle white-muted">Growing across China, Asia, Europe, and major global commuter hubs. More cities launch every month.</text>
-        <view class="cities-grid">
+        <text class="section-title white">{{ locationSectionTitle }}</text>
+        <text class="section-subtitle white-muted">{{ locationSectionSubtitle }}</text>
+        <view v-if="isMobileLayout" class="locations-toolbar">
+          <text class="locations-summary">{{ cities.length }} cities are currently live or launching soon.</text>
+          <view class="locations-toggle-btn" @tap="toggleLocationsExpanded">
+            <text class="locations-toggle-text">{{ locationsExpanded ? 'Hide Cities' : 'Show Cities' }}</text>
+          </view>
+        </view>
+        <view v-if="!isMobileLayout || locationsExpanded" class="cities-grid">
           <view class="city-card" v-for="city in cities" :key="city.name">
             <view class="city-main">
               <text v-if="city.flag" class="city-flag">{{ city.flag }}</text>
-              <text class="city-name">{{ city.name }}</text>
+              <text class="city-name">{{ isMobileLayout && city.mobileName ? city.mobileName : city.name }}</text>
             </view>
             <view class="city-status" :class="city.live ? 'live' : 'soon'">
               <view class="city-dot"></view>
               <text class="city-status-text">{{ city.live ? 'Live' : 'Soon' }}</text>
             </view>
           </view>
+        </view>
+        <view v-else class="locations-collapsed-card">
+          <text class="locations-collapsed-title">City list hidden on mobile</text>
+          <text class="locations-collapsed-text">Tap “Show Cities” when you want to browse the full list.</text>
         </view>
       </view>
     </view>
@@ -448,31 +460,34 @@
 </template>
 
 <script setup>
-import { nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import BaseLayout from '@/pages/BaseLayout.vue'
+import { HOME_PRICING } from '@/utils/pricing.js'
 
 const pendingSection = ref('')
+const isMobileLayout = ref(false)
+const locationsExpanded = ref(false)
 
 const cities = ref([
-  { name: 'Shanghai',   flag: '', live: true  },
-  { name: 'Beijing',    flag: '', live: true  },
-  { name: 'Shenzhen',   flag: '', live: true  },
-  { name: 'Guangzhou',  flag: '', live: true  },
-  { name: 'Hangzhou',   flag: '', live: true  },
-  { name: 'Chengdu',    flag: '', live: true  },
-  { name: 'Nanjing',    flag: '', live: true  },
-  { name: 'Suzhou',     flag: '', live: true  },
-  { name: 'HongKong',   flag: '', live: true  },
-  { name: 'Singapore',  flag: '', live: true  },
-  { name: 'Tokyo',      flag: '', live: true  },
-  { name: 'London',     flag: '', live: true  },
-  { name: 'Chongqing',  flag: '', live: false },
-  { name: 'Wuhan',      flag: '', live: false },
-  { name: "Xi'an",      flag: '', live: false },
-  { name: 'Seoul',      flag: '', live: false },
-  { name: 'Bangkok',    flag: '', live: false },
-  { name: 'Dubai',      flag: '', live: false },
+  { name: 'Shanghai',   mobileName: 'Shanghai', flag: '', live: true  },
+  { name: 'Beijing',    mobileName: 'Beijing', flag: '', live: true  },
+  { name: 'Shenzhen',   mobileName: 'Shenzhen', flag: '', live: true  },
+  { name: 'Guangzhou',  mobileName: 'Guangzhou', flag: '', live: true  },
+  { name: 'Hangzhou',   mobileName: 'Hangzhou', flag: '', live: true  },
+  { name: 'Chengdu',    mobileName: 'Chengdu', flag: '', live: true  },
+  { name: 'Nanjing',    mobileName: 'Nanjing', flag: '', live: true  },
+  { name: 'Suzhou',     mobileName: 'Suzhou', flag: '', live: true  },
+  { name: 'HongKong',   mobileName: 'HK', flag: '', live: true  },
+  { name: 'Singapore',  mobileName: 'SG', flag: '', live: true  },
+  { name: 'Tokyo',      mobileName: 'Tokyo', flag: '', live: true  },
+  { name: 'London',     mobileName: 'London', flag: '', live: true  },
+  { name: 'Chongqing',  mobileName: 'CQ', flag: '', live: false },
+  { name: 'Wuhan',      mobileName: 'Wuhan', flag: '', live: false },
+  { name: "Xi'an",      mobileName: "Xi'an", flag: '', live: false },
+  { name: 'Seoul',      mobileName: 'Seoul', flag: '', live: false },
+  { name: 'Bangkok',    mobileName: 'Bangkok', flag: '', live: false },
+  { name: 'Dubai',      mobileName: 'Dubai', flag: '', live: false },
 ])
 
 const reviews = ref([
@@ -544,17 +559,11 @@ const startMonthlyPass = () => {
     return
   }
 
-  uni.showModal({
-    title: 'Monthly Pass',
-    content: 'You are already signed in. Monthly Pass checkout is coming soon. Open the scooter map instead?',
-    confirmText: 'Open Map',
-    cancelText: 'Later',
-    success: ({ confirm }) => {
-      if (confirm) {
-        openFindScooter()
-      }
-    }
+  uni.showToast({
+    title: 'Select a scooter to use the monthly pass',
+    icon: 'none'
   })
+  uni.navigateTo({ url: '/pages/find-scooter?plan=1_MONTH' })
 }
 
 const scrollToHowItWorks = () => {
@@ -579,17 +588,63 @@ const contactSales = () => {
   uni.showToast({ title: 'Coming soon!', icon: 'none' })
 }
 
+const updateLayoutMode = () => {
+  try {
+    isMobileLayout.value = (uni.getSystemInfoSync().windowWidth || 0) <= 750
+    if (!isMobileLayout.value) {
+      locationsExpanded.value = false
+    }
+  } catch {
+    isMobileLayout.value = false
+  }
+}
+
+const handleWindowResize = (event = {}) => {
+  if (event?.size?.windowWidth) {
+    isMobileLayout.value = event.size.windowWidth <= 750
+    if (!isMobileLayout.value) {
+      locationsExpanded.value = false
+    }
+    return
+  }
+  updateLayoutMode()
+}
+
+const locationSectionTitle = computed(() =>
+  isMobileLayout.value ? 'Cities Live Now' : 'Available in your city'
+)
+
+const locationSectionSubtitle = computed(() =>
+  isMobileLayout.value
+    ? 'Already live in major commuter cities, with more opening soon.'
+    : 'Growing across China, Asia, Europe, and major global commuter hubs. More cities launch every month.'
+)
+
+const toggleLocationsExpanded = () => {
+  locationsExpanded.value = !locationsExpanded.value
+}
+
 onLoad((options) => {
   pendingSection.value = options?.section || ''
 })
 
 onMounted(() => {
+  updateLayoutMode()
+  if (typeof uni.onWindowResize === 'function') {
+    uni.onWindowResize(handleWindowResize)
+  }
   if (!pendingSection.value) return
   nextTick(() => {
     setTimeout(() => {
       scrollToSection(pendingSection.value)
     }, 120)
   })
+})
+
+onUnmounted(() => {
+  if (typeof uni.offWindowResize === 'function') {
+    uni.offWindowResize(handleWindowResize)
+  }
 })
 </script>
 
@@ -1401,6 +1456,14 @@ onMounted(() => {
   gap: 24rpx;
 }
 
+.locations-toolbar {
+  display: none;
+}
+
+.locations-collapsed-card {
+  display: none;
+}
+
 .city-card {
   background: rgba(255, 255, 255, 0.05);
   border: 1rpx solid rgba(255, 255, 255, 0.1);
@@ -1782,6 +1845,96 @@ onMounted(() => {
   }
   .hero-section {
     min-height: auto;
+  }
+
+  .section-subtitle.white-muted {
+    margin-bottom: 44rpx;
+    font-size: 28rpx;
+    line-height: 1.55;
+    max-width: none;
+  }
+
+  .locations-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18rpx;
+    margin-bottom: 28rpx;
+    padding: 24rpx;
+    border-radius: 24rpx;
+    background: rgba(148, 163, 184, 0.12);
+    border: 1rpx solid rgba(191, 219, 254, 0.18);
+  }
+
+  .locations-summary {
+    flex: 1;
+    min-width: 0;
+    font-size: 24rpx;
+    line-height: 1.55;
+    color: #CBD5E1;
+  }
+
+  .locations-toggle-btn {
+    flex-shrink: 0;
+    padding: 16rpx 24rpx;
+    border-radius: 999rpx;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 10rpx 20rpx rgba(15, 23, 42, 0.12);
+  }
+
+  .locations-toggle-text {
+    font-size: 22rpx;
+    font-weight: 700;
+    color: #0F172A;
+    white-space: nowrap;
+  }
+
+  .locations-collapsed-card {
+    display: block;
+    padding: 28rpx 26rpx;
+    border-radius: 24rpx;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1rpx solid rgba(191, 219, 254, 0.16);
+    box-shadow: 0 14rpx 28rpx rgba(2, 6, 23, 0.18);
+  }
+
+  .locations-collapsed-title {
+    display: block;
+    font-size: 28rpx;
+    font-weight: 700;
+    color: #FFFFFF;
+  }
+
+  .locations-collapsed-text {
+    display: block;
+    margin-top: 10rpx;
+    font-size: 23rpx;
+    line-height: 1.6;
+    color: #94A3B8;
+  }
+
+  .city-card {
+    padding: 28rpx 28rpx;
+    border-radius: 22rpx;
+  }
+
+  .city-main {
+    gap: 14rpx;
+  }
+
+  .city-name {
+    font-size: 28rpx;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .city-status {
+    padding: 8rpx 18rpx;
+  }
+
+  .city-status-text {
+    font-size: 18rpx;
   }
 }
 

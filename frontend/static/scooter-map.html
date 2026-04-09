@@ -2,142 +2,574 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+  />
   <title>Scooter Map</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"
+  />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; overflow: hidden; }
-    #map { width: 100%; height: 100vh; }
+    :root {
+      --map-blue: #2563eb;
+      --map-blue-dark: #1d4ed8;
+      --text-strong: #1f2937;
+      --text-muted: #6b7280;
+      --surface: rgba(255, 255, 255, 0.98);
+      --status-available: #16a34a;
+      --status-in-use: #dc2626;
+      --status-maintenance: #d97706;
+      --status-available-soft: #ecfdf5;
+      --status-in-use-soft: #fff1f2;
+      --status-maintenance-soft: #fffbeb;
+      --status-available-soft-2: #d1fae5;
+      --status-in-use-soft-2: #ffe4e6;
+      --status-maintenance-soft-2: #fef3c7;
+    }
 
-    .marker-available { background: linear-gradient(135deg, #16A34A, #15803d); border: 3px solid #fff; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); box-shadow: 0 4px 12px rgba(22,163,74,0.4); }
-    .marker-inuse     { background: linear-gradient(135deg, #DC2626, #b91c1c); border: 3px solid #fff; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); box-shadow: 0 4px 12px rgba(220,38,38,0.4); }
-    .marker-maintenance { background: linear-gradient(135deg, #D97706, #b45309); border: 3px solid #fff; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); box-shadow: 0 4px 12px rgba(217,119,6,0.4); }
-    .marker-inner { transform: rotate(45deg); display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-size: 16px; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-    .leaflet-popup-content-wrapper { border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.15); padding: 0; overflow: hidden; }
-    .leaflet-popup-content { margin: 0; width: 260px !important; }
-    .leaflet-popup-tip-container { display: none; }
+    html,
+    body {
+      height: 100%;
+      overflow: hidden;
+      width: 100%;
+    }
 
-    .popup-card { padding: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-    .popup-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
-    .popup-avatar { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
-    .popup-avatar.available { background: linear-gradient(135deg, #ECFDF5, #D1FAE5); }
-    .popup-avatar.inuse     { background: linear-gradient(135deg, #FFF1F2, #FFE4E6); }
-    .popup-avatar.maintenance { background: linear-gradient(135deg, #FFFBEB, #FEF3C7); }
-    .popup-id { font-size: 16px; font-weight: 700; color: #1F2937; margin-bottom: 4px; }
-    .popup-model { font-size: 12px; color: #9CA3AF; }
-    .popup-status { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-bottom: 12px; }
-    .popup-status.available { background: #ECFDF5; color: #16A34A; }
-    .popup-status.inuse     { background: #FFF1F2; color: #DC2626; }
-    .popup-status.maintenance { background: #FFFBEB; color: #D97706; }
-    .popup-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-    .popup-meta { display: flex; gap: 12px; margin-bottom: 14px; }
-    .popup-meta-item { font-size: 12px; color: #6B7280; }
-    .popup-btn { width: 100%; padding: 12px; background: linear-gradient(135deg, #2563EB, #1d4ed8); color: white; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(37,99,235,0.3); }
-    .popup-btn:disabled { background: #E5E7EB; color: #9CA3AF; box-shadow: none; cursor: not-allowed; }
+    #map {
+      height: 100vh;
+      width: 100%;
+    }
 
-    .user-location-marker { position: relative; }
-    .user-dot { width: 16px; height: 16px; background: #2563EB; border: 3px solid #fff; border-radius: 50%; box-shadow: 0 2px 8px rgba(37,99,235,0.5); }
-    .user-pulse { position: absolute; top: -8px; left: -8px; width: 32px; height: 32px; border-radius: 50%; background: rgba(37,99,235,0.2); animation: pulse 2s ease-out infinite; }
-    @keyframes pulse { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(2); opacity: 0; } }
+    .marker-available,
+    .marker-in-use,
+    .marker-maintenance {
+      border: 3px solid #fff;
+      border-radius: 50% 50% 50% 0;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
+      transform: rotate(-45deg);
+    }
+
+    .marker-available {
+      background: linear-gradient(135deg, var(--status-available), #15803d);
+    }
+
+    .marker-in-use {
+      background: linear-gradient(135deg, var(--status-in-use), #b91c1c);
+    }
+
+    .marker-maintenance {
+      background: linear-gradient(135deg, var(--status-maintenance), #b45309);
+    }
+
+    .marker-inner {
+      align-items: center;
+      color: #fff;
+      display: flex;
+      font-family: "Segoe UI", Arial, sans-serif;
+      font-size: 11px;
+      font-weight: 800;
+      height: 100%;
+      justify-content: center;
+      letter-spacing: 0.08em;
+      text-indent: 0.08em;
+      transform: rotate(45deg);
+      width: 100%;
+    }
+
+    .leaflet-popup-content-wrapper {
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+      overflow: hidden;
+      padding: 0;
+    }
+
+    .leaflet-popup-content {
+      margin: 0;
+      width: 280px !important;
+    }
+
+    .leaflet-popup-tip-container {
+      display: none;
+    }
+
+    .popup-card {
+      background: var(--surface);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      padding: 20px;
+    }
+
+    .popup-header {
+      align-items: center;
+      display: flex;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .popup-avatar {
+      align-items: center;
+      border-radius: 12px;
+      display: flex;
+      flex-shrink: 0;
+      font-size: 14px;
+      font-weight: 800;
+      height: 44px;
+      justify-content: center;
+      letter-spacing: 0.08em;
+      width: 44px;
+    }
+
+    .popup-avatar.available {
+      background: linear-gradient(135deg, var(--status-available-soft), var(--status-available-soft-2));
+      color: var(--status-available);
+    }
+
+    .popup-avatar.in-use {
+      background: linear-gradient(135deg, var(--status-in-use-soft), var(--status-in-use-soft-2));
+      color: var(--status-in-use);
+    }
+
+    .popup-avatar.maintenance {
+      background: linear-gradient(135deg, var(--status-maintenance-soft), var(--status-maintenance-soft-2));
+      color: var(--status-maintenance);
+    }
+
+    .popup-heading {
+      min-width: 0;
+    }
+
+    .popup-id {
+      color: var(--text-strong);
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .popup-model {
+      color: #9ca3af;
+      font-size: 12px;
+      line-height: 1.45;
+      word-break: break-word;
+    }
+
+    .popup-status {
+      align-items: center;
+      border-radius: 999px;
+      display: inline-flex;
+      font-size: 12px;
+      font-weight: 700;
+      gap: 6px;
+      margin-bottom: 14px;
+      padding: 5px 10px;
+    }
+
+    .popup-status.available {
+      background: var(--status-available-soft);
+      color: var(--status-available);
+    }
+
+    .popup-status.in-use {
+      background: var(--status-in-use-soft);
+      color: var(--status-in-use);
+    }
+
+    .popup-status.maintenance {
+      background: var(--status-maintenance-soft);
+      color: var(--status-maintenance);
+    }
+
+    .popup-dot {
+      background: currentColor;
+      border-radius: 50%;
+      height: 6px;
+      width: 6px;
+    }
+
+    .popup-meta {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .popup-meta-item {
+      align-items: center;
+      background: #f8fafc;
+      border-radius: 12px;
+      display: flex;
+      gap: 10px;
+      justify-content: space-between;
+      padding: 10px 12px;
+    }
+
+    .popup-meta-label {
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .popup-meta-value {
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-align: right;
+    }
+
+    .popup-price-summary {
+      background: #eff6ff;
+      border: 1px solid rgba(37, 99, 235, 0.12);
+      border-radius: 14px;
+      margin-bottom: 14px;
+      padding: 12px 14px;
+    }
+
+    .popup-price-title {
+      color: var(--map-blue);
+      font-size: 13px;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+
+    .popup-price-note {
+      color: #475569;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .popup-btn {
+      background: linear-gradient(135deg, var(--map-blue), var(--map-blue-dark));
+      border: none;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+      color: #fff;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 700;
+      padding: 12px;
+      width: 100%;
+    }
+
+    .popup-btn:disabled {
+      background: #e5e7eb;
+      box-shadow: none;
+      color: #9ca3af;
+      cursor: not-allowed;
+    }
+
+    .user-location-marker {
+      position: relative;
+    }
+
+    .user-dot {
+      background: var(--map-blue);
+      border: 3px solid #fff;
+      border-radius: 50%;
+      box-shadow: 0 2px 8px rgba(37, 99, 235, 0.5);
+      height: 16px;
+      width: 16px;
+    }
+
+    .user-pulse {
+      animation: pulse 2s ease-out infinite;
+      background: rgba(37, 99, 235, 0.2);
+      border-radius: 50%;
+      height: 32px;
+      left: -8px;
+      position: absolute;
+      top: -8px;
+      width: 32px;
+    }
+
+    @keyframes pulse {
+      0% {
+        opacity: 1;
+        transform: scale(0.5);
+      }
+
+      100% {
+        opacity: 0;
+        transform: scale(2);
+      }
+    }
   </style>
 </head>
 <body>
   <div id="map"></div>
   <script>
-    const map = L.map('map', { center: [53.8008, -1.5491], zoom: 15, zoomControl: false, attributionControl: false })
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map)
+    const MAP_DEFAULT_VIEW = Object.freeze({
+      center: [53.8008, -1.5491],
+      zoom: 15
+    })
 
-    let markers = {}
+    const STATUS_META = Object.freeze({
+      AVAILABLE: {
+        buttonLabel: "Ride Now",
+        label: "Available",
+        markerClass: "marker-available",
+        popupClass: "available"
+      },
+      IN_USE: {
+        buttonLabel: "Unavailable",
+        label: "In Use",
+        markerClass: "marker-in-use",
+        popupClass: "in-use"
+      },
+      MAINTENANCE: {
+        buttonLabel: "Unavailable",
+        label: "Maintenance",
+        markerClass: "marker-maintenance",
+        popupClass: "maintenance"
+      }
+    })
+
+    const PACKAGE_PRICING = Object.freeze({
+      oneHour: 3.5,
+      oneDay: 30,
+      oneWeek: 100,
+      oneMonth: 280
+    })
+
+    const UI_TEXT = Object.freeze({
+      avatarLabel: "SC",
+      batteryLabel: "Battery",
+      noLocation: "No location info",
+      noValue: "--",
+      packageHeadline: `Packages from ${formatCny(PACKAGE_PRICING.oneHour)} / hour`,
+      packageLine: `Day ${formatCny(PACKAGE_PRICING.oneDay)} | Week ${formatCny(PACKAGE_PRICING.oneWeek)} | Month ${formatCny(PACKAGE_PRICING.oneMonth)}`
+    })
+
+    const map = L.map("map", {
+      attributionControl: false,
+      center: MAP_DEFAULT_VIEW.center,
+      zoom: MAP_DEFAULT_VIEW.zoom,
+      zoomControl: false
+    })
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19
+    }).addTo(map)
+
+    const markers = {}
+    let currentFilter = "ALL"
     let userMarker = null
-    let currentFilter = 'ALL'
 
-    function makeIcon(status) {
-      const cls = status === 'AVAILABLE' ? 'marker-available' : status === 'IN_USE' ? 'marker-inuse' : 'marker-maintenance'
-      return L.divIcon({ className: '', html: `<div style="width:32px;height:32px;" class="${cls}"><div class="marker-inner">ðŸ›´</div></div>`, iconSize: [32, 32], iconAnchor: [16, 32], popupAnchor: [0, -36] })
+    function formatCny(value) {
+      const amount = Number(value || 0).toFixed(2)
+      return `RMB ${amount}`
     }
 
-    function buildPopup(s) {
-      const cls  = s.status === 'AVAILABLE' ? 'available' : s.status === 'IN_USE' ? 'inuse' : 'maintenance'
-      const txt  = s.status === 'AVAILABLE' ? 'âœAvailable' : s.status === 'IN_USE' ? 'âœIn Use' : 'âšMaintenance'
-      const dis  = s.status !== 'AVAILABLE' ? 'disabled' : ''
-      const btn  = s.status === 'AVAILABLE' ? 'Ride Now' : 'Unavailable'
-      return `<div class="popup-card">
-        <div class="popup-header">
-          <div class="popup-avatar ${cls}">ðŸ›´</div>
-          <div><div class="popup-id">#${s.id} Â· ${s.model || 'Scooter'}</div><div class="popup-model">${s.location || ''}</div></div>
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#39;")
+    }
+
+    function getStatusMeta(status) {
+      return STATUS_META[status] || STATUS_META.MAINTENANCE
+    }
+
+    function getCoordinates(scooter) {
+      const lat = Number(scooter?.latitude)
+      const lng = Number(scooter?.longitude)
+
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        return null
+      }
+
+      return [lat, lng]
+    }
+
+    function buildMarkerHtml(status) {
+      const statusMeta = getStatusMeta(status)
+      return `
+        <div style="height:32px;width:32px;" class="${statusMeta.markerClass}">
+          <div class="marker-inner">${UI_TEXT.avatarLabel}</div>
         </div>
-        <div class="popup-status ${cls}"><div class="popup-dot"></div>${txt}</div>
-        <div class="popup-meta">
-          <div class="popup-meta-item">âš${s.batteryLevel ?? '--'}%</div>
-          <div class="popup-meta-item">ðŸ’° Â£${s.basePrice ?? '--'} + Â£${s.pricePerMin ?? '--'}/min</div>
+      `
+    }
+
+    function makeIcon(status) {
+      return L.divIcon({
+        className: "",
+        html: buildMarkerHtml(status),
+        iconAnchor: [16, 32],
+        iconSize: [32, 32],
+        popupAnchor: [0, -36]
+      })
+    }
+
+    function buildPopup(scooter) {
+      const statusMeta = getStatusMeta(scooter?.status)
+      const batteryLevel = Number.isFinite(Number(scooter?.batteryLevel))
+        ? `${Number(scooter.batteryLevel)}%`
+        : UI_TEXT.noValue
+      const model = escapeHtml(scooter?.model || "Scooter")
+      const location = escapeHtml(scooter?.location || UI_TEXT.noLocation)
+      const scooterId = escapeHtml(scooter?.id || UI_TEXT.noValue)
+      const isAvailable = scooter?.status === "AVAILABLE"
+      const buttonState = isAvailable ? "" : "disabled"
+
+      return `
+        <div class="popup-card">
+          <div class="popup-header">
+            <div class="popup-avatar ${statusMeta.popupClass}">${UI_TEXT.avatarLabel}</div>
+            <div class="popup-heading">
+              <div class="popup-id">#${scooterId} - ${model}</div>
+              <div class="popup-model">${location}</div>
+            </div>
+          </div>
+          <div class="popup-status ${statusMeta.popupClass}">
+            <div class="popup-dot"></div>
+            ${statusMeta.label}
+          </div>
+          <div class="popup-meta">
+            <div class="popup-meta-item">
+              <span class="popup-meta-label">${UI_TEXT.batteryLabel}</span>
+              <span class="popup-meta-value">${batteryLevel}</span>
+            </div>
+          </div>
+          <div class="popup-price-summary">
+            <div class="popup-price-title">${UI_TEXT.packageHeadline}</div>
+            <div class="popup-price-note">${UI_TEXT.packageLine}</div>
+          </div>
+          <button class="popup-btn" ${buttonState} onclick="onRideTap(${Number(scooter?.id) || 0})">
+            ${statusMeta.buttonLabel}
+          </button>
         </div>
-        <button class="popup-btn" ${dis} onclick="onRideTap(${s.id})">${btn}</button>
-      </div>`
+      `
     }
 
     function renderScooters(scooters) {
-      const newIds = new Set(scooters.map(s => s.id))
-      Object.keys(markers).forEach(id => { if (!newIds.has(Number(id))) { map.removeLayer(markers[id]); delete markers[id] } })
-      scooters.forEach(s => {
-        if (!s.latitude || !s.longitude) return
-        const show = currentFilter === 'ALL' || s.status === 'AVAILABLE'
-        if (markers[s.id]) {
-          markers[s.id].setLatLng([s.latitude, s.longitude])
-          markers[s.id].setIcon(makeIcon(s.status))
-          markers[s.id]._scooterData = s
-          show ? (map.hasLayer(markers[s.id]) || markers[s.id].addTo(map)) : map.removeLayer(markers[s.id])
-        } else {
-          const m = L.marker([s.latitude, s.longitude], { icon: makeIcon(s.status) })
-          m._scooterData = s
-          m.bindPopup(buildPopup(s), { maxWidth: 280 })
-          m.on('click', () => { m.setPopupContent(buildPopup(m._scooterData)); postToUniApp('markerTap', m._scooterData) })
-          if (show) m.addTo(map)
-          markers[s.id] = m
+      const nextIds = new Set((Array.isArray(scooters) ? scooters : []).map(scooter => Number(scooter?.id)))
+
+      Object.keys(markers).forEach((markerId) => {
+        if (!nextIds.has(Number(markerId))) {
+          map.removeLayer(markers[markerId])
+          delete markers[markerId]
         }
+      })
+
+      ;(Array.isArray(scooters) ? scooters : []).forEach((scooter) => {
+        const coordinates = getCoordinates(scooter)
+        if (!coordinates) return
+
+        const shouldShow = currentFilter === "ALL" || scooter.status === "AVAILABLE"
+        const existingMarker = markers[scooter.id]
+
+        if (existingMarker) {
+          existingMarker.setLatLng(coordinates)
+          existingMarker.setIcon(makeIcon(scooter.status))
+          existingMarker.setPopupContent(buildPopup(scooter))
+          existingMarker._scooterData = scooter
+          if (shouldShow) {
+            if (!map.hasLayer(existingMarker)) {
+              existingMarker.addTo(map)
+            }
+          } else {
+            map.removeLayer(existingMarker)
+          }
+          return
+        }
+
+        const marker = L.marker(coordinates, { icon: makeIcon(scooter.status) })
+        marker._scooterData = scooter
+        marker.bindPopup(buildPopup(scooter), { maxWidth: 300 })
+        marker.on("click", () => {
+          marker.setPopupContent(buildPopup(marker._scooterData))
+          postToUniApp("markerTap", marker._scooterData)
+        })
+
+        if (shouldShow) {
+          marker.addTo(map)
+        }
+
+        markers[scooter.id] = marker
       })
     }
 
     function showUserLocation(lat, lng) {
-      const icon = L.divIcon({ className: '', html: `<div class="user-location-marker"><div class="user-pulse"></div><div class="user-dot"></div></div>`, iconSize: [16, 16], iconAnchor: [8, 8] })
-      if (userMarker) userMarker.setLatLng([lat, lng])
-      else userMarker = L.marker([lat, lng], { icon, zIndexOffset: 1000 }).addTo(map)
+      const icon = L.divIcon({
+        className: "",
+        html: `
+          <div class="user-location-marker">
+            <div class="user-pulse"></div>
+            <div class="user-dot"></div>
+          </div>
+        `,
+        iconAnchor: [8, 8],
+        iconSize: [16, 16]
+      })
+
+      if (userMarker) {
+        userMarker.setLatLng([lat, lng])
+      } else {
+        userMarker = L.marker([lat, lng], { icon, zIndexOffset: 1200 }).addTo(map)
+      }
+
       map.setView([lat, lng], 16)
     }
 
     function applyFilter(filter) {
       currentFilter = filter
-      Object.values(markers).forEach(m => {
-        const show = filter === 'ALL' || m._scooterData.status === 'AVAILABLE'
-        show ? (map.hasLayer(m) || m.addTo(map)) : map.removeLayer(m)
+      Object.values(markers).forEach((marker) => {
+        const shouldShow = filter === "ALL" || marker._scooterData.status === "AVAILABLE"
+        if (shouldShow) {
+          if (!map.hasLayer(marker)) {
+            marker.addTo(map)
+          }
+        } else {
+          map.removeLayer(marker)
+        }
       })
     }
 
     function onRideTap(scooterId) {
-      const m = markers[scooterId]
-      if (m) postToUniApp('rideTap', m._scooterData)
+      const marker = markers[scooterId]
+      if (marker) {
+        postToUniApp("rideTap", marker._scooterData)
+      }
     }
 
     function postToUniApp(type, data) {
       try {
-        if (window.uni) window.uni.postMessage({ data: { type, data } })
-        else window.parent.postMessage(JSON.stringify({ type, data }), '*')
-      } catch(e) {}
+        if (window.uni) {
+          window.uni.postMessage({ data: { type, data } })
+          return
+        }
+
+        window.parent.postMessage(JSON.stringify({ type, data }), "*")
+      } catch (error) {
+        console.warn("[scooter-map] postMessage failed", error)
+      }
     }
 
-    window.addEventListener('message', (e) => {
+    window.addEventListener("message", (event) => {
       let payload
-      try { payload = typeof e.data === 'string' ? JSON.parse(e.data) : e.data } catch { return }
+
+      try {
+        payload = typeof event.data === "string" ? JSON.parse(event.data) : event.data
+      } catch {
+        return
+      }
+
       const { cmd, data } = payload || {}
-      if (cmd === 'updateScooters') renderScooters(data)
-      if (cmd === 'locate')         showUserLocation(data.lat, data.lng)
-      if (cmd === 'filter')         applyFilter(data.filter)
-      if (cmd === 'flyTo')          map.setView([data.lat, data.lng], data.zoom || 16)
+
+      if (cmd === "updateScooters") renderScooters(data)
+      if (cmd === "locate" && data) showUserLocation(data.lat, data.lng)
+      if (cmd === "filter" && data) applyFilter(data.filter)
+      if (cmd === "flyTo" && data) map.setView([data.lat, data.lng], data.zoom || 16)
     })
 
-    window.onload = () => postToUniApp('mapReady', {})
+    window.onload = () => postToUniApp("mapReady", {})
   </script>
 </body>
 </html>

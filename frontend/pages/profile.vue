@@ -347,7 +347,7 @@
             <view class="receipt-dashed"></view>
             <view class="receipt-row receipt-row-total">
               <text class="receipt-total-label">Total Charged</text>
-              <text class="receipt-total-value">£{{ receiptModal.booking.cost }}</text>
+              <text class="receipt-total-value">{{ formatCny(receiptModal.booking.cost) }}</text>
             </view>
             <view class="receipt-row">
               <text class="receipt-label">Payment</text>
@@ -423,7 +423,7 @@
             <view class="receipt-dashed"></view>
             <view class="receipt-row receipt-row-total">
               <text class="receipt-total-label">Total Charged</text>
-              <text class="receipt-total-value">£{{ tripDetailModal.trip.cost }}</text>
+              <text class="receipt-total-value">{{ formatCny(tripDetailModal.trip.cost) }}</text>
             </view>
             <view class="receipt-status-badge" :class="'status-' + tripStatusTone(tripDetailModal.trip.status)">
               <text class="receipt-status-text" :class="'trip-status-text-' + tripStatusTone(tripDetailModal.trip.status)">
@@ -468,7 +468,7 @@
                 <line x1="12" y1="17" x2="12.01" y2="17"/>
               </svg>
               <text class="cancel-warning-text">
-                Cancellations made less than 1 hour before the booking may incur a £1.00 fee.
+                Cancellations made less than 1 hour before the booking may incur a ¥1.00 fee.
               </text>
             </view>
             <view class="cancel-actions">
@@ -507,7 +507,7 @@
             <view class="wm-balance-banner">
               <view class="wm-balance-left">
                 <text class="wm-balance-label">Available Balance</text>
-                <text class="wm-balance-amount">£{{ wallet.balance }}</text>
+                <text class="wm-balance-amount">{{ formatCny(wallet.balance) }}</text>
               </view>
               <button class="wm-topup-btn" @tap="topUpWallet">+ Top Up</button>
             </view>
@@ -687,7 +687,7 @@
           <view class="ph-stat-sep"></view>
           <view class="ph-stat">
             <view class="ph-stat-value-row">
-              <text class="ph-stat-val">£{{ stats.totalSpent }}</text>
+              <text class="ph-stat-val">{{ formatCny(stats.totalSpent) }}</text>
             </view>
             <text class="ph-stat-label">Total Spent</text>
           </view>
@@ -742,7 +742,7 @@
               <text class="pc-ride-date">{{ featuredTrip.date }} · {{ featuredTrip.duration }} min</text>
               <text class="pc-ride-route">{{ featuredTrip.scooterLabel }}</text>
             </view>
-            <text class="pc-ride-cost">£{{ featuredTrip.cost }}</text>
+            <text class="pc-ride-cost">{{ formatCny(featuredTrip.cost) }}</text>
           </view>
         </view>
 
@@ -767,11 +767,11 @@
               <text class="pc-pkg-label">Cards</text>
             </view>
             <view class="pc-pkg-item" @tap="openWalletModal">
-              <text class="pc-pkg-val eco-green">£0</text>
+              <text class="pc-pkg-val eco-green">{{ formatCny(0) }}</text>
               <text class="pc-pkg-label">Vouchers</text>
             </view>
             <view class="pc-pkg-item" @tap="openWalletModal">
-              <text class="pc-pkg-val eco-green">£{{ wallet.balance }}</text>
+              <text class="pc-pkg-val eco-green">{{ formatCny(wallet.balance) }}</text>
               <text class="pc-pkg-label">Balance</text>
             </view>
           </view>
@@ -867,7 +867,7 @@
               <text class="pc-trip-meta">{{ trip.date }} · {{ trip.duration }} min · {{ trip.statusLabel }}</text>
             </view>
             <view class="pc-trip-right">
-              <text class="pc-trip-cost">£{{ trip.cost }}</text>
+              <text class="pc-trip-cost">{{ formatCny(trip.cost) }}</text>
               <view class="pc-trip-pill pill-done">
                 <text class="pc-trip-pill-text">{{ trip.statusLabel }}</text>
               </view>
@@ -905,6 +905,7 @@ import {
   getSettings, updateSettings
 } from '@/api/profile.js'
 import { logout as apiLogout } from '@/api/user.js'
+import { formatCny } from '@/utils/pricing.js'
 
 // Reactive state — user profile
 const userInfo    = ref({ username: '', name: '', email: '', phone: '', city: '', avatar: '', avatarUrl: '', createdAt: '' })

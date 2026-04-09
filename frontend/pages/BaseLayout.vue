@@ -74,7 +74,10 @@
     </view>
 
     <!-- Slot for page content -->
-    <view class="content-wrapper" :style="{ paddingTop: actualNavbarHeight + 'px' }">
+    <view
+      :class="['content-wrapper', { 'content-with-mobile-nav': showMobileBottomNav }]"
+      :style="{ paddingTop: actualNavbarHeight + 'px' }"
+    >
       <slot></slot>
     </view>
 
@@ -177,6 +180,36 @@
     
     <!-- Simple Footer for pages without full footer -->
     <view v-else class="footer-simple"></view>
+
+    <view v-if="showMobileBottomNav" class="mobile-bottom-nav">
+      <view
+        v-for="item in mobileNavItems"
+        :key="item.id"
+        :class="['mobile-nav-item', activeMobileNavPage === item.id ? 'mobile-nav-item-active' : '']"
+        @tap="item.action"
+      >
+        <view class="mobile-nav-icon">
+          <svg v-if="item.id === 'home'" viewBox="0 0 24 24" fill="none">
+            <path d="M3 10.5L12 3l9 7.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M5.5 9.5V20h13V9.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <svg v-else-if="item.id === 'find-scooter'" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+            <circle cx="12" cy="9" r="2.5" stroke="currentColor" stroke-width="1.8"/>
+          </svg>
+          <svg v-else-if="item.id === 'ride'" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M12 3v4M12 17v4M3 12h4M17 12h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <circle cx="12" cy="12" r="2.5" stroke="currentColor" stroke-width="1.8"/>
+          </svg>
+          <svg v-else viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M4 20c1.8-3.5 4.8-5 8-5s6.2 1.5 8 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </view>
+        <text class="mobile-nav-label">{{ item.label }}</text>
+      </view>
+    </view>
   </view>
 </template>
 
@@ -219,6 +252,15 @@ const userInitial = computed(() => {
   if (userName.value) return userName.value.charAt(0).toUpperCase()
   return 'U'
 })
+
+const activeMobileNavPage = computed(() => {
+  if (props.currentPage === 'booking' || props.currentPage === 'trip') return 'ride'
+  return props.currentPage
+})
+
+const showMobileBottomNav = computed(() =>
+  props.showMenu && ['home', 'find-scooter', 'booking', 'trip', 'profile'].includes(props.currentPage)
+)
 
 /**
  * Read auth state from storage and update reactive refs.
@@ -348,6 +390,37 @@ const goToTrip = () => {
 const goToProfile = () => {
   uni.navigateTo({ url: '/pages/profile' })
 }
+
+const goToMobileHome = () => {
+  if (activeMobileNavPage.value === 'home') return
+  goToHome()
+}
+
+const goToMobileFindScooter = () => {
+  if (activeMobileNavPage.value === 'find-scooter') return
+  goToFindScooter()
+}
+
+const goToMobileRide = () => {
+  if (activeMobileNavPage.value === 'ride') return
+  goToTrip()
+}
+
+const goToMobileAccount = () => {
+  if (activeMobileNavPage.value === 'profile' && isLoggedIn.value) return
+  if (isLoggedIn.value) {
+    goToProfile()
+    return
+  }
+  goToLogin()
+}
+
+const mobileNavItems = computed(() => ([
+  { id: 'home', label: 'Home', action: goToMobileHome },
+  { id: 'find-scooter', label: 'Map', action: goToMobileFindScooter },
+  { id: 'ride', label: 'Ride', action: goToMobileRide },
+  { id: 'profile', label: isLoggedIn.value ? 'Profile' : 'Login', action: goToMobileAccount }
+]))
 </script>
 
 <style scoped>
@@ -1004,6 +1077,15 @@ const goToProfile = () => {
   min-height: 100rpx;
 }
 
+.mobile-bottom-nav {
+  display: none;
+}
+
+.mobile-nav-item,
+.mobile-nav-icon {
+  transition: transform 0.22s ease, color 0.22s ease, background 0.22s ease, box-shadow 0.22s ease, opacity 0.22s ease;
+}
+
 @media (hover: hover) {
   .social-icon:hover {
     background: #2563EB;
@@ -1075,6 +1157,83 @@ const goToProfile = () => {
 
   .footer-bottom-right {
     justify-content: center;
+  }
+}
+
+@media (max-width: 750px) {
+  .footer,
+  .footer-simple {
+    display: none !important;
+  }
+
+  .content-with-mobile-nav {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 136rpx);
+    box-sizing: border-box;
+  }
+
+  .mobile-bottom-nav {
+    position: fixed;
+    left: 16rpx;
+    right: 16rpx;
+    bottom: calc(env(safe-area-inset-bottom) + 14rpx);
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 10rpx;
+    padding: 12rpx;
+    border-radius: 30rpx;
+    background: rgba(255, 255, 255, 0.96);
+    border: 1rpx solid rgba(219, 234, 254, 0.95);
+    box-shadow: 0 20rpx 44rpx rgba(15, 23, 42, 0.14);
+    backdrop-filter: blur(22px);
+    z-index: 920;
+  }
+
+  .mobile-nav-item {
+    flex: 1;
+    min-width: 0;
+    padding: 14rpx 10rpx 12rpx;
+    border-radius: 24rpx;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8rpx;
+    color: #94A3B8;
+  }
+
+  .mobile-nav-item:active {
+    transform: scale(0.97);
+  }
+
+  .mobile-nav-item-active {
+    color: #2563EB;
+    background: linear-gradient(180deg, #EFF6FF 0%, #FFFFFF 100%);
+    box-shadow: inset 0 0 0 1rpx rgba(147, 197, 253, 0.7);
+  }
+
+  .mobile-nav-icon {
+    width: 46rpx;
+    height: 46rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .mobile-nav-icon svg {
+    width: 100%;
+    height: 100%;
+    stroke: currentColor;
+  }
+
+  .mobile-nav-label {
+    max-width: 100%;
+    font-size: 21rpx;
+    font-weight: 700;
+    color: currentColor;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 </style>
