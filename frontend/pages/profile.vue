@@ -362,6 +362,78 @@
         </view>
       </view>
 
+      <!-- ========== TRIP DETAIL MODAL ========== -->
+      <view v-if="tripDetailModal.open" class="modal-overlay" @tap="closeTripDetailModal">
+        <view class="modal-card" @tap.stop>
+          <view class="modal-header">
+            <view class="modal-icon-bg trip-icon-bg">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="9"/>
+                <path d="M12 3v4M12 17v4M3 12h4M17 12h4"/>
+                <circle cx="12" cy="12" r="2.5"/>
+              </svg>
+            </view>
+            <view class="modal-header-text">
+              <text class="modal-title">Trip Details</text>
+              <text class="modal-subtitle">Booking #{{ tripDetailModal.trip?.bookingId || tripDetailModal.trip?.id }}</text>
+            </view>
+            <view class="modal-close-btn" @tap="closeTripDetailModal">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2.2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </view>
+          </view>
+          <view v-if="tripDetailModal.trip" class="receipt-body">
+            <view class="receipt-brand-row">
+              <view class="receipt-brand-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="9"/>
+                  <path d="M12 3v4M12 17v4M3 12h4M17 12h4"/>
+                  <circle cx="12" cy="12" r="2.5"/>
+                </svg>
+              </view>
+              <text class="receipt-brand-name trip-brand-name">Ride History</text>
+            </view>
+            <view class="receipt-dashed"></view>
+            <view class="receipt-row">
+              <text class="receipt-label">Booking ID</text>
+              <text class="receipt-value receipt-mono">#{{ tripDetailModal.trip.bookingId || tripDetailModal.trip.id }}</text>
+            </view>
+            <view class="receipt-row">
+              <text class="receipt-label">Scooter</text>
+              <text class="receipt-value">{{ tripDetailModal.trip.scooterLabel }}</text>
+            </view>
+            <view class="receipt-row">
+              <text class="receipt-label">Started</text>
+              <text class="receipt-value">{{ tripDetailModal.trip.date }}</text>
+            </view>
+            <view class="receipt-row">
+              <text class="receipt-label">Ended</text>
+              <text class="receipt-value">{{ tripDetailModal.trip.dateLabel }}</text>
+            </view>
+            <view class="receipt-row">
+              <text class="receipt-label">Duration</text>
+              <text class="receipt-value">{{ tripDetailModal.trip.duration }} min</text>
+            </view>
+            <view class="receipt-row">
+              <text class="receipt-label">Status</text>
+              <text class="receipt-value">{{ tripDetailModal.trip.statusLabel }}</text>
+            </view>
+            <view class="receipt-dashed"></view>
+            <view class="receipt-row receipt-row-total">
+              <text class="receipt-total-label">Total Charged</text>
+              <text class="receipt-total-value">£{{ tripDetailModal.trip.cost }}</text>
+            </view>
+            <view class="receipt-status-badge" :class="'status-' + tripStatusTone(tripDetailModal.trip.status)">
+              <text class="receipt-status-text" :class="'trip-status-text-' + tripStatusTone(tripDetailModal.trip.status)">
+                {{ tripStatusPillText(tripDetailModal.trip.statusLabel) }}
+              </text>
+            </view>
+          </view>
+        </view>
+      </view>
+
       <!-- ========== CANCEL MODAL ========== -->
       <view v-if="cancelModal.open" class="modal-overlay" @tap="closeCancelModal">
         <view class="modal-card" @tap.stop>
@@ -771,19 +843,16 @@
 
         <!-- Recent Trips List -->
         <view class="pc-card" v-if="recentTrips.length > 0">
-          <view class="pc-section-head">
-            <view class="pc-section-icon" style="background:linear-gradient(135deg,#F59E0B,#D97706);">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="9"/>
-                <path d="M12 3v4M12 17v4M3 12h4M17 12h4"/>
-                <circle cx="12" cy="12" r="2.5"/>
-              </svg>
-            </view>
-            <text class="pc-section-title">Recent Trips</text>
-            <view class="pc-view-all" @tap="viewAllTrips">
-              <text class="pc-view-all-text">View All →</text>
-            </view>
+        <view class="pc-section-head">
+          <view class="pc-section-icon" style="background:linear-gradient(135deg,#F59E0B,#D97706);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="9"/>
+              <path d="M12 3v4M12 17v4M3 12h4M17 12h4"/>
+              <circle cx="12" cy="12" r="2.5"/>
+            </svg>
           </view>
+          <text class="pc-section-title">Recent Trips</text>
+        </view>
           <view
             v-for="(trip, i) in recentTrips"
             :key="trip.id"
@@ -1288,6 +1357,23 @@ const receiptModal     = ref({ open: false, booking: null })
 const openReceiptModal  = (booking) => { receiptModal.value = { open: true, booking } }
 const closeReceiptModal = () => { receiptModal.value.open = false }
 
+// Trip detail modal state
+const tripDetailModal = ref({ open: false, trip: null })
+const openTripDetailModal = (trip) => { tripDetailModal.value = { open: true, trip } }
+const closeTripDetailModal = () => { tripDetailModal.value = { open: false, trip: null } }
+
+const tripStatusTone = (status) => {
+  const normalized = String(status || '').toUpperCase()
+  if (normalized === 'ACTIVE') return 'active'
+  if (normalized === 'CANCELLED') return 'cancelled'
+  return 'completed'
+}
+
+const tripStatusPillText = (statusLabel) => {
+  const normalized = String(statusLabel || '').trim()
+  return normalized ? `• ${normalized}` : '• Completed'
+}
+
 // Cancel booking modal state
 const cancelModal     = ref({ open: false, booking: null, loading: false })
 const openCancelModal  = (booking) => { cancelModal.value = { open: true, booking, loading: false } }
@@ -1438,7 +1524,7 @@ const goToChangePassword = () => {
   uni.navigateTo({ url: `/pages/reset-password?source=profile${emailQuery}` })
 }
 const goToHelp           = () => uni.showToast({ title: 'Help coming soon', icon: 'none' })
-const viewTripDetail     = (trip) => uni.showToast({ title: `Trip #${trip.id}`, icon: 'none' })
+const viewTripDetail     = (trip) => openTripDetailModal(trip)
 
 /**
  * Show confirmation dialog before signing out
@@ -1977,10 +2063,34 @@ const confirmLogout = () => {
   background: #ECFDF5;
 }
 
+.status-active {
+  background: #EFF6FF;
+}
+
+.status-cancelled {
+  background: #FEF2F2;
+}
+
 .receipt-status-text {
   font-size: 28rpx;
   font-weight: 700;
   color: #059669;
+}
+
+.trip-status-text-active {
+  color: #2563EB;
+}
+
+.trip-status-text-cancelled {
+  color: #DC2626;
+}
+
+.trip-icon-bg {
+  background: linear-gradient(135deg, #F59E0B, #D97706);
+}
+
+.trip-brand-name {
+  color: #B45309;
 }
 
 /* ── Cancel Body ── */

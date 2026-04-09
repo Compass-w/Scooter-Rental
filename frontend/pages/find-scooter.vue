@@ -164,7 +164,7 @@
           <!-- Scooter List -->
           <scroll-view class="scooter-list" scroll-y enable-flex :show-scrollbar="false">
             <view
-              v-for="scooter in filteredScooters"
+              v-for="scooter in paginatedScooters"
               :key="scooter.id"
               :class="['scooter-card', selectedScooter && selectedScooter.id === scooter.id ? 'card-selected' : '']"
               @tap="selectScooterFromList(scooter)"
@@ -210,6 +210,29 @@
             </view>
           </scroll-view>
 
+          <view v-if="filteredScooters.length > 0" class="drawer-pagination">
+            <text class="drawer-pagination-text">
+              Showing {{ visibleScooterRange.start }}-{{ visibleScooterRange.end }} of {{ filteredScooters.length }}
+            </text>
+            <view class="drawer-pagination-actions">
+              <view
+                class="drawer-page-btn"
+                :class="scooterPage === 1 ? 'drawer-page-btn-disabled' : ''"
+                @tap="goToPrevScooterPage"
+              >
+                <text class="drawer-page-btn-text">Prev</text>
+              </view>
+              <text class="drawer-page-indicator">Page {{ scooterPage }} / {{ totalScooterPages }}</text>
+              <view
+                class="drawer-page-btn"
+                :class="scooterPage >= totalScooterPages ? 'drawer-page-btn-disabled' : ''"
+                @tap="goToNextScooterPage"
+              >
+                <text class="drawer-page-btn-text">Next</text>
+              </view>
+            </view>
+          </view>
+
         </view>
       </view>
 
@@ -225,7 +248,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import BaseLayout from '@/pages/BaseLayout.vue'
 import BookingOptions from '@/components/BookingOptions.vue'
 import { getAllScooters, startRide as startRideApi } from '@/api/scooter.js'
@@ -250,6 +273,8 @@ const bookingOptionsVisible = ref(false)
 const bookingScooter  = ref(null)
 const currentUserLocation = ref(null)
 const hasAttemptedInitialLocate = ref(false)
+const scooterPage = ref(1)
+const scootersPerPage = 8
 
 const locationAliases = [
   { label: 'Shanghai', names: ['shanghai', 'sh', '\u4e0a\u6d77'], lat: 31.2304, lng: 121.4737, zoom: 13, radiusKm: 18 },
@@ -385,6 +410,25 @@ const filteredScooters = computed(() => {
     list = list.filter(scooter => matchesScooterQuery(scooter, normalizedQuery, locationAlias))
   }
   return list
+})
+
+const totalScooterPages = computed(() =>
+  Math.max(1, Math.ceil(filteredScooters.value.length / scootersPerPage))
+)
+
+const paginatedScooters = computed(() => {
+  const startIndex = (scooterPage.value - 1) * scootersPerPage
+  return filteredScooters.value.slice(startIndex, startIndex + scootersPerPage)
+})
+
+const visibleScooterRange = computed(() => {
+  if (!filteredScooters.value.length) {
+    return { start: 0, end: 0 }
+  }
+
+  const start = (scooterPage.value - 1) * scootersPerPage + 1
+  const end = Math.min(scooterPage.value * scootersPerPage, filteredScooters.value.length)
+  return { start, end }
 })
 
 /**
@@ -616,6 +660,26 @@ const handleManualRefresh = async () => {
     refreshing.value = false
   }
 }
+
+const goToPrevScooterPage = () => {
+  if (scooterPage.value <= 1) return
+  scooterPage.value -= 1
+}
+
+const goToNextScooterPage = () => {
+  if (scooterPage.value >= totalScooterPages.value) return
+  scooterPage.value += 1
+}
+
+watch(filteredScooters, () => {
+  scooterPage.value = 1
+})
+
+watch(totalScooterPages, (pageCount) => {
+  if (scooterPage.value > pageCount) {
+    scooterPage.value = pageCount
+  }
+})
 
 /**
  * Toggle available-only filter and sync to map
@@ -1544,6 +1608,60 @@ onUnmounted(() => {
   min-height: 0;
   padding: 16rpx 0;
   overscroll-behavior: contain;
+}
+
+.drawer-pagination {
+  padding: 16rpx 28rpx 24rpx;
+  border-top: 1rpx solid #F1F5F9;
+  background: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  flex-wrap: wrap;
+}
+
+.drawer-pagination-text {
+  font-size: 22rpx;
+  color: #94A3B8;
+  font-weight: 600;
+}
+
+.drawer-pagination-actions {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+  flex-wrap: wrap;
+}
+
+.drawer-page-btn {
+  min-width: 96rpx;
+  height: 64rpx;
+  padding: 0 22rpx;
+  border-radius: 999rpx;
+  background: linear-gradient(180deg, #F8FBFF 0%, #FFFFFF 100%);
+  border: 1rpx solid #DBEAFE;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.22s ease, border-color 0.22s ease, background 0.22s ease, opacity 0.22s ease;
+}
+
+.drawer-page-btn-text {
+  font-size: 22rpx;
+  font-weight: 700;
+  color: #2563EB;
+}
+
+.drawer-page-btn-disabled {
+  opacity: 0.45;
+}
+
+.drawer-page-indicator {
+  font-size: 22rpx;
+  color: #475569;
+  font-weight: 700;
 }
 
 .scooter-card {
