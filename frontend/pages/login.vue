@@ -179,9 +179,9 @@ const handleLogin = async () => {
     // Navigate to appropriate page based on user role
     setTimeout(() => {
       if (role === 'ADMIN') {
-        uni.reLaunch({ url: '/pages/index' })  // Navigate to admin dashboard
+        uni.reLaunch({ url: '/pages/admin/dashboard' })
       } else {
-        uni.reLaunch({ url: '/pages/index' })  // Navigate to user home
+        uni.reLaunch({ url: '/pages/index' })
       }
     }, 1500)
 

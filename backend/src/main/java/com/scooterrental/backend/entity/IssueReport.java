@@ -12,6 +12,8 @@ public class IssueReport {
     private Integer bookingId;
     private String category;
     private String description;
+    private String priority;
     private String status;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

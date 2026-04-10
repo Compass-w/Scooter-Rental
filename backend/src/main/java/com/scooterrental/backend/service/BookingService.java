@@ -1,5 +1,7 @@
 package com.scooterrental.backend.service;
 
+import com.scooterrental.backend.dto.admin.IncomeReportPoint;
+import com.scooterrental.backend.dto.admin.IncomeReportResponse;
 import com.scooterrental.backend.dto.booking.EndRideResponse;
 import com.scooterrental.backend.dto.booking.StartRideRequest;
 import com.scooterrental.backend.dto.booking.StartRideResponse;
@@ -13,11 +15,17 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.DayOfWeek;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.TextStyle;
+import java.time.temporal.TemporalAdjusters;
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @Service
@@ -27,6 +35,8 @@ public class BookingService {
     private static final String BOOKING_COMPLETED = "COMPLETED";
     private static final String SCOOTER_AVAILABLE = "AVAILABLE";
     private static final String SCOOTER_IN_USE = "IN_USE";
+    private static final String REPORT_DAILY = "DAILY";
+    private static final String REPORT_WEEKLY = "WEEKLY";
     private static final String PLAN_PAY_AS_YOU_GO = "PAY_AS_YOU_GO";
     private static final String PLAN_ONE_HOUR = "1_HOUR";
     private static final String PLAN_FOUR_HOURS = "4_HOURS";
@@ -43,6 +53,8 @@ public class BookingService {
     private static final BigDecimal PRICE_ONE_DAY = BigDecimal.valueOf(30.00);
     private static final BigDecimal PRICE_ONE_WEEK = BigDecimal.valueOf(100.00);
     private static final BigDecimal PRICE_ONE_MONTH = BigDecimal.valueOf(280.00);
+    private static final DateTimeFormatter REPORT_LABEL_FORMATTER = DateTimeFormatter.ofPattern("MMM dd", Locale.ENGLISH);
+    private static final DateTimeFormatter REPORT_KEY_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
 
     @Autowired
     private BookingMapper bookingMapper;
@@ -60,6 +72,11 @@ public class BookingService {
 
     public List<Map<String, Object>> getStats(Integer userId) {
         return bookingMapper.getWeeklyStats(userId);
+    }
+
+    public IncomeReportResponse getIncomeReport(String type) {
+        String normalizedType = normalizeReportType(type);
+        return REPORT_WEEKLY.equals(normalizedType) ? buildWeeklyIncomeReport() : buildDailyIncomeReport();
     }
 
     @Transactional
@@ -287,6 +304,95 @@ public class BookingService {
             case MINUTES_ONE_MONTH -> PRICE_ONE_MONTH;
             default -> null;
         };
+    }
+
+    private IncomeReportResponse buildDailyIncomeReport() {
+        int dayCount = 7;
+        LocalDate today = LocalDate.now();
+        LocalDate startDate = today.minusDays(dayCount - 1L);
+        List<IncomeReportPoint> rawPoints = bookingMapper.selectRevenueByDay(startDate.atStartOfDay());
+        Map<String, IncomeReportPoint> pointByDate = new HashMap<>();
+        for (IncomeReportPoint point : rawPoints) {
+            pointByDate.put(point.getLabel(), point);
+        }
+
+        List<IncomeReportPoint> points = new ArrayList<>();
+        BigDecimal totalRevenue = BigDecimal.ZERO;
+        int totalBookings = 0;
+
+        for (int i = 0; i < dayCount; i++) {
+            LocalDate date = startDate.plusDays(i);
+            IncomeReportPoint point = pointByDate.get(date.format(REPORT_KEY_FORMATTER));
+            IncomeReportPoint normalizedPoint = new IncomeReportPoint();
+            normalizedPoint.setLabel(date.format(REPORT_LABEL_FORMATTER));
+            normalizedPoint.setRevenue(normalizeRevenue(point == null ? null : point.getRevenue()));
+            normalizedPoint.setBookingCount(point == null || point.getBookingCount() == null ? 0 : point.getBookingCount());
+            points.add(normalizedPoint);
+            totalRevenue = totalRevenue.add(normalizedPoint.getRevenue());
+            totalBookings += normalizedPoint.getBookingCount();
+        }
+
+        IncomeReportResponse response = new IncomeReportResponse();
+        response.setType(REPORT_DAILY);
+        response.setPeriodLabel("Last 7 Days");
+        response.setPeriodCount(dayCount);
+        response.setTotalRevenue(totalRevenue.setScale(2, RoundingMode.HALF_UP));
+        response.setTotalBookings(totalBookings);
+        response.setPoints(points);
+        return response;
+    }
+
+    private IncomeReportResponse buildWeeklyIncomeReport() {
+        int weekCount = 6;
+        LocalDate currentWeekStart = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        LocalDate startWeek = currentWeekStart.minusWeeks(weekCount - 1L);
+        List<IncomeReportPoint> rawPoints = bookingMapper.selectRevenueByWeek(startWeek.atStartOfDay());
+        Map<String, IncomeReportPoint> pointByWeek = new HashMap<>();
+        for (IncomeReportPoint point : rawPoints) {
+            pointByWeek.put(point.getLabel(), point);
+        }
+
+        List<IncomeReportPoint> points = new ArrayList<>();
+        BigDecimal totalRevenue = BigDecimal.ZERO;
+        int totalBookings = 0;
+
+        for (int i = 0; i < weekCount; i++) {
+            LocalDate weekStart = startWeek.plusWeeks(i);
+            IncomeReportPoint point = pointByWeek.get(weekStart.format(REPORT_KEY_FORMATTER));
+            IncomeReportPoint normalizedPoint = new IncomeReportPoint();
+            normalizedPoint.setLabel("Week of " + weekStart.getMonth().getDisplayName(TextStyle.SHORT, Locale.ENGLISH)
+                    + " " + String.format(Locale.ENGLISH, "%02d", weekStart.getDayOfMonth()));
+            normalizedPoint.setRevenue(normalizeRevenue(point == null ? null : point.getRevenue()));
+            normalizedPoint.setBookingCount(point == null || point.getBookingCount() == null ? 0 : point.getBookingCount());
+            points.add(normalizedPoint);
+            totalRevenue = totalRevenue.add(normalizedPoint.getRevenue());
+            totalBookings += normalizedPoint.getBookingCount();
+        }
+
+        IncomeReportResponse response = new IncomeReportResponse();
+        response.setType(REPORT_WEEKLY);
+        response.setPeriodLabel("Last 6 Weeks");
+        response.setPeriodCount(weekCount);
+        response.setTotalRevenue(totalRevenue.setScale(2, RoundingMode.HALF_UP));
+        response.setTotalBookings(totalBookings);
+        response.setPoints(points);
+        return response;
+    }
+
+    private String normalizeReportType(String type) {
+        if (type == null || type.isBlank()) {
+            return REPORT_DAILY;
+        }
+
+        return switch (type.trim().toUpperCase(Locale.ROOT)) {
+            case REPORT_DAILY -> REPORT_DAILY;
+            case REPORT_WEEKLY -> REPORT_WEEKLY;
+            default -> throw new IllegalArgumentException("Unsupported report type: " + type);
+        };
+    }
+
+    private BigDecimal normalizeRevenue(BigDecimal revenue) {
+        return (revenue == null ? BigDecimal.ZERO : revenue).setScale(2, RoundingMode.HALF_UP);
     }
 
     private PackageTier resolvePackageTier(Integer durationMinutes) {

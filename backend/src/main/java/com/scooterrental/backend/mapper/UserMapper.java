@@ -27,6 +27,11 @@ public interface UserMapper {
         @Options(useGeneratedKeys = true, keyProperty = "userId")
         void insert(User user);
 
+        @Insert("INSERT INTO users(username, email, phone, city, avatar_url, password_hash, role) " +
+                        "VALUES(#{username}, #{email}, #{phone}, #{city}, #{avatarUrl}, #{passwordHash}, #{role})")
+        @Options(useGeneratedKeys = true, keyProperty = "userId")
+        void insertWithRole(User user);
+
         // Get user profile by ID
         @Select("SELECT user_id AS userId, username, email, phone, city, avatar_url AS avatarUrl, role, " +
                         "total_riding_minutes AS totalRidingMinutes, achievements, created_at AS createdAt " +
@@ -51,4 +56,7 @@ public interface UserMapper {
 
         @Update("UPDATE users SET password_hash = #{passwordHash} WHERE user_id = #{userId}")
         int updatePasswordHash(@Param("userId") Integer userId, @Param("passwordHash") String passwordHash);
+
+        @Update("UPDATE users SET role = #{role} WHERE user_id = #{userId}")
+        int updateUserRole(@Param("userId") Integer userId, @Param("role") String role);
 }
