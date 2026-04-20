@@ -1,7 +1,6 @@
 package com.scooterrental.backend.controller;
 
 import com.scooterrental.backend.common.Result;
-import com.scooterrental.backend.dto.admin.IssueStatusUpdateRequest;
 import com.scooterrental.backend.entity.IssueReport;
 import com.scooterrental.backend.service.IssueReportService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -10,11 +9,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -43,22 +40,7 @@ public class IssueController {
 
     @GetMapping("/api/admin/issues")
     @Operation(summary = "List issue reports")
-    public Result<List<IssueReport>> getIssueReports(@RequestParam(required = false) String priority) {
-        return Result.success(issueReportService.getIssueReports(priority));
-    }
-
-    @PutMapping("/api/admin/issues/{issueId}/status")
-    @Operation(summary = "Update issue workflow status")
-    public ResponseEntity<Result<String>> updateIssueStatus(
-            @PathVariable Integer issueId,
-            @RequestBody IssueStatusUpdateRequest request
-    ) {
-        try {
-            issueReportService.updateIssueStatus(issueId, request == null ? null : request.getStatus());
-            return ResponseEntity.ok(Result.success("Issue status updated"));
-        } catch (IllegalArgumentException ex) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Result.error(400, ex.getMessage()));
-        }
+    public Result<List<IssueReport>> getIssueReports() {
+        return Result.success(issueReportService.getIssueReports());
     }
 }

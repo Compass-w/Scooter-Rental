@@ -26,13 +26,3 @@ export const reportIssue = (data) => {
 export const getIssues = (params = {}) => {
   return request.get('/admin/issues', params)
 }
-
-/**
- * [Admin] Update issue workflow status
- * @param {number} issueId - Issue ID
- * @param {string} status - Workflow status
- * @returns {Promise}
- */
-export const updateIssueStatus = (issueId, status) => {
-  return request.put(`/admin/issues/${issueId}/status`, { status })
-}

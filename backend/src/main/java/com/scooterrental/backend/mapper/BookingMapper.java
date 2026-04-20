@@ -1,10 +1,8 @@
 package com.scooterrental.backend.mapper;
 
-import com.scooterrental.backend.dto.admin.IncomeReportPoint;
 import com.scooterrental.backend.entity.Booking;
 import org.apache.ibatis.annotations.*;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -30,30 +28,6 @@ public interface BookingMapper {
             "FROM bookings WHERE user_id = #{userId} AND status = 'COMPLETED' AND created_at > NOW() - INTERVAL '7 days' " +
             "GROUP BY day ORDER BY day")
     List<Map<String, Object>> getWeeklyStats(Integer userId);
-
-    @Select("""
-            SELECT TO_CHAR(DATE_TRUNC('day', COALESCE(end_time, created_at)), 'YYYY-MM-DD') AS label,
-                   COALESCE(SUM(total_cost), 0) AS revenue,
-                   COUNT(*) AS bookingCount
-            FROM bookings
-            WHERE status = 'COMPLETED'
-              AND COALESCE(end_time, created_at) >= #{startDateTime}
-            GROUP BY DATE_TRUNC('day', COALESCE(end_time, created_at))
-            ORDER BY DATE_TRUNC('day', COALESCE(end_time, created_at))
-            """)
-    List<IncomeReportPoint> selectRevenueByDay(@Param("startDateTime") LocalDateTime startDateTime);
-
-    @Select("""
-            SELECT TO_CHAR(DATE_TRUNC('week', COALESCE(end_time, created_at)), 'YYYY-MM-DD') AS label,
-                   COALESCE(SUM(total_cost), 0) AS revenue,
-                   COUNT(*) AS bookingCount
-            FROM bookings
-            WHERE status = 'COMPLETED'
-              AND COALESCE(end_time, created_at) >= #{startDateTime}
-            GROUP BY DATE_TRUNC('week', COALESCE(end_time, created_at))
-            ORDER BY DATE_TRUNC('week', COALESCE(end_time, created_at))
-            """)
-    List<IncomeReportPoint> selectRevenueByWeek(@Param("startDateTime") LocalDateTime startDateTime);
 
     @Insert("INSERT INTO bookings (user_id, scooter_id, start_time, total_cost, duration_minutes, status) " +
             "VALUES (#{userId}, #{scooterId}, #{startTime}, #{totalCost}, #{durationMinutes}, #{status})")

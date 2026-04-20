@@ -55,13 +55,6 @@
         "navigationStyle": "custom"
       }
     },
-    {
-      "path": "pages/admin/dashboard",
-      "style": {
-        "navigationBarTitleText": "Admin Dashboard",
-        "navigationStyle": "custom"
-      }
-    },
 	{
 	  "path": "pages/profile",
 	  "style": {

@@ -1,5 +1,4 @@
 -- 1. Clean up existing tables (Drop in order due to foreign key constraints)
-DROP TABLE IF EXISTS issue_reports;
 DROP TABLE IF EXISTS bank_cards;
 DROP TABLE IF EXISTS bookings;
 DROP TABLE IF EXISTS scooters;
@@ -48,21 +47,7 @@ CREATE TABLE bookings (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 5. Create Issue Reports Table
-CREATE TABLE issue_reports (
-    issue_id SERIAL PRIMARY KEY,
-    user_id INT REFERENCES users(user_id),
-    scooter_id INT REFERENCES scooters(scooter_id),
-    booking_id INT REFERENCES bookings(booking_id),
-    category VARCHAR(32) NOT NULL,
-    description TEXT NOT NULL,
-    priority VARCHAR(16) NOT NULL DEFAULT 'MEDIUM',
-    status VARCHAR(16) NOT NULL DEFAULT 'REPORTED',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- 6. Create Bank Cards Table [ID: 2, 3]
+-- 5. Create Bank Cards Table [ID: 2, 3]
 -- Securely store masked card information
 CREATE TABLE bank_cards (
     card_id SERIAL PRIMARY KEY,
@@ -73,7 +58,7 @@ CREATE TABLE bank_cards (
     is_default BOOLEAN DEFAULT false
 );
 
--- 7. Insert Mock Data for Testing
+-- 6. Insert Mock Data for Testing
 
 -- Insert Test User (Password is '123456' hashed via BCrypt)
 INSERT INTO users (username, email, phone, city, password_hash, role, total_riding_minutes, achievements) 
@@ -165,22 +150,9 @@ VALUES
 -- Insert Mock Booking History for User 1 (For Stats Chart & History List) [ID: 8, 22]
 INSERT INTO bookings (user_id, scooter_id, start_time, end_time, duration_minutes, total_cost, status)
 VALUES 
-(1, 1, NOW() - INTERVAL '35 days', NOW() - INTERVAL '35 days' + INTERVAL '20 minutes', 20, 5.00, 'COMPLETED'),
-(1, 2, NOW() - INTERVAL '28 days', NOW() - INTERVAL '28 days' + INTERVAL '45 minutes', 45, 10.00, 'COMPLETED'),
-(1, 3, NOW() - INTERVAL '20 days', NOW() - INTERVAL '20 days' + INTERVAL '60 minutes', 60, 12.00, 'COMPLETED'),
-(1, 1, NOW() - INTERVAL '14 days', NOW() - INTERVAL '14 days' + INTERVAL '30 minutes', 30, 7.50, 'COMPLETED'),
-(1, 2, NOW() - INTERVAL '8 days', NOW() - INTERVAL '8 days' + INTERVAL '40 minutes', 40, 9.50, 'COMPLETED'),
 (1, 1, NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days' + INTERVAL '20 minutes', 20, 5.00, 'COMPLETED'),
 (1, 2, NOW() - INTERVAL '1 days', NOW() - INTERVAL '1 days' + INTERVAL '45 minutes', 45, 10.00, 'COMPLETED'),
 (1, 1, NOW(), NOW() + INTERVAL '15 minutes', 15, 3.50, 'COMPLETED');
-
--- Insert Mock Issue Reports for Admin Dashboard
-INSERT INTO issue_reports (user_id, scooter_id, booking_id, category, description, priority, status, created_at, updated_at)
-VALUES
-(1, 4, NULL, 'MECHANICAL', 'Rear brake is sticking and the scooter feels unsafe at low speed.', 'HIGH', 'REPORTED', NOW() - INTERVAL '3 hours', NOW() - INTERVAL '3 hours'),
-(1, 3, NULL, 'BATTERY', 'Battery dropped from 30 percent to zero within five minutes of riding.', 'HIGH', 'IN_PROGRESS', NOW() - INTERVAL '1 day', NOW() - INTERVAL '20 hours'),
-(1, 2, NULL, 'ELECTRICAL', 'Headlight flickers on uneven roads after unlock.', 'MEDIUM', 'REPORTED', NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days'),
-(1, 1, NULL, 'OTHER', 'Kickstand feels loose but scooter can still be parked.', 'LOW', 'FIXED', NOW() - INTERVAL '5 days', NOW() - INTERVAL '4 days');
 
 -- Insert Mock Bank Card for User 1 [ID: 2, 3]
 INSERT INTO bank_cards (user_id, card_holder_name, card_number_masked, expiry_date, is_default)
