@@ -13,5 +13,9 @@ public class IssueReport {
     private String category;
     private String description;
     private String status;
+    private String priority;
+    private String workflowStatus;
+    private String assignedStaff;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

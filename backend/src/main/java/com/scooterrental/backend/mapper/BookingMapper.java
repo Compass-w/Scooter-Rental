@@ -47,6 +47,15 @@ public interface BookingMapper {
             "ORDER BY start_time DESC LIMIT 1")
     Booking selectActiveBookingByUserId(@Param("userId") Integer userId);
 
+    @Select("SELECT b.booking_id AS bookingId, b.user_id AS userId, b.scooter_id AS scooterId, " +
+            "b.start_time AS startTime, b.end_time AS endTime, b.total_cost AS totalCost, " +
+            "b.duration_minutes AS durationMinutes, b.status, b.created_at AS createdAt, " +
+            "s.model AS scooterModel " +
+            "FROM bookings b " +
+            "LEFT JOIN scooters s ON b.scooter_id = s.scooter_id " +
+            "ORDER BY b.created_at DESC")
+    List<Booking> selectAllForAdmin();
+
     @Update("UPDATE bookings SET end_time = #{endTime}, total_cost = #{totalCost}, " +
             "duration_minutes = #{durationMinutes}, status = #{status} " +
             "WHERE booking_id = #{bookingId}")

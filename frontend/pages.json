@@ -61,6 +61,13 @@
 	    "navigationBarTitleText": "My Profile",
 	    "navigationStyle": "custom"
 	  }
+	},
+	{
+	  "path": "pages/admin-dashboard",
+	  "style": {
+	    "navigationBarTitleText": "Admin Dashboard",
+	    "navigationStyle": "custom"
+	  }
 	}
   ],
   "globalStyle": {

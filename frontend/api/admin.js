@@ -1,16 +1,28 @@
-/**
- * 管理员数据统计相关API
- * 对应API文档的数据统计模块
- */
-
 import request from '@/utils/request.js'
 
-/**
- * [管理员] 获取收入报表
- * @param {Object} params - 查询参数
- * @param {string} params.type - 报表类型：daily（日报）或 weekly（周报）
- * @returns {Promise} - 返回收入报表数据
- */
-export const getIncomeReport = (params = { type: 'daily' }) => {
-  return request.get('/admin/reports/income', params)
-}
+export const getAdminDashboard = () => request.get('/admin/dashboard')
+
+export const createAdminScooter = (data) => request.post('/admin/scooters', data)
+
+export const updateAdminScooter = (scooterId, data) => request.put(`/admin/scooters/${scooterId}`, data)
+
+export const overrideScooterStatus = (scooterId, status) =>
+  request.patch(`/admin/scooters/${scooterId}/status`, { status })
+
+export const getMaintenanceLogs = (scooterId) =>
+  request.get(`/admin/scooters/${scooterId}/maintenance-logs`)
+
+export const addMaintenanceLog = (scooterId, data) =>
+  request.post(`/admin/scooters/${scooterId}/maintenance-logs`, data)
+
+export const updateAdminIssue = (issueId, data) =>
+  request.patch(`/admin/issues/${issueId}`, data)
+
+export const getStaffBookings = () =>
+  request.get('/admin/pos/bookings')
+
+export const createStaffBooking = (data) =>
+  request.post('/admin/pos/bookings', data)
+
+export const sendStaffConfirmation = (bookingId, email) =>
+  request.post(`/admin/pos/bookings/${bookingId}/confirmation`, { email })
