@@ -126,6 +126,98 @@
             <text class="input-hint" v-else>Select a country code and enter the local phone number. Example: {{ selectedCountry.code }} {{ selectedCountry.example }}</text>
           </view>
 
+          <view class="form-group">
+            <text class="label">Operating Market</text>
+            <view class="market-toggle-row">
+              <view
+                v-for="market in onboardingMarkets"
+                :key="market.code"
+                :class="['market-toggle-card', selectedOnboardingMarketCode === market.code ? 'market-toggle-card-active' : '']"
+                @tap="selectOnboardingMarket(market.code)"
+              >
+                <text class="market-toggle-title">{{ market.label }}</text>
+                <text class="market-toggle-copy">{{ market.registrationLabel }}</text>
+              </view>
+            </view>
+            <view class="market-info-card">
+              <text class="market-info-title">{{ selectedOnboardingMarket.label }}</text>
+              <text class="market-info-copy">{{ selectedOnboardingMarket.registrationRequirement }}</text>
+              <text class="market-info-copy">{{ selectedOnboardingMarket.paymentRequirement }}</text>
+              <text class="market-info-copy">{{ selectedOnboardingMarket.returnRequirement }}</text>
+            </view>
+          </view>
+
+          <view v-if="requiresRealName" class="form-group">
+            <text class="label">Real-name Verification</text>
+            <view class="input-wrapper" :class="fieldState('legalName')">
+              <view class="icon-left">
+                <uni-icons type="person" size="24" :color="iconColor('legalName')"></uni-icons>
+              </view>
+              <input
+                class="input-pill"
+                v-model="legalName"
+                type="text"
+                placeholder="Legal name"
+                @blur="validateField('legalName')"
+                @input="clearError('legalName')"
+              />
+            </view>
+            <view class="input-wrapper" :class="fieldState('identityNumber')" style="margin-top: 16rpx;">
+              <view class="icon-left">
+                <uni-icons type="locked" size="24" :color="iconColor('identityNumber')"></uni-icons>
+              </view>
+              <input
+                class="input-pill"
+                v-model="identityNumber"
+                type="text"
+                placeholder="National ID or passport number"
+                @blur="validateField('identityNumber')"
+                @input="clearError('identityNumber')"
+              />
+            </view>
+            <view class="hint-row" v-if="errors.legalName || errors.identityNumber">
+              <uni-icons type="info" size="14" color="#EF4444"></uni-icons>
+              <text class="hint-error">{{ errors.legalName || errors.identityNumber }}</text>
+            </view>
+            <text class="input-hint" v-else>China sharing users must complete real-name verification before scan-to-unlock is enabled.</text>
+          </view>
+
+          <view v-if="requiresSignupCard" class="form-group">
+            <text class="label">Saved Credit Card</text>
+            <view class="input-wrapper" :class="fieldState('registrationCardName')">
+              <view class="icon-left">
+                <uni-icons type="wallet" size="24" :color="iconColor('registrationCardName')"></uni-icons>
+              </view>
+              <input
+                class="input-pill"
+                v-model="registrationCardName"
+                type="text"
+                placeholder="Cardholder name"
+                @blur="validateField('registrationCardName')"
+                @input="clearError('registrationCardName')"
+              />
+            </view>
+            <view class="input-wrapper" :class="fieldState('registrationCardNumber')" style="margin-top: 16rpx;">
+              <view class="icon-left">
+                <uni-icons type="wallet" size="24" :color="iconColor('registrationCardNumber')"></uni-icons>
+              </view>
+              <input
+                class="input-pill"
+                v-model="registrationCardNumber"
+                type="number"
+                maxlength="16"
+                placeholder="4111111111111111"
+                @blur="validateField('registrationCardNumber')"
+                @input="clearError('registrationCardNumber')"
+              />
+            </view>
+            <view class="hint-row" v-if="errors.registrationCardName || errors.registrationCardNumber">
+              <uni-icons type="info" size="14" color="#EF4444"></uni-icons>
+              <text class="hint-error">{{ errors.registrationCardName || errors.registrationCardNumber }}</text>
+            </view>
+            <text class="input-hint" v-else>UK riders bind a card during registration so overtime and damage charges can be processed automatically.</text>
+          </view>
+
           <!-- Password -->
           <view class="form-group">
             <text class="label">Password</text>
@@ -234,6 +326,7 @@
 import { ref, reactive, computed } from 'vue'
 import { register as registerApi } from '@/api/user.js'
 import BaseLayout from '@/pages/BaseLayout.vue'
+import { MARKET_PROFILES } from '@/utils/scooterCatalog.js'
 
 const countryCodeOptions = [
   { label: 'China Mainland (+86)', shortLabel: 'China', code: '+86', example: '13800138000' },
@@ -258,10 +351,37 @@ const showConfirmPwd  = ref(false)
 const agreeTerms      = ref(false)
 const loading         = ref(false)
 const globalError     = ref('')
+const legalName       = ref('')
+const identityNumber  = ref('')
+const registrationCardName = ref('')
+const registrationCardNumber = ref('')
+const onboardingMarkets = MARKET_PROFILES.filter(market => ['CN', 'UK'].includes(market.code))
+const selectedOnboardingMarketCode = ref('CN')
 
 // ─── Per-field touched & error state ───────────────────────────
-const touched = reactive({ username: false, email: false, phone: false, password: false, confirmPassword: false })
-const errors  = reactive({ username: '', email: '', phone: '', password: '', confirmPassword: '', terms: '' })
+const touched = reactive({
+  username: false,
+  email: false,
+  phone: false,
+  legalName: false,
+  identityNumber: false,
+  registrationCardName: false,
+  registrationCardNumber: false,
+  password: false,
+  confirmPassword: false
+})
+const errors  = reactive({
+  username: '',
+  email: '',
+  phone: '',
+  legalName: '',
+  identityNumber: '',
+  registrationCardName: '',
+  registrationCardNumber: '',
+  password: '',
+  confirmPassword: '',
+  terms: ''
+})
 
 // ─── Password strength ─────────────────────────────────────────
 const pwdStrength = computed(() => {
@@ -296,6 +416,11 @@ const isStrongPassword = (value) => {
 }
 const digitsOnly = (value) => String(value || '').replace(/\D/g, '')
 const selectedCountry = computed(() => countryCodeOptions[selectedCountryIndex.value] || countryCodeOptions[0])
+const selectedOnboardingMarket = computed(() =>
+  onboardingMarkets.find(market => market.code === selectedOnboardingMarketCode.value) || onboardingMarkets[0]
+)
+const requiresRealName = computed(() => selectedOnboardingMarketCode.value === 'CN')
+const requiresSignupCard = computed(() => selectedOnboardingMarketCode.value === 'UK')
 const formattedPhone = computed(() => {
   const localDigits = digitsOnly(phone.value)
   return localDigits ? `${selectedCountry.value.code} ${localDigits}` : ''
@@ -329,6 +454,24 @@ const handleCountryCodeChange = (event) => {
   if (touched.phone) validateField('phone')
 }
 
+const selectOnboardingMarket = (code) => {
+  selectedOnboardingMarketCode.value = code
+  if (code === 'CN') {
+    selectedCountryIndex.value = countryCodeOptions.findIndex(option => option.code === '+86')
+  } else if (code === 'UK') {
+    selectedCountryIndex.value = countryCodeOptions.findIndex(option => option.code === '+44')
+  }
+
+  if (touched.phone) validateField('phone')
+  if (requiresRealName.value) {
+    errors.registrationCardName = ''
+    errors.registrationCardNumber = ''
+  } else {
+    errors.legalName = ''
+    errors.identityNumber = ''
+  }
+}
+
 const validateField = (field) => {
   touched[field] = true
   switch (field) {
@@ -359,6 +502,42 @@ const validateField = (field) => {
         errors.phone = `Enter 6 to 14 digits for the local number. It will be saved with ${selectedCountry.value.code}.`
       else
         errors.phone = ''
+      break
+    case 'legalName':
+      if (!requiresRealName.value) {
+        errors.legalName = ''
+      } else if (!legalName.value.trim()) {
+        errors.legalName = 'Legal name is required for China onboarding'
+      } else {
+        errors.legalName = ''
+      }
+      break
+    case 'identityNumber':
+      if (!requiresRealName.value) {
+        errors.identityNumber = ''
+      } else if (identityNumber.value.trim().length < 8) {
+        errors.identityNumber = 'Enter a valid ID or passport number'
+      } else {
+        errors.identityNumber = ''
+      }
+      break
+    case 'registrationCardName':
+      if (!requiresSignupCard.value) {
+        errors.registrationCardName = ''
+      } else if (!registrationCardName.value.trim()) {
+        errors.registrationCardName = 'Cardholder name is required for UK onboarding'
+      } else {
+        errors.registrationCardName = ''
+      }
+      break
+    case 'registrationCardNumber':
+      if (!requiresSignupCard.value) {
+        errors.registrationCardNumber = ''
+      } else if (digitsOnly(registrationCardNumber.value).length < 12) {
+        errors.registrationCardNumber = 'Enter a valid credit card number'
+      } else {
+        errors.registrationCardNumber = ''
+      }
       break
     case 'password':
       if (!password.value)
@@ -399,6 +578,12 @@ const handleSignup = async () => {
   globalError.value = ''
   // Validate all fields
   ;['username', 'email', 'phone', 'password', 'confirmPassword'].forEach(f => validateField(f))
+  if (requiresRealName.value) {
+    ;['legalName', 'identityNumber'].forEach(f => validateField(f))
+  }
+  if (requiresSignupCard.value) {
+    ;['registrationCardName', 'registrationCardNumber'].forEach(f => validateField(f))
+  }
   if (!agreeTerms.value) {
     errors.terms = 'You must accept the Terms of Service and Privacy Policy to continue'
   } else {
@@ -418,6 +603,13 @@ const handleSignup = async () => {
       email:        email.value.trim(),
       phone:        formattedPhone.value,
       passwordHash: password.value,
+    })
+    uni.setStorageSync('signupOnboardingProfile', {
+      marketCode: selectedOnboardingMarketCode.value,
+      marketLabel: selectedOnboardingMarket.value.label,
+      legalName: requiresRealName.value ? legalName.value.trim() : '',
+      identityNumber: requiresRealName.value ? identityNumber.value.trim() : '',
+      registrationCardLast4: requiresSignupCard.value ? digitsOnly(registrationCardNumber.value).slice(-4) : ''
     })
     uni.showToast({ title: 'Account created successfully! 🎉', icon: 'success', duration: 2000 })
     setTimeout(() => uni.reLaunch({ url: '/pages/login' }), 2000)
@@ -517,6 +709,62 @@ const goToLogin = () => { uni.navigateTo({ url: '/pages/login' }) }
   color: #1F2937;
   margin-bottom: 16rpx;
   margin-left: 20rpx;
+}
+
+.market-toggle-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16rpx;
+  margin-bottom: 18rpx;
+}
+
+.market-toggle-card {
+  padding: 24rpx;
+  border-radius: 26rpx;
+  background: #F8FAFC;
+  border: 2rpx solid #E2E8F0;
+}
+
+.market-toggle-card-active {
+  border-color: #2563EB;
+  background: linear-gradient(180deg, #EFF6FF 0%, #F8FBFF 100%);
+  box-shadow: 0 14rpx 28rpx rgba(37, 99, 235, 0.12);
+}
+
+.market-toggle-title {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.market-toggle-copy {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  line-height: 1.6;
+  color: #64748B;
+}
+
+.market-info-card {
+  padding: 22rpx 24rpx;
+  border-radius: 28rpx;
+  background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+}
+
+.market-info-title {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #FFFFFF;
+  margin-bottom: 10rpx;
+}
+
+.market-info-copy {
+  display: block;
+  font-size: 22rpx;
+  line-height: 1.65;
+  color: rgba(255, 255, 255, 0.78);
 }
 
 /* ---- Input wrapper states ---- */

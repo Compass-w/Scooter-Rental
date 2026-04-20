@@ -69,6 +69,7 @@
 
         <!-- Scooter Popup -->
         <view v-if="selectedScooter" class="scooter-popup" @tap.stop>
+          <image class="popup-photo" :src="selectedScooter.imageUrl" mode="aspectFill" />
           <view class="popup-drag" @tap="closePopup">
             <view class="popup-drag-bar"></view>
           </view>
@@ -99,6 +100,15 @@
               <uni-icons type="wallet" size="16" class="meta-chip-icon-svg"></uni-icons>
               <text class="meta-chip-val">From {{ formatCny(RATE_CARD.hourlyPrice) }}/hour</text>
             </view>
+            <view class="meta-chip">
+              <uni-icons type="paperplane" size="16" class="meta-chip-icon-svg"></uni-icons>
+              <text class="meta-chip-val">{{ selectedScooter.specs.remainingRangeKm }} km left</text>
+            </view>
+          </view>
+
+          <view class="popup-specs">
+            <text class="popup-spec-line">{{ selectedScooter.performanceSummary }}</text>
+            <text class="popup-spec-line">Telemetry: {{ (selectedScooter.telemetry || []).slice(0, 3).join(' · ') }}</text>
           </view>
 
           <!-- Ride Button -->
@@ -169,9 +179,7 @@
               :class="['scooter-card', selectedScooter && selectedScooter.id === scooter.id ? 'card-selected' : '']"
               @tap="selectScooterFromList(scooter)"
             >
-              <view :class="['scooter-avatar', 'avatar-' + statusClass(scooter.status)]">
-                <uni-icons type="navigate" size="28" class="avatar-icon"></uni-icons>
-              </view>
+              <image class="scooter-thumb" :src="scooter.imageUrl" mode="aspectFill" />
               <view class="card-body">
                 <view class="card-top-row">
                   <text class="card-id">#{{ scooter.id }} · {{ scooter.model }}</text>
@@ -191,6 +199,7 @@
                     <text class="card-meta-text">{{ formatCny(RATE_CARD.hourlyPrice) }}/hour standard</text>
                   </view>
                 </view>
+                <text class="card-spec">{{ scooter.specs.topSpeedKph }} km/h · {{ scooter.specs.rangeKm }} km range · {{ scooter.specs.mileageTodayKm }} km today</text>
               </view>
               <view v-if="scooter.status === 'AVAILABLE'" class="ride-btn-small" @tap.stop="openBookingOptions(scooter)">
                 <text class="ride-btn-text">Ride</text>
@@ -257,6 +266,7 @@ import { getAllScooters, startRide as startRideApi } from '@/api/scooter.js'
 import { getUserBookings } from '@/api/booking.js'
 import { findActiveRide, getStoredActiveRide, setStoredActiveRide } from '@/utils/activeRide.js'
 import { applyRidePricing, formatCny, HOME_PRICING } from '@/utils/pricing.js'
+import { enrichScooter } from '@/utils/scooterCatalog.js'
 
 /**
  * Reactive state variables
@@ -333,7 +343,7 @@ const mapInteractionLocked = computed(() =>
 )
 
 const RATE_CARD = HOME_PRICING.payAsYouGo
-const normalizeScooterEntry = (scooter = {}) => applyRidePricing(scooter)
+const normalizeScooterEntry = (scooter = {}) => enrichScooter(applyRidePricing(scooter))
 
 const getActiveRideSnapshot = () => {
   const activeRide = getStoredActiveRide()
@@ -702,13 +712,14 @@ const _handleMapPayload = ({ type, data } = {}) => {
   }
 
   if (type === 'markerTap') {
-    selectedScooter.value = data
+    selectedScooter.value = normalizeScooterEntry(data)
     drawerOpen.value = false
   }
 
   if (type === 'rideTap') {
-    selectedScooter.value = data
-    openBookingOptions(data)
+    const normalizedScooter = normalizeScooterEntry(data)
+    selectedScooter.value = normalizedScooter
+    openBookingOptions(normalizedScooter)
   }
 }
 
@@ -1017,13 +1028,32 @@ const confirmRideStart = async (paymentData) => {
       bookingId: booking?.bookingId,
       userId,
       scooterId: bookingScooter.value.id,
-      scooterModel: bookingScooter.value.model,
+      scooterModel: paymentData.scooterModel || bookingScooter.value.model,
       startTime: new Date().toISOString(),
       durationMinutes: booking?.durationMinutes ?? paymentData.durationMinutes,
       totalCost: booking?.estimatedCost ?? paymentData.totalPrice,
       basePrice: bookingScooter.value.basePrice,
       pricePerMinute: bookingScooter.value.pricePerMin,
       cardLast4: paymentData.cardLast4,
+      imageUrl: paymentData.imageUrl || bookingScooter.value.imageUrl,
+      gallery: paymentData.gallery || bookingScooter.value.gallery,
+      photoCredit: paymentData.photoCredit || bookingScooter.value.photoCredit,
+      profileSlug: paymentData.profileSlug || bookingScooter.value.profileSlug,
+      specs: paymentData.specs || bookingScooter.value.specs,
+      telemetry: paymentData.telemetry || bookingScooter.value.telemetry,
+      performanceSummary: paymentData.performanceSummary || bookingScooter.value.performanceSummary,
+      marketCode: paymentData.marketCode,
+      marketLabel: paymentData.marketLabel,
+      serviceMode: paymentData.serviceMode,
+      serviceLabel: paymentData.serviceLabel,
+      startBatteryLevel: paymentData.startBatteryLevel ?? bookingScooter.value.batteryLevel,
+      estimatedReturnBattery: paymentData.estimatedReturnBattery,
+      electricityFeeEstimate: paymentData.electricityFeeEstimate,
+      overtimeFeePer15Minutes: paymentData.overtimeFeePer15Minutes,
+      parkingRule: paymentData.parkingRule,
+      damagePolicy: paymentData.damagePolicy,
+      insurancePolicy: paymentData.insurancePolicy,
+      liabilityAccepted: paymentData.liabilityAccepted,
       latitude: currentUserLocation.value?.lat ?? null,
       longitude: currentUserLocation.value?.lng ?? null,
       lat: currentUserLocation.value?.lat ?? null,
@@ -1492,6 +1522,13 @@ onUnmounted(() => {
   color: #2563EB;
 }
 
+.popup-photo {
+  width: calc(100% + 48rpx);
+  height: 240rpx;
+  margin: -24rpx -24rpx 18rpx;
+  border-radius: 28rpx 28rpx 0 0;
+}
+
 .popup-info {
   flex: 1;
 }
@@ -1554,8 +1591,9 @@ onUnmounted(() => {
 /* Popup Meta Row */
 .popup-meta-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 16rpx;
-  margin-bottom: 24rpx;
+  margin-bottom: 18rpx;
 }
 
 .meta-chip {
@@ -1576,6 +1614,24 @@ onUnmounted(() => {
   font-size: 24rpx;
   color: #374151;
   font-weight: 500;
+}
+
+.popup-specs {
+  padding: 18rpx 20rpx;
+  margin-bottom: 22rpx;
+  border-radius: 22rpx;
+  background: #F8FAFC;
+}
+
+.popup-spec-line {
+  display: block;
+  font-size: 22rpx;
+  line-height: 1.6;
+  color: #475569;
+}
+
+.popup-spec-line + .popup-spec-line {
+  margin-top: 8rpx;
 }
 
 /* Ride Button */
@@ -1848,7 +1904,7 @@ onUnmounted(() => {
 
 .scooter-card {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   padding: 28rpx 36rpx;
   gap: 20rpx;
   border-bottom: 1rpx solid #F9FAFB;
@@ -1861,36 +1917,13 @@ onUnmounted(() => {
   background: #EFF6FF;
 }
 
-.scooter-avatar {
-  width: 88rpx;
-  height: 88rpx;
-  border-radius: 22rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.scooter-thumb {
+  width: 132rpx;
+  height: 132rpx;
+  border-radius: 24rpx;
   flex-shrink: 0;
+  box-shadow: 0 10rpx 26rpx rgba(15, 23, 42, 0.08);
 }
-
-.avatar-available {
-  background: linear-gradient(135deg, #ECFDF5, #D1FAE5);
-}
-
-.avatar-inuse {
-  background: linear-gradient(135deg, #FFF1F2, #FFE4E6);
-}
-
-.avatar-maintenance {
-  background: linear-gradient(135deg, #FFFBEB, #FEF3C7);
-}
-
-.avatar-icon {
-  color: inherit;
-}
-
-/* Avatar icon color per status */
-.avatar-available .avatar-icon { color: #16A34A; }
-.avatar-inuse .avatar-icon { color: #DC2626; }
-.avatar-maintenance .avatar-icon { color: #D97706; }
 
 .card-body {
   flex: 1;
@@ -1972,6 +2005,14 @@ onUnmounted(() => {
   align-items: center;
   gap: 6rpx;
   color: #9CA3AF;
+}
+
+.card-spec {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  line-height: 1.55;
+  color: #64748B;
 }
 
 .card-meta-icon {

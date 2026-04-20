@@ -62,6 +62,29 @@ export const normalizeActiveRide = (ride = {}, fallback = {}) => {
     ride.totalCost ?? ride.estimatedCost ?? ride.reservedTotal ?? fallback.totalCost ?? fallback.estimatedCost,
     0
   )
+  const metadata = {
+    profileSlug: String(ride.profileSlug ?? fallback.profileSlug ?? '').trim(),
+    imageUrl: String(ride.imageUrl ?? fallback.imageUrl ?? '').trim(),
+    photoCredit: String(ride.photoCredit ?? fallback.photoCredit ?? '').trim(),
+    marketCode: String(ride.marketCode ?? fallback.marketCode ?? '').trim(),
+    marketLabel: String(ride.marketLabel ?? fallback.marketLabel ?? '').trim(),
+    serviceMode: String(ride.serviceMode ?? fallback.serviceMode ?? '').trim(),
+    serviceLabel: String(ride.serviceLabel ?? fallback.serviceLabel ?? '').trim(),
+    performanceSummary: String(ride.performanceSummary ?? fallback.performanceSummary ?? '').trim(),
+    startBatteryLevel: toNumber(ride.startBatteryLevel ?? fallback.startBatteryLevel, 0),
+    estimatedReturnBattery: toNumber(ride.estimatedReturnBattery ?? fallback.estimatedReturnBattery, 0),
+    electricityFeeEstimate: toNumber(ride.electricityFeeEstimate ?? fallback.electricityFeeEstimate, 0),
+    overtimeFeePer15Minutes: toNumber(ride.overtimeFeePer15Minutes ?? fallback.overtimeFeePer15Minutes, 0),
+    parkingRule: String(ride.parkingRule ?? fallback.parkingRule ?? '').trim(),
+    damagePolicy: String(ride.damagePolicy ?? fallback.damagePolicy ?? '').trim(),
+    insurancePolicy: String(ride.insurancePolicy ?? fallback.insurancePolicy ?? '').trim(),
+    liabilityAccepted: Boolean(ride.liabilityAccepted ?? fallback.liabilityAccepted),
+    gallery: Array.isArray(ride.gallery) && ride.gallery.length ? ride.gallery : (Array.isArray(fallback.gallery) ? fallback.gallery : []),
+    telemetry: Array.isArray(ride.telemetry) && ride.telemetry.length ? ride.telemetry : (Array.isArray(fallback.telemetry) ? fallback.telemetry : []),
+    specs: ride.specs && typeof ride.specs === 'object'
+      ? { ...(fallback.specs || {}), ...ride.specs }
+      : (fallback.specs && typeof fallback.specs === 'object' ? { ...fallback.specs } : null)
+  }
 
   return {
     bookingId,
@@ -80,7 +103,8 @@ export const normalizeActiveRide = (ride = {}, fallback = {}) => {
     lng: longitudeValue,
     liveLocationLabel: String(ride.liveLocationLabel ?? fallback.liveLocationLabel ?? '').trim(),
     status: normalizeStatus(ride.status ?? ride.bookingStatus ?? fallback.status ?? fallback.bookingStatus),
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
+    ...metadata
   }
 }
 

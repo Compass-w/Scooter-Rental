@@ -72,6 +72,54 @@
         </view>
       </view>
 
+      <view v-if="rideVehicle" class="trip-vehicle-card">
+        <image class="trip-vehicle-image" :src="rideVehicle.imageUrl" mode="aspectFill" />
+        <view class="trip-vehicle-copy">
+          <text class="trip-vehicle-title">{{ rideVehicle.displayName }}</text>
+          <text class="trip-vehicle-sub">{{ rideVehicle.performanceSummary }}</text>
+          <view class="trip-vehicle-chips">
+            <view class="trip-vehicle-chip">
+              <text class="trip-vehicle-chip-text">{{ rideVehicle.specs.topSpeedKph }} km/h</text>
+            </view>
+            <view class="trip-vehicle-chip">
+              <text class="trip-vehicle-chip-text">{{ rideVehicle.specs.rangeKm }} km range</text>
+            </view>
+            <view class="trip-vehicle-chip">
+              <text class="trip-vehicle-chip-text">{{ rideVehicle.specs.motorPowerW }} W</text>
+            </view>
+          </view>
+          <text class="trip-vehicle-credit">{{ rideVehicle.photoCredit }}</text>
+        </view>
+      </view>
+
+      <view v-if="activeRide" class="trip-return-card">
+        <view class="trip-return-header">
+          <text class="trip-return-title">Return Check</text>
+          <view :class="['trip-return-badge', `trip-return-${returnCompliance.status}`]">
+            <text class="trip-return-badge-text">{{ returnCompliance.label }}</text>
+          </view>
+        </view>
+        <text class="trip-return-copy">{{ returnCompliance.detail }}</text>
+        <view class="trip-return-grid">
+          <view class="trip-return-item">
+            <text class="trip-return-label">Return mode</text>
+            <text class="trip-return-value">{{ activeRide.marketLabel || 'China Mainland' }} · {{ activeRide.serviceLabel || 'Sharing Scooters' }}</text>
+          </view>
+          <view class="trip-return-item">
+            <text class="trip-return-label">Battery delta</text>
+            <text class="trip-return-value">{{ activeRide.startBatteryLevel || 0 }}% → {{ activeRide.estimatedReturnBattery || 0 }}%</text>
+          </view>
+          <view class="trip-return-item">
+            <text class="trip-return-label">Electricity fee</text>
+            <text class="trip-return-value">{{ formatMoney(activeRide.electricityFeeEstimate || 0) }}</text>
+          </view>
+          <view class="trip-return-item">
+            <text class="trip-return-label">Overtime rule</text>
+            <text class="trip-return-value">{{ formatMoney(activeRide.overtimeFeePer15Minutes || 0) }}/15 min</text>
+          </view>
+        </view>
+      </view>
+
       <!-- Main content stack -->
       <view class="trip-content">
 
@@ -259,6 +307,38 @@
           </view>
         </view>
 
+        <view v-if="rideVehicle" class="booking-visual-card">
+          <image class="booking-visual-image" :src="rideVehicle.imageUrl" mode="aspectFill" />
+          <view class="booking-visual-copy">
+            <text class="booking-visual-title">{{ rideVehicle.displayName }}</text>
+            <text class="booking-visual-sub">{{ rideVehicle.performanceSummary }}</text>
+            <view class="booking-visual-meta">
+              <text class="booking-visual-meta-text">{{ rideVehicle.specs.topSpeedKph }} km/h</text>
+              <text class="booking-visual-meta-text">{{ rideVehicle.specs.rangeKm }} km range</text>
+              <text class="booking-visual-meta-text">{{ rideVehicle.specs.maxLoadKg }} kg load</text>
+            </view>
+          </view>
+        </view>
+
+        <view class="booking-policy-grid">
+          <view class="booking-policy-card">
+            <text class="booking-policy-title">Return & Parking</text>
+            <text class="booking-policy-copy">{{ activeRide.parkingRule || returnCompliance.detail }}</text>
+          </view>
+          <view class="booking-policy-card">
+            <text class="booking-policy-title">Damage on Return</text>
+            <text class="booking-policy-copy">{{ activeRide.damagePolicy || 'Damage photos and a staff review are required before closing a disputed ride.' }}</text>
+          </view>
+          <view class="booking-policy-card">
+            <text class="booking-policy-title">Insurance & Disclaimer</text>
+            <text class="booking-policy-copy">{{ activeRide.insurancePolicy || 'Insurance reminders and rider liability exclusions are shown before unlock.' }}</text>
+          </view>
+          <view class="booking-policy-card">
+            <text class="booking-policy-title">Telemetry</text>
+            <text class="booking-policy-copy">{{ rideTelemetryText }}</text>
+          </view>
+        </view>
+
         <!-- Quick extend section -->
         <view class="booking-extend-section">
           <text class="booking-section-title">Extend Booking</text>
@@ -409,6 +489,7 @@ import { reportIssue } from '@/api/issue.js'
 import { getScooterById } from '@/api/scooter.js'
 import { clearStoredActiveRide, findActiveRide, getRideEndTime, getStoredActiveRide, getStoredUserId, normalizeActiveRide, setStoredActiveRide } from '@/utils/activeRide.js'
 import { formatCny } from '@/utils/pricing.js'
+import { enrichScooter, evaluateReturnCompliance } from '@/utils/scooterCatalog.js'
 
 const extensionOptions = [15, 30, 60]
 const extensionLabels = extensionOptions.map(minutes => `${minutes} min`)
@@ -732,6 +813,27 @@ const heroChip = computed(() => {
   return activeRide.value ? 'Ride in progress' : 'Ready when you are'
 })
 const durationLabel = computed(() => `${Number(activeRide.value?.durationMinutes || 0)} min reserved`)
+const rideVehicle = computed(() => {
+  if (!activeRide.value) return null
+  return enrichScooter({
+    ...activeRide.value,
+    model: activeRide.value.scooterModel,
+    batteryLevel: activeRide.value.startBatteryLevel || activeRide.value.estimatedReturnBattery || 86,
+    imageUrl: activeRide.value.imageUrl,
+    gallery: activeRide.value.gallery,
+    photoCredit: activeRide.value.photoCredit,
+    specs: activeRide.value.specs,
+    telemetry: activeRide.value.telemetry,
+    performanceSummary: activeRide.value.performanceSummary
+  })
+})
+const returnCompliance = computed(() => evaluateReturnCompliance(activeRide.value || {}))
+const rideTelemetryText = computed(() => {
+  if (!rideVehicle.value?.telemetry?.length) {
+    return 'GPS, mileage, battery, and unlock status will be synced to the backend once the scooter is paired.'
+  }
+  return rideVehicle.value.telemetry.join(' · ')
+})
 
 const formatDateTime = (value) => {
   if (!value) return 'Not available'
@@ -804,12 +906,14 @@ const enrichRideDetails = async (ride) => {
   if (hasPricing && hasModel) return ride
   try {
     const scooter = await getScooterById(ride.scooterId)
-    return normalizeActiveRide({
+    return normalizeActiveRide(enrichScooter({
       ...ride,
       scooterModel: hasModel ? ride.scooterModel : scooter?.model,
+      model: hasModel ? ride.scooterModel : scooter?.model,
+      batteryLevel: ride.startBatteryLevel || scooter?.batteryLevel || ride.estimatedReturnBattery || 82,
       basePrice: hasPricing ? ride.basePrice : scooter?.basePrice,
       pricePerMinute: hasPricing ? ride.pricePerMinute : scooter?.pricePerMin
-    }, ride)
+    }), ride)
   } catch (error) {
     console.error('Failed to enrich ride details:', error)
     return ride
@@ -867,9 +971,17 @@ const handleExtendRide = async () => {
 
 const handleEndRide = () => {
   if (!activeRide.value?.bookingId || busyAction.value) return
+  if (returnCompliance.value.status === 'outside') {
+    uni.showModal({
+      title: 'Return zone check failed',
+      content: `${returnCompliance.value.detail} Move the scooter to a permitted zone before trying again.`,
+      showCancel: false
+    })
+    return
+  }
   uni.showModal({
     title: 'End this ride?',
-    content: 'This will finish the current booking and calculate your final total.',
+    content: `This will finish the current booking and calculate your final total. ${returnCompliance.value.detail}`,
     success: async ({ confirm }) => {
       if (!confirm) return
       busyAction.value = 'end'
@@ -1718,6 +1830,192 @@ onUnload(() => {
 .booking-info-preview-label { display: block; font-size: 25rpx; color: #94A3B8; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8rpx; }
 .booking-info-preview-value { display: block; font-size: 29rpx; color: #475569; font-weight: 600; line-height: 1.4; }
 
+.trip-vehicle-card,
+.trip-return-card,
+.booking-visual-card,
+.booking-policy-card {
+  background: rgba(255, 255, 255, 0.97);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  box-shadow: 0 16px 38px rgba(15, 23, 42, 0.06);
+  border-radius: 24rpx;
+}
+
+.trip-vehicle-card {
+  display: grid;
+  grid-template-columns: 240rpx minmax(0, 1fr);
+  gap: 18rpx;
+  padding: 18rpx;
+  margin-bottom: 18rpx;
+}
+
+.trip-vehicle-image,
+.booking-visual-image {
+  width: 100%;
+  border-radius: 22rpx;
+  min-height: 210rpx;
+}
+
+.trip-vehicle-copy,
+.booking-visual-copy {
+  min-width: 0;
+}
+
+.trip-vehicle-title,
+.booking-visual-title {
+  display: block;
+  font-size: 32rpx;
+  font-weight: 800;
+  color: #0F172A;
+}
+
+.trip-vehicle-sub,
+.booking-visual-sub {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  line-height: 1.65;
+  color: #64748B;
+}
+
+.trip-vehicle-chips,
+.booking-visual-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-top: 14rpx;
+}
+
+.trip-vehicle-chip,
+.booking-visual-meta-text {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12rpx 16rpx;
+  border-radius: 999rpx;
+  background: #EFF6FF;
+  color: #1D4ED8;
+  font-size: 22rpx;
+  font-weight: 700;
+}
+
+.trip-vehicle-chip-text {
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.trip-vehicle-credit {
+  display: block;
+  margin-top: 14rpx;
+  font-size: 21rpx;
+  color: #94A3B8;
+}
+
+.trip-return-card {
+  padding: 22rpx;
+  margin-bottom: 18rpx;
+}
+
+.trip-return-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14rpx;
+  margin-bottom: 12rpx;
+}
+
+.trip-return-title {
+  font-size: 30rpx;
+  font-weight: 800;
+  color: #0F172A;
+}
+
+.trip-return-badge {
+  padding: 10rpx 16rpx;
+  border-radius: 999rpx;
+}
+
+.trip-return-pass {
+  background: #DCFCE7;
+}
+
+.trip-return-warning,
+.trip-return-manual-review {
+  background: #FEF3C7;
+}
+
+.trip-return-outside {
+  background: #FFE4E6;
+}
+
+.trip-return-badge-text {
+  font-size: 22rpx;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.trip-return-copy,
+.booking-policy-copy {
+  font-size: 24rpx;
+  line-height: 1.65;
+  color: #64748B;
+}
+
+.trip-return-grid,
+.booking-policy-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16rpx;
+  margin-top: 16rpx;
+}
+
+.trip-return-item {
+  padding: 18rpx;
+  border-radius: 18rpx;
+  background: #F8FAFC;
+}
+
+.trip-return-label {
+  display: block;
+  font-size: 22rpx;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #94A3B8;
+}
+
+.trip-return-value {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 26rpx;
+  font-weight: 700;
+  line-height: 1.55;
+  color: #0F172A;
+}
+
+.booking-visual-card {
+  display: grid;
+  grid-template-columns: 240rpx minmax(0, 1fr);
+  gap: 18rpx;
+  padding: 18rpx;
+  margin-bottom: 18rpx;
+}
+
+.booking-policy-grid {
+  margin-bottom: 18rpx;
+}
+
+.booking-policy-card {
+  padding: 22rpx;
+}
+
+.booking-policy-title {
+  display: block;
+  margin-bottom: 10rpx;
+  font-size: 28rpx;
+  font-weight: 800;
+  color: #0F172A;
+}
+
 @media (hover: hover) {
   .trip-status-pill:hover,
   .trip-sync-badge:hover,
@@ -1728,12 +2026,16 @@ onUnload(() => {
 
   .trip-hero:hover,
   .trip-scooter-strip:hover,
+  .trip-vehicle-card:hover,
+  .trip-return-card:hover,
   .trip-card:hover,
   .trip-empty-state:hover,
   .trip-preview-tile:hover,
   .booking-header:hover,
   .booking-order-card:hover,
   .booking-info-section:hover,
+  .booking-visual-card:hover,
+  .booking-policy-card:hover,
   .booking-extend-section:hover,
   .booking-empty-card:hover,
   .booking-info-preview-cell:hover {
@@ -1830,6 +2132,10 @@ onUnload(() => {
   .trip-timer-value { font-size: 58rpx; }
   .trip-extend-grid { gap: 10rpx; }
   .booking-info-grid { grid-template-columns: 1fr; }
+  .trip-vehicle-card,
+  .booking-visual-card,
+  .trip-return-grid,
+  .booking-policy-grid { grid-template-columns: 1fr; }
   .booking-empty-info-grid { grid-template-columns: 1fr; }
   .booking-btn-row { flex-direction: column; }
   .trip-preview-tiles { grid-template-columns: repeat(2, 1fr); }

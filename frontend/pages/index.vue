@@ -65,32 +65,11 @@
         </view>
         <view class="hero-scooter-graphic">
           <view class="scooter-glow"></view>
-          <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" class="scooter-svg">
-            <!-- Body -->
-            <rect x="70" y="95" width="70" height="16" rx="8" fill="#2563EB"/>
-            <!-- Stem -->
-            <rect x="128" y="55" width="10" height="50" rx="5" fill="#1d4ed8"/>
-            <!-- Handlebar -->
-            <rect x="110" y="52" width="46" height="8" rx="4" fill="#1F2937"/>
-            <!-- Deck -->
-            <rect x="60" y="108" width="80" height="10" rx="5" fill="#1F2937"/>
-            <!-- Back wheel -->
-            <circle cx="80" cy="140" r="22" fill="none" stroke="#1F2937" stroke-width="7"/>
-            <circle cx="80" cy="140" r="10" fill="#2563EB"/>
-            <circle cx="80" cy="140" r="4" fill="#fff"/>
-            <!-- Front wheel -->
-            <circle cx="150" cy="140" r="22" fill="none" stroke="#1F2937" stroke-width="7"/>
-            <circle cx="150" cy="140" r="10" fill="#2563EB"/>
-            <circle cx="150" cy="140" r="4" fill="#fff"/>
-            <!-- Fork -->
-            <line x1="133" y1="100" x2="150" y2="130" stroke="#1d4ed8" stroke-width="7" stroke-linecap="round"/>
-            <!-- Light -->
-            <circle cx="156" cy="58" r="6" fill="#93C5FD"/>
-            <!-- Speed lines -->
-            <line x1="20" y1="130" x2="55" y2="130" stroke="#93C5FD" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
-            <line x1="28" y1="142" x2="57" y2="142" stroke="#BFDBFE" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
-            <line x1="15" y1="118" x2="50" y2="118" stroke="#DBEAFE" stroke-width="2" stroke-linecap="round" opacity="0.4"/>
-          </svg>
+          <image class="hero-scooter-photo" :src="heroVehicle.imageUrl" mode="aspectFill" />
+          <view class="hero-photo-caption">
+            <text class="hero-photo-title">{{ heroVehicle.displayName }}</text>
+            <text class="hero-photo-copy">{{ heroVehicle.performanceSummary }}</text>
+          </view>
         </view>
         <view class="hero-card-float hero-card-2">
           <!-- Location pin icon -->
@@ -116,6 +95,26 @@
           <view class="float-card-info">
             <text class="float-card-title">CO Saved</text>
             <text class="float-card-sub">3.2 kg this week</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="section section-light">
+      <view class="section-inner">
+        <view class="section-badge">
+          <text class="section-badge-text">Real Fleet</text>
+        </view>
+        <text class="section-title">Real scooters, not placeholders</text>
+        <text class="section-subtitle">The homepage, booking sheet, and ride pages now use real scooter photography together with model-specific range, battery, and pricing details.</text>
+        <view class="fleet-grid">
+          <view v-for="vehicle in fleetShowcase" :key="vehicle.slug" class="fleet-card">
+            <image class="fleet-image" :src="vehicle.imageUrl" mode="aspectFill" />
+            <view class="fleet-copy">
+              <text class="fleet-name">{{ vehicle.displayName }}</text>
+              <text class="fleet-meta">{{ vehicle.specs.topSpeedKph }} km/h · {{ vehicle.specs.rangeKm }} km range · {{ vehicle.specs.motorPowerW }} W</text>
+              <text class="fleet-desc">{{ vehicle.performanceSummary }}</text>
+            </view>
           </view>
         </view>
       </view>
@@ -185,6 +184,28 @@
             </view>
             <text class="step-title">Ride & Park</text>
             <text class="step-desc">Enjoy your journey and park in any designated zone. End trip with one tap.</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="section section-gradient" id="business-plan">
+      <view class="section-inner">
+        <view class="section-badge">
+          <text class="section-badge-text">Business Model</text>
+        </view>
+        <text class="section-title">Two rental models, one operating platform</text>
+        <text class="section-subtitle">ScooterGo now presents both the sharing-scooter model and the walk-in / remote reservation model, including backend operations, battery rules, and return checks.</text>
+        <view class="business-grid">
+          <view v-for="model in businessModels" :key="model.title" class="business-card">
+            <text class="business-card-title">{{ model.title }}</text>
+            <text class="business-card-desc">{{ model.description }}</text>
+            <view class="business-points">
+              <view v-for="point in model.points" :key="point" class="business-point">
+                <view class="business-point-dot"></view>
+                <text class="business-point-text">{{ point }}</text>
+              </view>
+            </view>
           </view>
         </view>
       </view>
@@ -349,7 +370,7 @@
           </view>
 
           <!-- Business -->
-          <view class="pricing-card" id="business-plan">
+          <view class="pricing-card">
             <text class="plan-name">Day & Week Passes</text>
             <view class="plan-price-row">
               <text class="plan-currency">RMB</text>
@@ -415,6 +436,22 @@
       </view>
     </view>
 
+    <view class="section section-light">
+      <view class="section-inner">
+        <view class="section-badge">
+          <text class="section-badge-text">Safety & Liability</text>
+        </view>
+        <text class="section-title">Insurance and rider responsibility are explicit</text>
+        <text class="section-subtitle">Traffic insurance prompts, parking liability, and damage responsibility are now surfaced directly in the signup, booking, and ride-ending flows.</text>
+        <view class="safety-grid">
+          <view v-for="item in safetyResponsibilities" :key="item.title" class="safety-card">
+            <text class="safety-title">{{ item.title }}</text>
+            <text class="safety-copy">{{ item.copy }}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
     <!-- ===== TESTIMONIALS ===== -->
     <view class="section section-light">
       <view class="section-inner">
@@ -464,10 +501,53 @@ import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import BaseLayout from '@/pages/BaseLayout.vue'
 import { HOME_PRICING } from '@/utils/pricing.js'
+import { enrichScooter, getAlternativeScooterProfiles } from '@/utils/scooterCatalog.js'
 
 const pendingSection = ref('')
 const isMobileLayout = ref(false)
 const locationsExpanded = ref(false)
+const fleetShowcase = ref(
+  getAlternativeScooterProfiles('Ninebot Max G2')
+    .slice(0, 3)
+    .map(profile => enrichScooter({ model: profile.displayName, batteryLevel: 88 }))
+)
+const heroVehicle = computed(() => fleetShowcase.value[0] || enrichScooter({ model: 'Ninebot Max G2', batteryLevel: 92 }))
+const businessModels = ref([
+  {
+    title: 'Sharing Scooters',
+    description: 'For dockless or semi-dockless city sharing operations.',
+    points: [
+      'Scooter hardware includes GPS real-time positioning, live mileage, real-time battery telemetry, QR unlock, and an assumed communication module that uploads trip data to the backend.',
+      'China app flow requires real-name verification before unlock; UK app flow requires a saved credit card before unlock.',
+      'Users unlock by scanning QR codes and return through the app, with permitted parking-zone checks before ride closure.',
+      'Backend handles automatic billing, charging management, vehicle deployment and collection, staff scheduling, and fault scooter management.'
+    ]
+  },
+  {
+    title: 'Walk-in and Rent',
+    description: 'For store pickup, store return, or remote reservation with in-store handover.',
+    points: [
+      'Real-time GPS and battery telemetry are optional, but the booking flow still displays pickup battery, return battery, and the electricity-fee difference.',
+      'In-store rental can skip full app registration because the clerk can create the rental record and bind a credit card for the customer.',
+      'Remote rental supports web or app booking, store pickup, store return, overdue reminders, and automatic extra charging if the scooter is not returned on time.',
+      'The order interface now includes scooter images, performance descriptions, model switching, and automatic pricing updates when a different scooter type is chosen.'
+    ]
+  }
+])
+const safetyResponsibilities = ref([
+  {
+    title: 'Traffic Insurance',
+    copy: 'Riders now see insurance reminders and local coverage notes before unlocking, so the service makes accident coverage and exclusions visible instead of hidden in a footer.'
+  },
+  {
+    title: 'Liability Disclaimer',
+    copy: 'The booking flow requires the rider to acknowledge that traffic-law compliance, unsafe parking fines, and uncovered damage can still become the rider’s responsibility.'
+  },
+  {
+    title: 'Damage & Fault Closure',
+    copy: 'Return handling now explicitly includes damage checks, issue reporting, and backend escalation for scooters that should be held for maintenance instead of being released back into inventory.'
+  }
+])
 
 const cities = ref([
   { name: 'Shanghai',   mobileName: 'Shanghai', flag: '', live: true  },
@@ -948,7 +1028,6 @@ onUnmounted(() => {
   background: #E5E7EB;
 }
 
-/* Scooter SVG graphic */
 .hero-scooter-graphic {
   position: relative;
   width: 500rpx;
@@ -966,12 +1045,42 @@ onUnmounted(() => {
   border-radius: 50%;
 }
 
-.scooter-svg {
-  width: 440rpx;
-  height: 440rpx;
+.hero-scooter-photo {
+  width: 420rpx;
+  height: 420rpx;
+  border-radius: 48rpx;
+  object-fit: cover;
   position: relative;
   z-index: 1;
   animation: scooter-float 3.5s ease-in-out infinite;
+  box-shadow: 0 28rpx 60rpx rgba(37, 99, 235, 0.18);
+}
+
+.hero-photo-caption {
+  position: absolute;
+  left: 30rpx;
+  right: 30rpx;
+  bottom: 28rpx;
+  z-index: 2;
+  padding: 18rpx 22rpx;
+  border-radius: 24rpx;
+  background: rgba(15, 23, 42, 0.74);
+  backdrop-filter: blur(14px);
+}
+
+.hero-photo-title {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #FFFFFF;
+}
+
+.hero-photo-copy {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.76);
 }
 
 @keyframes scooter-float {
@@ -1447,6 +1556,108 @@ onUnmounted(() => {
   border: none;
 }
 
+.fleet-grid,
+.business-grid,
+.safety-grid {
+  display: grid;
+  gap: 28rpx;
+}
+
+.fleet-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.fleet-card,
+.business-card,
+.safety-card {
+  background: #FFFFFF;
+  border-radius: 30rpx;
+  border: 1rpx solid #E5E7EB;
+  box-shadow: 0 8rpx 26rpx rgba(15, 23, 42, 0.05);
+}
+
+.fleet-card {
+  overflow: hidden;
+}
+
+.fleet-image {
+  width: 100%;
+  height: 280rpx;
+}
+
+.fleet-copy {
+  padding: 28rpx;
+}
+
+.fleet-name,
+.business-card-title,
+.safety-title {
+  display: block;
+  font-size: 32rpx;
+  font-weight: 800;
+  color: #0F172A;
+}
+
+.fleet-meta {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  color: #1D4ED8;
+  font-weight: 700;
+}
+
+.fleet-desc,
+.business-card-desc,
+.safety-copy {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  line-height: 1.7;
+  color: #64748B;
+}
+
+.business-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.business-card,
+.safety-card {
+  padding: 34rpx;
+}
+
+.business-points {
+  margin-top: 20rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.business-point {
+  display: flex;
+  align-items: flex-start;
+  gap: 12rpx;
+}
+
+.business-point-dot {
+  width: 12rpx;
+  height: 12rpx;
+  margin-top: 12rpx;
+  border-radius: 50%;
+  background: #2563EB;
+  flex-shrink: 0;
+}
+
+.business-point-text {
+  flex: 1;
+  font-size: 23rpx;
+  line-height: 1.65;
+  color: #475569;
+}
+
+.safety-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 
 /* ========== Locations ========== */
 
@@ -1740,6 +1951,9 @@ onUnmounted(() => {
   .step-card:hover,
   .feature-card:hover,
   .pricing-card:hover,
+  .fleet-card:hover,
+  .business-card:hover,
+  .safety-card:hover,
   .review-card:hover,
   .city-card:hover {
     transform: translateY(-6rpx);
@@ -1749,6 +1963,9 @@ onUnmounted(() => {
   .step-card:hover,
   .feature-card:hover,
   .pricing-card:hover,
+  .fleet-card:hover,
+  .business-card:hover,
+  .safety-card:hover,
   .review-card:hover {
     border-color: rgba(37, 99, 235, 0.16);
   }
@@ -1778,6 +1995,13 @@ onUnmounted(() => {
   }
   .pricing-card-featured {
     transform: none;
+  }
+  .fleet-grid,
+  .safety-grid {
+    grid-template-columns: 1fr;
+  }
+  .business-grid {
+    grid-template-columns: 1fr;
   }
   .reviews-grid {
     grid-template-columns: 1fr;
