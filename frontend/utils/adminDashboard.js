@@ -5,16 +5,16 @@ const toSafeNumber = (value, fallback = 0) => {
   return Number.isFinite(parsed) ? parsed : fallback
 }
 
-export const formatCurrency = (value, currency = 'GBP') => {
+export const formatCurrency = (value, currency = 'CNY') => {
   const amount = toSafeNumber(value, 0)
   try {
-    return new Intl.NumberFormat('en-GB', {
+    return new Intl.NumberFormat(currency === 'CNY' ? 'zh-CN' : 'en-GB', {
       style: 'currency',
       currency,
       maximumFractionDigits: 2
     }).format(amount)
   } catch {
-    return `£${amount.toFixed(2)}`
+    return `${currency === 'CNY' ? 'RMB' : currency} ${amount.toFixed(2)}`
   }
 }
 

@@ -828,7 +828,7 @@ const handleManualRefresh = async () => {
 
 onLoad((options) => {
   const incomingPlan = String(options?.plan || options?.preferredPlan || '').trim().toUpperCase()
-  if (['1_HOUR', '1_DAY', '1_WEEK', '1_MONTH'].includes(incomingPlan)) {
+  if (['1_HOUR', '4_HOURS', '1_DAY', '1_WEEK'].includes(incomingPlan)) {
     preferredBookingPlan.value = incomingPlan
   }
 })

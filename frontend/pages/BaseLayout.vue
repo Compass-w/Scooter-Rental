@@ -47,6 +47,20 @@
             <text class="menu-label">My Ride</text>
             <view class="menu-indicator"></view>
           </view>
+
+          <view
+            v-if="canAccessDashboard"
+            class="menu-item-wrap"
+            :class="{ active: currentPage === 'admin-dashboard' }"
+            @tap="goToDashboard"
+          >
+            <svg class="menu-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4 5.5h16M4 12h16M4 18.5h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              <path d="M6 4v16M12 8v12M18 10v10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+            <text class="menu-label">Dashboard</text>
+            <view class="menu-indicator"></view>
+          </view>
         </view>
 
         <!-- Right: Auth area -->
@@ -247,11 +261,16 @@ const actualNavbarHeight = ref(88)
 const isLoggedIn = ref(false)
 const userAvatar = ref('')
 const userName = ref('')
+const userRole = ref('')
 
 const userInitial = computed(() => {
   if (userName.value) return userName.value.charAt(0).toUpperCase()
   return 'U'
 })
+
+const canAccessDashboard = computed(() =>
+  ['ADMIN', 'MANAGER'].includes(String(userRole.value || '').toUpperCase()) || props.currentPage === 'admin-dashboard'
+)
 
 const activeMobileNavPage = computed(() => {
   if (props.currentPage === 'booking' || props.currentPage === 'trip') return 'ride'
@@ -276,14 +295,17 @@ const refreshAuthState = () => {
         const userObj = typeof user === 'string' ? JSON.parse(user) : user
         userAvatar.value = userObj.avatar || userObj.avatarUrl || ''
         userName.value = userObj.name || userObj.nickname || userObj.username || ''
+        userRole.value = userObj.role || ''
       }
     } else {
       isLoggedIn.value = false
       userAvatar.value = ''
       userName.value = ''
+      userRole.value = ''
     }
   } catch (e) {
     isLoggedIn.value = false
+    userRole.value = ''
   }
 }
 
@@ -385,6 +407,11 @@ const goToBooking = () => {
 
 const goToTrip = () => {
   uni.navigateTo({ url: '/pages/active-ride?source=trip' })
+}
+
+const goToDashboard = () => {
+  if (props.currentPage === 'admin-dashboard') return
+  uni.navigateTo({ url: '/pages/admin-dashboard' })
 }
 
 const goToProfile = () => {

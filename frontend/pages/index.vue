@@ -269,7 +269,7 @@
               </svg>
             </view>
             <text class="feature-title">Flexible Pricing</text>
-            <text class="feature-desc">Pay-per-ride or choose a monthly pass. No hidden fees, no surprise charges.</text>
+            <text class="feature-desc">Pay-per-ride or switch to 4-hour, day, or week packages. No hidden fees, no surprise charges.</text>
           </view>
           <!-- 100% Electric & Green  wide card spanning two columns -->
           <view class="feature-card feature-wide">
@@ -340,33 +340,33 @@
           <!-- Pro -->
           <view class="pricing-card pricing-card-featured">
             <view class="plan-badge-popular">Most Popular</view>
-            <text class="plan-name white">Monthly Pass</text>
+            <text class="plan-name white">4 Hour Flex Pass</text>
             <view class="plan-price-row">
               <text class="plan-currency white">RMB</text>
-              <text class="plan-price white">{{ HOME_PRICING.monthlyPass.monthlyPrice.toFixed(2) }}</text>
-              <text class="plan-unit white">/mo</text>
+              <text class="plan-price white">{{ HOME_PRICING.flexPass.fourHourPrice.toFixed(2) }}</text>
+              <text class="plan-unit white">/4h</text>
             </view>
-            <text class="plan-unlock white-muted">Best for daily riders | about RMB {{ HOME_PRICING.monthlyPass.averageDailyPrice.toFixed(2) }}/day</text>
+            <text class="plan-unlock white-muted">Most popular on admin dashboards | save RMB {{ HOME_PRICING.flexPass.savings.toFixed(2) }} vs four 1-hour rides</text>
             <view class="plan-divider light"></view>
             <view class="plan-features">
               <view class="plan-feature">
                 <view class="check-icon white"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></view>
-                <text class="plan-feature-text white">30 days included</text>
+                <text class="plan-feature-text white">240 minutes included</text>
               </view>
               <view class="plan-feature">
                 <view class="check-icon white"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></view>
-                <text class="plan-feature-text white">Lowest long-term cost</text>
+                <text class="plan-feature-text white">Ideal for half-day errands</text>
               </view>
               <view class="plan-feature">
                 <view class="check-icon white"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></view>
-                <text class="plan-feature-text white">Predictable monthly budget</text>
+                <text class="plan-feature-text white">Cheaper than stacking hourly trips</text>
               </view>
               <view class="plan-feature">
                 <view class="check-icon white"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></view>
-                <text class="plan-feature-text white">Priority booking convenience</text>
+                <text class="plan-feature-text white">Smooth handoff for store pickup too</text>
               </view>
             </view>
-            <button class="btn-white-pill plan-btn" @tap="startMonthlyPass">Start Monthly Pass</button>
+            <button class="btn-white-pill plan-btn" @tap="startFlexPass">Start 4 Hour Pass</button>
           </view>
 
           <!-- Business -->
@@ -587,7 +587,7 @@ const reviews = ref([
     name: 'Mei L.',
     city: 'Edinburgh',
     avatar: '',
-    text: 'The monthly pass is an absolute steal. I\'ve basically replaced my bus pass and I\'m arriving at work faster than ever before.'
+    text: 'The 4-hour flex pass is perfect for errands, meetings, and campus days. I stop thinking about topping up every single hour.'
   },
 ])
 
@@ -633,17 +633,17 @@ const goToLogin = () => {
   uni.navigateTo({ url: '/pages/login' })
 }
 
-const startMonthlyPass = () => {
+const startFlexPass = () => {
   if (!hasActiveSession()) {
     uni.navigateTo({ url: '/pages/signup' })
     return
   }
 
   uni.showToast({
-    title: 'Select a scooter to use the monthly pass',
+    title: 'Select a scooter to use the 4 hour pass',
     icon: 'none'
   })
-  uni.navigateTo({ url: '/pages/find-scooter?plan=1_MONTH' })
+  uni.navigateTo({ url: '/pages/find-scooter?plan=4_HOURS' })
 }
 
 const scrollToHowItWorks = () => {

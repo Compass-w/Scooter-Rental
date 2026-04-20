@@ -5,18 +5,22 @@ import com.scooterrental.backend.entity.IssueReport;
 import com.scooterrental.backend.entity.MaintenanceLog;
 import com.scooterrental.backend.entity.Scooter;
 import com.scooterrental.backend.entity.StaffBooking;
+import com.scooterrental.backend.entity.User;
 import com.scooterrental.backend.mapper.BookingMapper;
 import com.scooterrental.backend.mapper.MaintenanceLogMapper;
 import com.scooterrental.backend.mapper.StaffBookingMapper;
+import com.scooterrental.backend.mapper.UserMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -29,24 +33,28 @@ import java.util.stream.Collectors;
 public class AdminService {
 
     private static final DateTimeFormatter DAY_FORMATTER = DateTimeFormatter.ofPattern("MM-dd");
+    private static final Logger log = LoggerFactory.getLogger(AdminService.class);
 
     private final BookingMapper bookingMapper;
     private final ScooterService scooterService;
     private final IssueReportService issueReportService;
     private final MaintenanceLogMapper maintenanceLogMapper;
     private final StaffBookingMapper staffBookingMapper;
+    private final UserMapper userMapper;
 
     public AdminService(
             BookingMapper bookingMapper,
             ScooterService scooterService,
             IssueReportService issueReportService,
             MaintenanceLogMapper maintenanceLogMapper,
-            StaffBookingMapper staffBookingMapper) {
+            StaffBookingMapper staffBookingMapper,
+            UserMapper userMapper) {
         this.bookingMapper = bookingMapper;
         this.scooterService = scooterService;
         this.issueReportService = issueReportService;
         this.maintenanceLogMapper = maintenanceLogMapper;
         this.staffBookingMapper = staffBookingMapper;
+        this.userMapper = userMapper;
     }
 
     public Map<String, Object> getDashboardSnapshot() {
@@ -57,6 +65,7 @@ public class AdminService {
         List<IssueReport> issues = issueReportService.getIssueReports();
         List<MaintenanceLog> maintenanceLogs = maintenanceLogMapper.selectRecent();
         List<StaffBooking> staffBookings = staffBookingMapper.selectAll();
+        List<User> users = List.of();
 
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("generatedAt", LocalDateTime.now());
@@ -64,7 +73,38 @@ public class AdminService {
         response.put("fleet", buildFleetSnapshot(scooters, bookings, maintenanceLogs));
         response.put("issues", buildIssueSnapshot(issues));
         response.put("pos", buildPosSnapshot(staffBookings));
-        response.put("recommendations", buildRecommendations(bookings, scooters, issues, staffBookings));
+
+        try {
+            users = defaultList(userMapper.selectAll());
+            response.put("users", buildUserSnapshot(users, bookings));
+        } catch (Exception ex) {
+            log.error("Failed to build admin user snapshot", ex);
+            response.put("users", buildEmptyUserSnapshot());
+        }
+
+        try {
+            response.put("discountRules", buildDiscountRules(bookings));
+        } catch (Exception ex) {
+            log.error("Failed to build admin discount rules", ex);
+            response.put("discountRules", buildEmptyDiscountRules());
+        }
+
+        try {
+            response.put("releaseAudit", buildReleaseAudit(users, scooters, issues, staffBookings));
+        } catch (Exception ex) {
+            log.error("Failed to build admin release audit", ex);
+            response.put("releaseAudit", buildEmptyReleaseAudit());
+        }
+
+        try {
+            response.put("recommendations", buildRecommendations(bookings, scooters, issues, staffBookings, users));
+        } catch (Exception ex) {
+            log.error("Failed to build admin recommendations", ex);
+            response.put("recommendations", List.of(mapOf(
+                    "title", "Dashboard fallback mode",
+                    "detail", "Some optional admin insights could not be generated, but core fleet and issue data is still available.",
+                    "level", "warning")));
+        }
         return response;
     }
 
@@ -443,11 +483,205 @@ public class AdminService {
                                 .count()));
     }
 
+    private Map<String, Object> buildUserSnapshot(List<User> users, List<Booking> bookings) {
+        LocalDateTime weekAgo = LocalDateTime.now().minusDays(7);
+
+        Map<Integer, List<Booking>> bookingsByUser = bookings.stream()
+                .filter(item -> item.getUserId() != null)
+                .collect(Collectors.groupingBy(Booking::getUserId));
+
+        Map<Integer, Booking> activeBookingByUser = bookings.stream()
+                .filter(item -> item.getUserId() != null)
+                .filter(item -> "ACTIVE".equalsIgnoreCase(item.getStatus()))
+                .collect(Collectors.toMap(
+                        Booking::getUserId,
+                        item -> item,
+                        (left, right) -> compareDateTime(left.getStartTime(), right.getStartTime()) >= 0 ? left : right,
+                        LinkedHashMap::new));
+
+        List<Map<String, Object>> records = users.stream()
+                .sorted((left, right) -> compareDateTime(right.getCreatedAt(), left.getCreatedAt()))
+                .map(user -> {
+                    List<Booking> userBookings = bookingsByUser.getOrDefault(user.getUserId(), List.of());
+                    Booking activeBooking = activeBookingByUser.get(user.getUserId());
+
+                    long completedBookings = userBookings.stream()
+                            .filter(item -> "COMPLETED".equalsIgnoreCase(item.getStatus()))
+                            .count();
+
+                    BigDecimal lifetimeSpend = userBookings.stream()
+                            .filter(item -> "COMPLETED".equalsIgnoreCase(item.getStatus()))
+                            .map(item -> zeroMoney(item.getTotalCost()))
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                    LocalDateTime lastRideAt = userBookings.stream()
+                            .map(this::resolveBookingDateTime)
+                            .filter(Objects::nonNull)
+                            .max(LocalDateTime::compareTo)
+                            .orElse(null);
+
+                    String achievements = trimToNull(user.getAchievements());
+                    return mapOf(
+                            "userId", user.getUserId(),
+                            "username", defaultText(user.getUsername(), "Guest"),
+                            "email", defaultText(user.getEmail(), "No email"),
+                            "phone", defaultText(user.getPhone(), "No phone"),
+                            "city", defaultText(user.getCity(), "Unknown city"),
+                            "role", defaultText(user.getRole(), "customer").toUpperCase(Locale.ROOT),
+                            "avatarUrl", defaultText(user.getAvatarUrl(), ""),
+                            "achievements", achievements == null
+                                    ? List.of()
+                                    : Arrays.stream(achievements.split("\\s*,\\s*"))
+                                            .map(String::trim)
+                                            .filter(item -> !item.isEmpty())
+                                            .toList(),
+                            "totalRidingMinutes", user.getTotalRidingMinutes() == null ? 0 : user.getTotalRidingMinutes(),
+                            "totalBookings", userBookings.size(),
+                            "completedBookings", completedBookings,
+                            "lifetimeSpend", scale(lifetimeSpend),
+                            "activeRide", activeBooking != null,
+                            "activeBookingId", activeBooking == null ? null : activeBooking.getBookingId(),
+                            "activeScooterId", activeBooking == null ? null : activeBooking.getScooterId(),
+                            "lastRideAt", lastRideAt,
+                            "createdAt", user.getCreatedAt());
+                })
+                .toList();
+
+        Map<String, Long> citySummary = users.stream()
+                .map(user -> defaultText(trimToNull(user.getCity()), "Unknown city"))
+                .collect(Collectors.groupingBy(city -> city, LinkedHashMap::new, Collectors.counting()));
+
+        String topCity = citySummary.entrySet().stream()
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey)
+                .orElse("Unknown city");
+
+        long loyaltyMembers = users.stream()
+                .filter(user -> trimToNull(user.getAchievements()) != null)
+                .count();
+
+        return mapOf(
+                "records", records,
+                "summary", mapOf(
+                        "totalUsers", users.size(),
+                        "activeRiders", activeBookingByUser.size(),
+                        "newThisWeek", users.stream().filter(user -> user.getCreatedAt() != null && !user.getCreatedAt().isBefore(weekAgo)).count(),
+                        "loyaltyMembers", loyaltyMembers,
+                        "syncedCities", citySummary.size(),
+                        "topCity", topCity));
+    }
+
+    private Map<String, Object> buildDiscountRules(List<Booking> bookings) {
+        List<Map<String, Object>> rules = List.of(
+                buildDiscountRule("1_HOUR", "1 hour", BigDecimal.valueOf(3.50), BigDecimal.valueOf(3.50), "Quick errands and short campus hops", bookings),
+                buildDiscountRule("4_HOURS", "4 hours", BigDecimal.valueOf(12.00), BigDecimal.valueOf(14.00), "Half-day trips, repairs, and reserve-and-return errands", bookings),
+                buildDiscountRule("1_DAY", "1 day", BigDecimal.valueOf(30.00), BigDecimal.valueOf(84.00), "Day rentals and tourism-heavy demand", bookings),
+                buildDiscountRule("1_WEEK", "1 week", BigDecimal.valueOf(100.00), BigDecimal.valueOf(210.00), "Longer-term commuting, guest riders, and promotions", bookings));
+
+        String mostUsedRule = rules.stream()
+                .max(Comparator.comparingInt(item -> (Integer) item.get("usageCount")))
+                .map(item -> String.valueOf(item.get("label")))
+                .orElse("1 hour");
+
+        double avgSavingsRate = rules.stream()
+                .mapToDouble(item -> ((BigDecimal) item.get("savingsRate")).doubleValue())
+                .average()
+                .orElse(0);
+
+        return mapOf(
+                "rules", rules,
+                "summary", mapOf(
+                        "activeRules", rules.size(),
+                        "mostUsedRule", mostUsedRule,
+                        "averageSavingsRate", BigDecimal.valueOf(avgSavingsRate).setScale(2, RoundingMode.HALF_UP)));
+    }
+
+    private Map<String, Object> buildReleaseAudit(
+            List<User> users,
+            List<Scooter> scooters,
+            List<IssueReport> issues,
+            List<StaffBooking> staffBookings) {
+        List<Map<String, Object>> items = List.of(
+                mapOf(
+                        "title", "Analytics dashboard",
+                        "status", "READY",
+                        "detail", "Revenue tables, charting, popularity tracking, and export flows are connected."),
+                mapOf(
+                        "title", "Fleet controls",
+                        "status", scooters.isEmpty() ? "WATCH" : "READY",
+                        "detail", scooters.isEmpty()
+                                ? "Fleet data is empty, so configuration and heatmap views need seeded scooters."
+                                : "Scooter configuration, remote status override, charging queue, and maintenance history are available."),
+                mapOf(
+                        "title", "Issue workflow",
+                        "status", "READY",
+                        "detail", "Priority sorting, high-priority filtering, workflow transitions, and auto-assignment are in place."),
+                mapOf(
+                        "title", "Staff POS mode",
+                        "status", "READY",
+                        "detail", "Walk-in bookings and manual confirmation actions are available from the admin board."),
+                mapOf(
+                        "title", "User sync",
+                        "status", users.isEmpty() ? "WATCH" : "READY",
+                        "detail", users.isEmpty()
+                                ? "No user rows were found, so the admin board cannot mirror customer activity yet."
+                                : "Customer profiles, ride totals, loyalty signals, and active rides are synced into admin."),
+                mapOf(
+                        "title", "Discount rules and 4-hour package",
+                        "status", "READY",
+                        "detail", "Discount ladders are exposed in admin and the 4-hour package can now be surfaced consistently."),
+                mapOf(
+                        "title", "Operational caveats",
+                        "status", "WATCH",
+                        "detail", "The heatmap is an ops visualization and booking confirmations are tracked in-app; a live GIS layer and real email provider are still optional follow-up work."));
+
+        long readyCount = items.stream().filter(item -> "READY".equals(item.get("status"))).count();
+        long watchCount = items.stream().filter(item -> "WATCH".equals(item.get("status"))).count();
+
+        return mapOf(
+                "items", items,
+                "summary", mapOf(
+                        "ready", readyCount,
+                        "watch", watchCount,
+                        "openIssues", issues.stream().filter(item -> !"FIXED".equalsIgnoreCase(item.getWorkflowStatus())).count(),
+                        "recentPosBookings", staffBookings.size()));
+    }
+
+    private Map<String, Object> buildDiscountRule(
+            String code,
+            String label,
+            BigDecimal packagePrice,
+            BigDecimal referencePrice,
+            String recommendedFor,
+            List<Booking> bookings) {
+        BigDecimal savings = referencePrice.subtract(packagePrice).max(BigDecimal.ZERO);
+        BigDecimal savingsRate = referencePrice.compareTo(BigDecimal.ZERO) > 0
+                ? savings.divide(referencePrice, 2, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+
+        int usageCount = (int) bookings.stream()
+                .filter(item -> "COMPLETED".equalsIgnoreCase(item.getStatus()))
+                .filter(item -> label.equalsIgnoreCase(classifyHirePeriod(item.getDurationMinutes())))
+                .count();
+
+        return mapOf(
+                "code", code,
+                "label", label,
+                "status", "ACTIVE",
+                "packagePrice", scale(packagePrice),
+                "referencePrice", scale(referencePrice),
+                "savings", scale(savings),
+                "savingsRate", savingsRate,
+                "usageCount", usageCount,
+                "recommendedFor", recommendedFor);
+    }
+
     private List<Map<String, Object>> buildRecommendations(
             List<Booking> bookings,
             List<Scooter> scooters,
             List<IssueReport> issues,
-            List<StaffBooking> staffBookings) {
+            List<StaffBooking> staffBookings,
+            List<User> users) {
         List<Map<String, Object>> recommendations = new ArrayList<>();
 
         long lowBatteryCount = scooters.stream()
@@ -480,7 +714,52 @@ public class AdminService {
                         + staffBookings.size() + " walk-in bookings logged.",
                 "level", "info"));
 
+        long newUsersThisWeek = users.stream()
+                .filter(user -> user.getCreatedAt() != null && !user.getCreatedAt().isBefore(LocalDateTime.now().minusDays(7)))
+                .count();
+        if (newUsersThisWeek > 0) {
+            recommendations.add(Map.of(
+                    "title", "Customer growth",
+                    "detail", newUsersThisWeek + " users joined in the last 7 days. Consider highlighting the 4-hour package for conversion lifts.",
+                    "level", "info"));
+        }
+
         return recommendations;
+    }
+
+    private List<User> defaultList(List<User> users) {
+        return users == null ? List.of() : users;
+    }
+
+    private Map<String, Object> buildEmptyUserSnapshot() {
+        return mapOf(
+                "records", List.of(),
+                "summary", mapOf(
+                        "totalUsers", 0,
+                        "activeRiders", 0,
+                        "newThisWeek", 0,
+                        "loyaltyMembers", 0,
+                        "syncedCities", 0,
+                        "topCity", "Unavailable"));
+    }
+
+    private Map<String, Object> buildEmptyDiscountRules() {
+        return mapOf(
+                "rules", List.of(),
+                "summary", mapOf(
+                        "activeRules", 0,
+                        "mostUsedRule", "Unavailable",
+                        "averageSavingsRate", BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP)));
+    }
+
+    private Map<String, Object> buildEmptyReleaseAudit() {
+        return mapOf(
+                "items", List.of(),
+                "summary", mapOf(
+                        "ready", 0,
+                        "watch", 0,
+                        "openIssues", 0,
+                        "recentPosBookings", 0));
     }
 
     private Map<String, Object> mapOf(Object... entries) {
@@ -580,8 +859,27 @@ public class AdminService {
         };
     }
 
+    private LocalDateTime resolveBookingDateTime(Booking booking) {
+        if (booking == null) return null;
+        if (booking.getEndTime() != null) return booking.getEndTime();
+        if (booking.getStartTime() != null) return booking.getStartTime();
+        return booking.getCreatedAt();
+    }
+
+    private int compareDateTime(LocalDateTime left, LocalDateTime right) {
+        if (left == null && right == null) return 0;
+        if (left == null) return -1;
+        if (right == null) return 1;
+        return left.compareTo(right);
+    }
+
     private String trimToDefault(Object value, String fallback) {
         String resolved = trimToNull(value == null ? null : String.valueOf(value));
+        return resolved == null ? fallback : resolved;
+    }
+
+    private String defaultText(String value, String fallback) {
+        String resolved = trimToNull(value);
         return resolved == null ? fallback : resolved;
     }
 

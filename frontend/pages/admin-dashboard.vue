@@ -1,5 +1,5 @@
 <template>
-  <BaseLayout :show-menu="false" :show-footer="false" current-page="admin-dashboard">
+  <BaseLayout :show-menu="true" :show-footer="false" current-page="admin-dashboard">
     <view class="admin-page">
       <view class="admin-shell">
         <view class="admin-hero">
@@ -38,12 +38,12 @@
           <view class="kpi-card">
             <text class="kpi-label">Weekly Revenue</text>
             <text class="kpi-value">{{ formatCurrency(financialSummary.weeklyRevenue) }}</text>
-            <text class="kpi-foot">Backlog ID 19</text>
+            <text class="kpi-foot">Last 7 days of completed bookings</text>
           </view>
           <view class="kpi-card">
             <text class="kpi-label">Daily Revenue</text>
             <text class="kpi-value">{{ formatCurrency(financialSummary.dailyRevenue) }}</text>
-            <text class="kpi-foot">Backlog ID 20</text>
+            <text class="kpi-foot">Today's realised booking revenue</text>
           </view>
           <view class="kpi-card">
             <text class="kpi-label">Average Order Value</text>
@@ -53,7 +53,7 @@
           <view class="kpi-card">
             <text class="kpi-label">Most Popular Period</text>
             <text class="kpi-value">{{ financialSummary.popularPeriod || 'No data' }}</text>
-            <text class="kpi-foot">Backlog IDs 19, 20</text>
+            <text class="kpi-foot">Based on recent completed-booking volume</text>
           </view>
         </view>
 
@@ -74,11 +74,6 @@
               <view>
                 <text class="panel-title">Analytics Dashboard</text>
                 <text class="panel-subtitle">Financial tables, graphical charts, and popular rental periods.</text>
-              </view>
-              <view class="panel-chip-row">
-                <text class="panel-chip">ID 19</text>
-                <text class="panel-chip">ID 20</text>
-                <text class="panel-chip">ID 21</text>
               </view>
             </view>
 
@@ -185,15 +180,170 @@
             </view>
           </view>
 
+          <view class="panel panel-customer">
+            <view class="panel-head">
+              <view>
+                <text class="panel-title">Customer Sync & Pricing Controls</text>
+                <text class="panel-subtitle">Live user sync, package discounts, and a quick backlog audit for remaining rollout work.</text>
+              </view>
+            </view>
+
+            <view class="customer-grid">
+              <view class="user-sync-card">
+                <view class="subpanel-head">
+                  <view>
+                    <text class="subpanel-title">User Sync Center</text>
+                    <text class="subpanel-copy">Customer profiles, activity, loyalty signals, and active rides mirrored into operations.</text>
+                  </view>
+                  <text class="sync-pill">{{ userSummary.totalUsers || 0 }} synced</text>
+                </view>
+
+                <view class="user-summary-grid">
+                  <view class="mini-card">
+                    <text class="mini-title">Active Riders</text>
+                    <text class="mini-value">{{ userSummary.activeRiders || 0 }}</text>
+                  </view>
+                  <view class="mini-card">
+                    <text class="mini-title">New This Week</text>
+                    <text class="mini-value">{{ userSummary.newThisWeek || 0 }}</text>
+                  </view>
+                  <view class="mini-card">
+                    <text class="mini-title">Loyalty Members</text>
+                    <text class="mini-value">{{ userSummary.loyaltyMembers || 0 }}</text>
+                  </view>
+                  <view class="mini-card">
+                    <text class="mini-title">Top City</text>
+                    <text class="mini-value mini-value-compact">{{ userSummary.topCity || 'Unknown' }}</text>
+                  </view>
+                </view>
+
+                <view v-if="pagedUsers.length" class="user-list">
+                  <view
+                    v-for="user in pagedUsers"
+                    :key="user.userId"
+                    class="user-row"
+                  >
+                    <view class="user-row-main">
+                      <view v-if="user.avatarUrl" class="user-avatar-shell">
+                        <image class="user-avatar-image" :src="user.avatarUrl" mode="aspectFill" />
+                      </view>
+                      <view v-else class="user-avatar-shell user-avatar-shell-fallback">
+                        <text class="user-avatar-initial">{{ deriveUserInitial(user.username) }}</text>
+                      </view>
+                      <view class="user-copy">
+                        <view class="user-copy-row">
+                          <text class="user-name">#{{ user.userId }} {{ user.username }}</text>
+                          <text :class="['sync-status-pill', user.activeRide ? 'sync-status-pill-active' : '']">
+                            {{ user.activeRide ? `Ride #${user.activeBookingId}` : 'Idle' }}
+                          </text>
+                        </view>
+                        <text class="user-meta">{{ user.email }} · {{ user.city }} · {{ user.role }}</text>
+                        <text class="user-meta">Bookings {{ user.totalBookings }} · Spend {{ formatCurrency(user.lifetimeSpend) }} · Last ride {{ formatDateTime(user.lastRideAt) }}</text>
+                        <view v-if="user.achievements.length" class="achievement-row">
+                          <text
+                            v-for="achievement in user.achievements"
+                            :key="`${user.userId}-${achievement}`"
+                            class="achievement-pill"
+                          >
+                            {{ achievement }}
+                          </text>
+                        </view>
+                      </view>
+                    </view>
+                  </view>
+                </view>
+                <text v-else class="empty-copy">No synced customer records are available yet.</text>
+
+                <view v-if="syncedUsers.length" class="pagination-row">
+                  <text class="pagination-copy">{{ customerPaginationLabel }}</text>
+                  <view class="pagination-actions">
+                    <button
+                      class="hero-btn hero-btn-ghost hero-btn-small"
+                      :disabled="customerPage <= 1"
+                      @tap="goToCustomerPage(customerPage - 1)"
+                    >
+                      Previous
+                    </button>
+                    <text class="pagination-page">Page {{ customerPage }} / {{ customerTotalPages }}</text>
+                    <button
+                      class="hero-btn hero-btn-ghost hero-btn-small"
+                      :disabled="customerPage >= customerTotalPages"
+                      @tap="goToCustomerPage(customerPage + 1)"
+                    >
+                      Next
+                    </button>
+                  </view>
+                </view>
+              </view>
+
+              <view class="customer-side-grid">
+                <view class="discount-card">
+                  <view class="subpanel-head">
+                    <view>
+                      <text class="subpanel-title">Discount Rules</text>
+                      <text class="subpanel-copy">Package discounts now stay aligned between admin pricing guidance and the booking flow.</text>
+                    </view>
+                    <text class="sync-pill">{{ discountSummary.activeRules || 0 }} active</text>
+                  </view>
+
+                  <view class="discount-list">
+                    <view
+                      v-for="rule in discountRuleRows"
+                      :key="rule.code"
+                      class="discount-row"
+                    >
+                      <view class="discount-row-main">
+                        <view class="discount-title-row">
+                          <text class="discount-name">{{ rule.label }}</text>
+                          <text class="discount-status">{{ rule.status }}</text>
+                        </view>
+                        <text class="discount-meta">
+                          {{ formatCurrency(rule.packagePrice) }} vs {{ formatCurrency(rule.referencePrice) }} list price
+                        </text>
+                        <text class="discount-copy">{{ rule.recommendedFor }}</text>
+                      </view>
+                      <view class="discount-metrics">
+                        <text class="discount-savings">Save {{ formatCurrency(rule.savings) }}</text>
+                        <text class="discount-usage">{{ formatPercent(rule.savingsRate) }} off · {{ rule.usageCount }} uses</text>
+                      </view>
+                    </view>
+                  </view>
+                </view>
+
+                <view class="audit-card">
+                  <view class="subpanel-head">
+                    <view>
+                      <text class="subpanel-title">Backlog Check</text>
+                      <text class="subpanel-copy">A quick pass over the delivery checklist and the remaining caveats still worth watching.</text>
+                    </view>
+                    <text class="sync-pill">{{ releaseAuditSummary.ready || 0 }} ready</text>
+                  </view>
+
+                  <view class="audit-list">
+                    <view
+                      v-for="item in releaseAuditItems"
+                      :key="item.title"
+                      class="audit-row"
+                    >
+                      <view class="audit-row-head">
+                        <text class="audit-title">{{ item.title }}</text>
+                        <text :class="['audit-status', item.status === 'READY' ? 'audit-status-ready' : 'audit-status-watch']">
+                          {{ item.status }}
+                        </text>
+                      </view>
+                      <text class="audit-copy">{{ item.detail }}</text>
+                    </view>
+                  </view>
+                </view>
+              </view>
+            </view>
+          </view>
+
           <view class="panel panel-fleet">
             <view class="panel-head">
               <view>
                 <text class="panel-title">Fleet Management</text>
                 <text class="panel-subtitle">Configuration, status override, charging queue, maintenance logs, and a heatmap.</text>
-              </view>
-              <view class="panel-chip-row">
-                <text class="panel-chip">ID 16</text>
-                <text class="panel-chip">ID 10</text>
               </view>
             </view>
 
@@ -267,12 +417,22 @@
                 <view v-if="selectedScooter" class="preview-stage">
                   <view class="preview-card-3d">
                     <view class="preview-card-3d-inner">
-                      <image class="preview-main-image" :src="selectedScooter.imageUrl" mode="aspectFit" />
+                      <image class="preview-main-image" :src="activePreviewImage" mode="aspectFit" />
                     </view>
                   </view>
                   <view class="preview-copy-block">
                     <text class="preview-title">#{{ selectedScooter.id }} {{ selectedScooter.displayName }}</text>
                     <text class="preview-summary">{{ selectedScooter.performanceSummary }}</text>
+                    <view class="preview-gallery-strip">
+                      <view
+                        v-for="image in selectedScooterPreviewGallery"
+                        :key="image"
+                        :class="['preview-thumb', image === activePreviewImage ? 'preview-thumb-active' : '']"
+                        @tap="selectPreviewImage(image)"
+                      >
+                        <image class="preview-thumb-image" :src="image" mode="aspectFill" />
+                      </view>
+                    </view>
                     <view class="preview-spec-grid">
                       <view class="preview-spec">
                         <text class="preview-spec-label">Battery</text>
@@ -367,7 +527,7 @@
                 <view class="maintenance-block">
                   <view class="subpanel-head subpanel-tight">
                     <text class="subpanel-title">Maintenance Log</text>
-                    <text class="subpanel-copy">Backlog distinction feature for vehicle service history.</text>
+                    <text class="subpanel-copy">Track service history, diagnostics, and charging follow-up for the selected vehicle.</text>
                   </view>
                   <view class="form-grid">
                     <view class="field">
@@ -415,11 +575,6 @@
                 <text class="panel-title">Issue Tracker</text>
                 <text class="panel-subtitle">Prioritise faults, track workflow, and auto-assign the right maintenance team.</text>
               </view>
-              <view class="panel-chip-row">
-                <text class="panel-chip">ID 13</text>
-                <text class="panel-chip">ID 14</text>
-                <text class="panel-chip">ID 15</text>
-              </view>
             </view>
 
             <view class="issues-summary-row">
@@ -439,9 +594,9 @@
               </view>
             </view>
 
-            <view class="issue-list">
+            <view v-if="pagedIssues.length" class="issue-list">
               <view
-                v-for="issue in displayedIssues"
+                v-for="issue in pagedIssues"
                 :key="issue.issueId"
                 class="issue-card"
               >
@@ -470,6 +625,28 @@
                 </view>
               </view>
             </view>
+            <text v-else class="empty-copy">No issues match the current filter.</text>
+
+            <view v-if="displayedIssues.length" class="pagination-row">
+              <text class="pagination-copy">{{ issuePaginationLabel }}</text>
+              <view class="pagination-actions">
+                <button
+                  class="hero-btn hero-btn-ghost hero-btn-small"
+                  :disabled="issuePage <= 1"
+                  @tap="goToIssuePage(issuePage - 1)"
+                >
+                  Previous
+                </button>
+                <text class="pagination-page">Page {{ issuePage }} / {{ issueTotalPages }}</text>
+                <button
+                  class="hero-btn hero-btn-ghost hero-btn-small"
+                  :disabled="issuePage >= issueTotalPages"
+                  @tap="goToIssuePage(issuePage + 1)"
+                >
+                  Next
+                </button>
+              </view>
+            </view>
           </view>
 
           <view class="panel panel-pos">
@@ -477,10 +654,6 @@
               <view>
                 <text class="panel-title">Staff POS Mode</text>
                 <text class="panel-subtitle">Create walk-in bookings for unregistered users and send confirmation manually.</text>
-              </view>
-              <view class="panel-chip-row">
-                <text class="panel-chip">ID 9</text>
-                <text class="panel-chip">ID 7</text>
               </view>
             </view>
 
@@ -563,7 +736,7 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import BaseLayout from './BaseLayout.vue'
 import {
@@ -582,6 +755,7 @@ import {
   buildBarChartGeometry,
   buildLineChartGeometry,
   exportCsv,
+  formatCompactNumber,
   formatCurrency,
   formatDateTime,
   printReport
@@ -630,6 +804,34 @@ const createEmptySnapshot = () => ({
     },
     recentBookings: []
   },
+  users: {
+    summary: {
+      totalUsers: 0,
+      activeRiders: 0,
+      newThisWeek: 0,
+      loyaltyMembers: 0,
+      syncedCities: 0,
+      topCity: ''
+    },
+    records: []
+  },
+  discountRules: {
+    summary: {
+      activeRules: 0,
+      mostUsedRule: '',
+      averageSavingsRate: 0
+    },
+    rules: []
+  },
+  releaseAudit: {
+    summary: {
+      ready: 0,
+      watch: 0,
+      openIssues: 0,
+      recentPosBookings: 0
+    },
+    items: []
+  },
   recommendations: []
 })
 
@@ -637,10 +839,16 @@ const snapshot = reactive(createEmptySnapshot())
 const loading = ref(false)
 const highPriorityOnly = ref(false)
 const selectedScooterId = ref(null)
+const selectedPreviewImage = ref('')
+const customerPage = ref(1)
+const issuePage = ref(1)
 const maintenanceLogs = ref([])
 const submittingScooter = ref(false)
 const submittingMaintenance = ref(false)
 const submittingPos = ref(false)
+
+const CUSTOMER_PAGE_SIZE = 6
+const ISSUE_PAGE_SIZE = 5
 
 const statusOptions = ['AVAILABLE', 'IN_USE', 'MAINTENANCE', 'LOW_BATTERY', 'REMOTE_LOCKED']
 const priorityOptions = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']
@@ -716,6 +924,39 @@ const displayedIssues = computed(() => {
   if (!highPriorityOnly.value) return records
   return records.filter(item => ['HIGH', 'CRITICAL'].includes(String(item.priority || '').toUpperCase()))
 })
+const userSummary = computed(() => snapshot.users?.summary || {})
+const syncedUsers = computed(() => snapshot.users?.records || [])
+const discountSummary = computed(() => snapshot.discountRules?.summary || {})
+const discountRuleRows = computed(() => snapshot.discountRules?.rules || [])
+const releaseAuditSummary = computed(() => snapshot.releaseAudit?.summary || {})
+const releaseAuditItems = computed(() => snapshot.releaseAudit?.items || [])
+const customerTotalPages = computed(() => Math.max(1, Math.ceil(syncedUsers.value.length / CUSTOMER_PAGE_SIZE)))
+const issueTotalPages = computed(() => Math.max(1, Math.ceil(displayedIssues.value.length / ISSUE_PAGE_SIZE)))
+const pagedUsers = computed(() => {
+  const start = (customerPage.value - 1) * CUSTOMER_PAGE_SIZE
+  return syncedUsers.value.slice(start, start + CUSTOMER_PAGE_SIZE)
+})
+const pagedIssues = computed(() => {
+  const start = (issuePage.value - 1) * ISSUE_PAGE_SIZE
+  return displayedIssues.value.slice(start, start + ISSUE_PAGE_SIZE)
+})
+const customerPaginationLabel = computed(() =>
+  buildPaginationLabel(customerPage.value, CUSTOMER_PAGE_SIZE, syncedUsers.value.length, 'customers')
+)
+const issuePaginationLabel = computed(() =>
+  buildPaginationLabel(issuePage.value, ISSUE_PAGE_SIZE, displayedIssues.value.length, 'issues')
+)
+const selectedScooterPreviewGallery = computed(() => {
+  const gallery = selectedScooter.value?.gallery || []
+  return Array.isArray(gallery) && gallery.length
+    ? gallery.slice(0, 4)
+    : selectedScooter.value?.imageUrl
+      ? [selectedScooter.value.imageUrl]
+      : []
+})
+const activePreviewImage = computed(() =>
+  selectedPreviewImage.value || selectedScooterPreviewGallery.value[0] || selectedScooter.value?.imageUrl || ''
+)
 
 const workflowSummaryText = computed(() => {
   const workflow = issueSummary.value.workflow || {}
@@ -750,6 +991,13 @@ const adminAccessLabel = computed(() => {
 
 const hottestZone = computed(() => snapshot.fleet.hotspots?.[0]?.city || 'No hotspot data')
 
+const buildPaginationLabel = (page, pageSize, total, label) => {
+  if (!total) return `No ${label} to display`
+  const start = (page - 1) * pageSize + 1
+  const end = Math.min(total, start + pageSize - 1)
+  return `Showing ${start}-${end} of ${total} ${label}`
+}
+
 const applySnapshot = (data) => {
   const fresh = createEmptySnapshot()
   Object.assign(snapshot, fresh, data || {})
@@ -775,6 +1023,10 @@ const resetMaintenanceForm = () => {
     batteryLevel: selectedScooter.value?.batteryLevel ? String(selectedScooter.value.batteryLevel) : '100',
     notes: ''
   })
+}
+
+const syncPreviewGallery = () => {
+  selectedPreviewImage.value = selectedScooterPreviewGallery.value[0] || ''
 }
 
 const resetPosForm = () => {
@@ -813,8 +1065,10 @@ const loadDashboard = async () => {
 
     if (selectedScooter.value) {
       hydrateScooterForm(selectedScooter.value)
+      syncPreviewGallery()
       await loadMaintenanceLogs(selectedScooter.value.id)
     } else {
+      selectedPreviewImage.value = ''
       maintenanceLogs.value = snapshot.fleet.maintenanceLogs || []
     }
   } catch (error) {
@@ -842,10 +1096,15 @@ const selectScooter = async (scooter) => {
   selectedScooterId.value = scooter.id
   hydrateScooterForm(scooter)
   resetMaintenanceForm()
+  selectedPreviewImage.value = scooter.gallery?.[0] || scooter.imageUrl || ''
   if (!posForm.scooterId) {
     posForm.scooterId = scooter.id
   }
   await loadMaintenanceLogs(scooter.id)
+}
+
+const selectPreviewImage = (image) => {
+  selectedPreviewImage.value = image
 }
 
 const cycleStatus = async (scooter) => {
@@ -946,6 +1205,15 @@ const autoAssignIssue = async (issue) => {
 
 const toggleHighPriorityOnly = () => {
   highPriorityOnly.value = !highPriorityOnly.value
+  issuePage.value = 1
+}
+
+const goToCustomerPage = (page) => {
+  customerPage.value = Math.min(customerTotalPages.value, Math.max(1, page))
+}
+
+const goToIssuePage = (page) => {
+  issuePage.value = Math.min(issueTotalPages.value, Math.max(1, page))
 }
 
 const handlePosScooterChange = (event) => {
@@ -996,6 +1264,13 @@ const resolvePopularityWidth = (count) => {
   const max = Math.max(...(analytics.value.popularPeriods || []).map(item => Number(item.count || 0)), 1)
   return Math.max(8, (Number(count || 0) / max) * 100)
 }
+
+const formatPercent = (value) => {
+  const parsed = Number(value || 0)
+  return `${Math.round(parsed * 100)}%`
+}
+
+const deriveUserInitial = (value) => String(value || 'U').trim().charAt(0).toUpperCase() || 'U'
 
 const exportDashboardCsv = () => {
   const analyticsRows = (analytics.value.dailyRevenueTable || []).map(item => ({
@@ -1053,6 +1328,19 @@ const exportDashboardPdf = () => {
           item.assignedStaff || 'Unassigned'
         ])
       )
+    },
+    {
+      title: 'Customer Sync',
+      html: renderTableHtml(
+        ['User', 'City', 'Bookings', 'Spend', 'Active Ride'],
+        syncedUsers.value.map(user => [
+          `#${user.userId} ${user.username}`,
+          user.city,
+          formatCompactNumber(user.totalBookings),
+          formatCurrency(user.lifetimeSpend),
+          user.activeRide ? `#${user.activeBookingId}` : 'Idle'
+        ])
+      )
     }
   ])
 
@@ -1065,21 +1353,40 @@ onShow(() => {
   loadDashboard()
   resetPosForm()
 })
+
+watch(
+  () => syncedUsers.value.length,
+  () => {
+    if (customerPage.value > customerTotalPages.value) {
+      customerPage.value = customerTotalPages.value
+    }
+  },
+  { immediate: true }
+)
+
+watch(
+  () => displayedIssues.value.length,
+  () => {
+    if (issuePage.value > issueTotalPages.value) {
+      issuePage.value = issueTotalPages.value
+    }
+  },
+  { immediate: true }
+)
 </script>
 
 <style scoped>
 .admin-page {
   min-height: 100vh;
-  background:
-    radial-gradient(circle at 0% 0%, rgba(66, 153, 225, 0.18), transparent 36%),
-    radial-gradient(circle at 100% 10%, rgba(16, 185, 129, 0.16), transparent 32%),
-    linear-gradient(180deg, #f3f7fb 0%, #edf3f8 50%, #eaf0f6 100%);
+  background: transparent;
 }
 
 .admin-shell {
-  max-width: 1400rpx;
-  margin: 0 auto;
-  padding: 44rpx 30rpx 72rpx;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 36rpx 36rpx 72rpx;
+  box-sizing: border-box;
 }
 
 .admin-hero,
@@ -1093,12 +1400,14 @@ onShow(() => {
 .fleet-form-card,
 .heatmap-card,
 .fleet-side-panel,
+.user-sync-card,
+.discount-card,
+.audit-card,
 .pos-form-card,
 .pos-list-card {
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(203, 213, 225, 0.72);
-  box-shadow: 0 24rpx 64rpx rgba(15, 23, 42, 0.08);
-  backdrop-filter: blur(18rpx);
+  background: #ffffff;
+  border: 1px solid rgba(37, 99, 235, 0.08);
+  box-shadow: 0 18rpx 44rpx rgba(37, 99, 235, 0.08);
 }
 
 .admin-hero {
@@ -1108,6 +1417,7 @@ onShow(() => {
   border-radius: 42rpx;
   padding: 36rpx;
   margin-bottom: 28rpx;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(239, 246, 255, 0.96) 100%);
 }
 
 .hero-copy {
@@ -1120,7 +1430,7 @@ onShow(() => {
   font-size: 24rpx;
   text-transform: uppercase;
   letter-spacing: 0.28em;
-  color: #0f766e;
+  color: #2563eb;
 }
 
 .hero-title {
@@ -1147,7 +1457,9 @@ onShow(() => {
 .heatmap-legend,
 .status-stack,
 .preview-spec-grid,
-.issue-controls {
+.issue-controls,
+.pagination-row,
+.pagination-actions {
   display: flex;
   gap: 16rpx;
   flex-wrap: wrap;
@@ -1167,12 +1479,12 @@ onShow(() => {
 }
 
 .hero-btn-primary {
-  background: linear-gradient(135deg, #0f766e, #0ea5a4);
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
   color: #ffffff;
 }
 
 .hero-btn-secondary {
-  background: #eff6ff;
+  background: rgba(37, 99, 235, 0.08);
   color: #1d4ed8;
 }
 
@@ -1197,8 +1509,9 @@ onShow(() => {
   flex: 1 1 100%;
   border-radius: 26rpx;
   padding: 22rpx 24rpx;
-  background: linear-gradient(145deg, #10233e, #173054);
-  color: #dbeafe;
+  background: linear-gradient(135deg, #eff6ff 0%, #f8fbff 100%);
+  color: #1e3a8a;
+  border: 1px solid rgba(37, 99, 235, 0.1);
 }
 
 .ops-badge-label {
@@ -1206,7 +1519,7 @@ onShow(() => {
   font-size: 22rpx;
   text-transform: uppercase;
   letter-spacing: 0.2em;
-  opacity: 0.75;
+  opacity: 0.7;
   margin-bottom: 10rpx;
 }
 
@@ -1261,6 +1574,10 @@ onShow(() => {
   font-weight: 700;
 }
 
+.mini-value-compact {
+  font-size: 30rpx;
+}
+
 .kpi-foot,
 .mini-copy,
 .subpanel-copy,
@@ -1284,7 +1601,7 @@ onShow(() => {
 }
 
 .recommendation-info {
-  background: linear-gradient(135deg, rgba(14, 165, 233, 0.08), rgba(56, 189, 248, 0.12));
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.06), rgba(147, 197, 253, 0.14));
 }
 
 .recommendation-warning {
@@ -1300,6 +1617,9 @@ onShow(() => {
 .subpanel-title,
 .chart-title,
 .fleet-row-title,
+.user-name,
+.discount-name,
+.audit-title,
 .preview-title,
 .issue-title,
 .pos-row-title,
@@ -1379,6 +1699,9 @@ onShow(() => {
 .fleet-top-grid,
 .fleet-main-grid,
 .analytics-bottom,
+.customer-grid,
+.customer-side-grid,
+.user-summary-grid,
 .pos-grid {
   display: grid;
   gap: 18rpx;
@@ -1386,6 +1709,7 @@ onShow(() => {
 
 .chart-grid,
 .analytics-bottom,
+.customer-grid,
 .fleet-main-grid,
 .pos-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1396,10 +1720,22 @@ onShow(() => {
   margin-bottom: 18rpx;
 }
 
+.customer-side-grid,
+.user-summary-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.customer-side-grid {
+  grid-template-columns: 1fr;
+}
+
 .mini-card,
 .table-card,
 .chart-card,
 .heatmap-card,
+.user-sync-card,
+.discount-card,
+.audit-card,
 .fleet-side-panel,
 .fleet-list-card,
 .fleet-form-card,
@@ -1421,7 +1757,7 @@ onShow(() => {
   min-width: 180rpx;
   border-radius: 22rpx;
   padding: 18rpx;
-  background: #f8fbff;
+  background: linear-gradient(135deg, #eff6ff 0%, #f8fbff 100%);
 }
 
 .status-pill-label,
@@ -1457,7 +1793,7 @@ onShow(() => {
 .popular-row {
   align-items: center;
   border-radius: 22rpx;
-  background: #f8fafc;
+  background: #f8fbff;
   padding: 18rpx 20rpx;
 }
 
@@ -1565,6 +1901,32 @@ onShow(() => {
   justify-content: flex-start;
 }
 
+.preview-gallery-strip,
+.achievement-row {
+  display: flex;
+  gap: 10rpx;
+  flex-wrap: wrap;
+}
+
+.preview-thumb {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 18rpx;
+  overflow: hidden;
+  border: 2rpx solid transparent;
+  background: #e2e8f0;
+}
+
+.preview-thumb-active {
+  border-color: #0ea5e9;
+  box-shadow: 0 8rpx 18rpx rgba(14, 165, 233, 0.18);
+}
+
+.preview-thumb-image {
+  width: 100%;
+  height: 100%;
+}
+
 .preview-title {
   font-size: 34rpx;
   margin-bottom: 12rpx;
@@ -1582,7 +1944,7 @@ onShow(() => {
   flex: 1 1 40%;
   min-width: 180rpx;
   border-radius: 22rpx;
-  background: #f8fbff;
+  background: linear-gradient(135deg, #eff6ff 0%, #f8fbff 100%);
   padding: 16rpx;
 }
 
@@ -1591,8 +1953,8 @@ onShow(() => {
 }
 
 .fleet-row-active {
-  background: linear-gradient(135deg, rgba(14, 165, 233, 0.1), rgba(16, 185, 129, 0.12));
-  border: 1px solid rgba(14, 165, 233, 0.2);
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(147, 197, 253, 0.16));
+  border: 1px solid rgba(37, 99, 235, 0.18);
 }
 
 .fleet-row-main,
@@ -1610,8 +1972,8 @@ onShow(() => {
 .status-btn {
   min-width: 188rpx;
   border-radius: 999rpx;
-  background: #e2e8f0;
-  color: #0f172a;
+  background: rgba(37, 99, 235, 0.08);
+  color: #1d4ed8;
   font-size: 22rpx;
 }
 
@@ -1637,8 +1999,8 @@ onShow(() => {
   width: 100%;
   min-height: 84rpx;
   border-radius: 20rpx;
-  background: #f8fafc;
-  border: 1px solid #dbe4ee;
+  background: #f8fbff;
+  border: 1px solid rgba(37, 99, 235, 0.1);
   padding: 0 18rpx;
   font-size: 26rpx;
   color: #0f172a;
@@ -1659,6 +2021,181 @@ onShow(() => {
   margin-top: 26rpx;
   padding-top: 22rpx;
   border-top: 1px solid #e5edf5;
+}
+
+.sync-pill,
+.discount-status,
+.audit-status,
+.sync-status-pill,
+.achievement-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8rpx 14rpx;
+  border-radius: 999rpx;
+  font-size: 20rpx;
+  font-weight: 700;
+}
+
+.sync-pill,
+.sync-status-pill,
+.achievement-pill {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.sync-status-pill-active {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.user-list,
+.discount-list,
+.audit-list,
+.pagination-row {
+  display: flex;
+  gap: 14rpx;
+}
+
+.user-list,
+.discount-list,
+.audit-list {
+  flex-direction: column;
+}
+
+.user-row,
+.discount-row,
+.audit-row {
+  border-radius: 24rpx;
+  background: #f8fbff;
+  padding: 18rpx 20rpx;
+}
+
+.user-row-main,
+.user-copy,
+.discount-row-main {
+  display: flex;
+  gap: 14rpx;
+}
+
+.user-row-main,
+.user-copy,
+.discount-row-main {
+  align-items: flex-start;
+}
+
+.user-copy,
+.discount-row-main {
+  flex-direction: column;
+}
+
+.user-avatar-shell {
+  width: 84rpx;
+  height: 84rpx;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.user-avatar-shell-fallback {
+  background: linear-gradient(135deg, #0f766e, #0ea5a4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.user-avatar-image {
+  width: 100%;
+  height: 100%;
+}
+
+.user-avatar-initial {
+  color: #ffffff;
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.user-copy {
+  flex: 1;
+}
+
+.user-copy-row,
+.discount-title-row,
+.audit-row-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12rpx;
+}
+
+.user-name,
+.discount-name,
+.audit-title {
+  font-size: 28rpx;
+}
+
+.user-meta,
+.discount-meta,
+.discount-copy,
+.audit-copy,
+.discount-usage {
+  font-size: 22rpx;
+  line-height: 1.55;
+  color: #64748b;
+}
+
+.discount-row,
+.audit-row {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.discount-status {
+  background: rgba(20, 184, 166, 0.12);
+  color: #0f766e;
+}
+
+.discount-metrics {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12rpx;
+  flex-wrap: wrap;
+}
+
+.discount-savings {
+  font-size: 26rpx;
+  font-weight: 700;
+  color: #0f766e;
+}
+
+.audit-status-ready {
+  background: rgba(34, 197, 94, 0.12);
+  color: #15803d;
+}
+
+.audit-status-watch {
+  background: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+}
+
+.pagination-row {
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 18rpx;
+  padding-top: 8rpx;
+}
+
+.pagination-copy,
+.pagination-page {
+  font-size: 22rpx;
+  color: #64748b;
+}
+
+.pagination-page {
+  font-weight: 700;
+  color: #0f172a;
 }
 
 .table-shell,
@@ -1764,7 +2301,7 @@ onShow(() => {
 .issue-card {
   border-radius: 28rpx;
   padding: 20rpx;
-  background: #f8fafc;
+  background: #f8fbff;
 }
 
 .priority-pill {
@@ -1851,6 +2388,7 @@ onShow(() => {
   .recommendation-strip,
   .chart-grid,
   .analytics-bottom,
+  .customer-grid,
   .fleet-top-grid,
   .fleet-main-grid,
   .pos-grid {
@@ -1864,7 +2402,7 @@ onShow(() => {
 
 @media (max-width: 820px) {
   .admin-shell {
-    padding: 24rpx 18rpx 56rpx;
+    padding: 24rpx 20rpx 56rpx;
   }
 
   .admin-hero,
@@ -1873,6 +2411,9 @@ onShow(() => {
   .mini-card,
   .table-card,
   .chart-card,
+  .user-sync-card,
+  .discount-card,
+  .audit-card,
   .fleet-list-card,
   .fleet-form-card,
   .heatmap-card,
@@ -1898,6 +2439,14 @@ onShow(() => {
 
   .chart-label-row-bars {
     gap: 8rpx;
+  }
+
+  .discount-metrics,
+  .user-copy-row,
+  .audit-row-head,
+  .pagination-row {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 </style>

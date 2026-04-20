@@ -224,6 +224,7 @@ export const createPlanPricingForProfile = (profile, basePricing = {}) => {
 
   return {
     oneHour: scalePrice(basePricing.oneHour),
+    fourHours: scalePrice(basePricing.fourHours),
     oneDay: scalePrice(basePricing.oneDay),
     oneWeek: scalePrice(basePricing.oneWeek),
     oneMonth: scalePrice(basePricing.oneMonth)

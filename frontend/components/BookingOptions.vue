@@ -108,6 +108,7 @@
           >
             <text class="plan-label">{{ option.label }}</text>
             <text class="plan-meta">{{ option.subtitle }}</text>
+            <text v-if="option.discountNote" class="plan-discount">{{ option.discountNote }}</text>
             <text class="plan-price">{{ formatCny(option.fixedPrice) }}</text>
           </view>
         </view>
@@ -457,10 +458,38 @@ const modelPricing = computed(() => createPlanPricingForProfile(selectedVehicle.
 const modelPricingFor = (vehicle) => createPlanPricingForProfile(vehicle, RENTAL_PACKAGE_PRICING)
 
 const planOptions = computed(() => [
-  { value: '1_HOUR', label: '1 hour', subtitle: '60 minutes included', minutes: 60, fixedPrice: modelPricing.value.oneHour },
-  { value: '1_DAY', label: '1 day', subtitle: '24 hours included', minutes: 1440, fixedPrice: modelPricing.value.oneDay },
-  { value: '1_WEEK', label: '1 week', subtitle: '7 days included', minutes: 10080, fixedPrice: modelPricing.value.oneWeek },
-  { value: '1_MONTH', label: '1 month', subtitle: '30 days included', minutes: 43200, fixedPrice: modelPricing.value.oneMonth }
+  {
+    value: '1_HOUR',
+    label: '1 hour',
+    subtitle: '60 minutes included',
+    minutes: 60,
+    fixedPrice: modelPricing.value.oneHour,
+    discountNote: ''
+  },
+  {
+    value: '4_HOURS',
+    label: '4 hours',
+    subtitle: '240 minutes included',
+    minutes: 240,
+    fixedPrice: modelPricing.value.fourHours,
+    discountNote: `Save ${formatCny(Math.max(0, modelPricing.value.oneHour * 4 - modelPricing.value.fourHours))} vs hourly`
+  },
+  {
+    value: '1_DAY',
+    label: '1 day',
+    subtitle: '24 hours included',
+    minutes: 1440,
+    fixedPrice: modelPricing.value.oneDay,
+    discountNote: 'Best for full-day rentals'
+  },
+  {
+    value: '1_WEEK',
+    label: '1 week',
+    subtitle: '7 days included',
+    minutes: 10080,
+    fixedPrice: modelPricing.value.oneWeek,
+    discountNote: 'Lowest rate for long trips'
+  }
 ])
 
 const selectedOption = computed(() =>
@@ -1014,6 +1043,17 @@ const handleConfirm = async () => {
   margin-top: 6rpx;
   font-size: 23rpx;
   color: #64748b;
+}
+
+.plan-discount {
+  display: inline-flex;
+  margin-top: 12rpx;
+  padding: 8rpx 14rpx;
+  border-radius: 999rpx;
+  background: rgba(37, 99, 235, 0.08);
+  color: #1D4ED8;
+  font-size: 21rpx;
+  font-weight: 700;
 }
 
 .plan-price {

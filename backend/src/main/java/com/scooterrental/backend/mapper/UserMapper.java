@@ -6,6 +6,11 @@ import org.apache.ibatis.annotations.*;
 @Mapper
 public interface UserMapper {
 
+        @Select("SELECT user_id AS userId, username, email, phone, city, avatar_url AS avatarUrl, role, " +
+                        "total_riding_minutes AS totalRidingMinutes, achievements, created_at AS createdAt " +
+                        "FROM users ORDER BY created_at DESC, user_id DESC")
+        java.util.List<User> selectAll();
+
         // Find user by username for login
         @Select("SELECT user_id AS userId, username, email, phone, city, avatar_url AS avatarUrl, password_hash AS passwordHash, role, " +
                         "total_riding_minutes AS totalRidingMinutes, achievements, created_at AS createdAt " +

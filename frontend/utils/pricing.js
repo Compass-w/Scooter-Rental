@@ -5,6 +5,7 @@ const toNumber = (value) => {
 
 export const RENTAL_PACKAGE_PRICING = Object.freeze({
   oneHour: 3.5,
+  fourHours: 12,
   oneDay: 30,
   oneWeek: 100,
   oneMonth: 280
@@ -20,6 +21,11 @@ export const HOME_PRICING = Object.freeze({
     hourlyPrice: RENTAL_PACKAGE_PRICING.oneHour,
     pricePerMinute: Number((RENTAL_PACKAGE_PRICING.oneHour / 60).toFixed(2)),
     unlockFee: 0
+  },
+  flexPass: {
+    fourHourPrice: RENTAL_PACKAGE_PRICING.fourHours,
+    comparedToHourly: Number((RENTAL_PACKAGE_PRICING.oneHour * 4).toFixed(2)),
+    savings: Number((RENTAL_PACKAGE_PRICING.oneHour * 4 - RENTAL_PACKAGE_PRICING.fourHours).toFixed(2))
   },
   dailyPass: {
     dailyPrice: RENTAL_PACKAGE_PRICING.oneDay,
