@@ -846,9 +846,11 @@ const maintenanceLogs = ref([])
 const submittingScooter = ref(false)
 const submittingMaintenance = ref(false)
 const submittingPos = ref(false)
+const redirectingUnauthorized = ref(false)
 
 const CUSTOMER_PAGE_SIZE = 6
 const ISSUE_PAGE_SIZE = 5
+const ADMIN_ROLES = ['ADMIN', 'MANAGER']
 
 const statusOptions = ['AVAILABLE', 'IN_USE', 'MAINTENANCE', 'LOW_BATTERY', 'REMOTE_LOCKED']
 const priorityOptions = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']
@@ -982,7 +984,7 @@ const adminAccessLabel = computed(() => {
     const stored = uni.getStorageSync('userInfo')
     const userInfo = typeof stored === 'string' ? JSON.parse(stored) : stored
     const role = String(userInfo?.role || '').toUpperCase()
-    if (role === 'ADMIN' || role === 'MANAGER') return `${role} session`
+    if (ADMIN_ROLES.includes(role)) return `${role} session`
     return 'Demo / shared access'
   } catch {
     return 'Demo / shared access'
@@ -996,6 +998,37 @@ const buildPaginationLabel = (page, pageSize, total, label) => {
   const start = (page - 1) * pageSize + 1
   const end = Math.min(total, start + pageSize - 1)
   return `Showing ${start}-${end} of ${total} ${label}`
+}
+
+const hasAdminAccess = () => {
+  try {
+    const stored = uni.getStorageSync('userInfo')
+    const userInfo = typeof stored === 'string' ? JSON.parse(stored) : stored
+    return ADMIN_ROLES.includes(String(userInfo?.role || '').toUpperCase())
+  } catch {
+    return false
+  }
+}
+
+const ensureAdminAccess = () => {
+  if (hasAdminAccess()) return true
+  if (redirectingUnauthorized.value) return false
+
+  redirectingUnauthorized.value = true
+  uni.showToast({
+    title: 'Admin access required',
+    icon: 'none',
+    duration: 1500
+  })
+  setTimeout(() => {
+    uni.reLaunch({
+      url: '/pages/index',
+      complete: () => {
+        redirectingUnauthorized.value = false
+      }
+    })
+  }, 1500)
+  return false
 }
 
 const applySnapshot = (data) => {
@@ -1350,6 +1383,7 @@ const exportDashboardPdf = () => {
 }
 
 onShow(() => {
+  if (!ensureAdminAccess()) return
   loadDashboard()
   resetPosForm()
 })

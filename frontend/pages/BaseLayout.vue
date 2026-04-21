@@ -155,38 +155,17 @@
           </view>
         </view>
 
-        <view class="footer-main">
-          <view class="footer-brand">
-            <view class="footer-logo">
-              <view class="footer-logo-icon">
-                <svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12.08,19H7a1,1,0,0,1,0-2h5.08a7,7,0,0,1,5.86-5.91,1,1,0,0,1,.3,2,5,5,0,0,0-4.19,4.22A2,2,0,0,1,12.08,19Z" style="fill: #93C5FD;"></path>
-                  <path d="M19.56,15.06,18,5h2a1,1,0,0,0,0-2H18a2,2,0,0,0-2,2.3l1.55,10.07a3,3,0,1,0,2-.31ZM19,19a1,1,0,1,1,1-1A1,1,0,0,1,19,19ZM5,15a3,3,0,1,0,3,3A3,3,0,0,0,5,15Zm0,4a1,1,0,1,1,1-1A1,1,0,0,1,5,19Z" style="fill: #FFFFFF;"></path>
-                </svg>
-              </view>
-              <text class="footer-logo-text">ScooterGo</text>
-            </view>
-            <text class="footer-description">Find, book, and ride electric scooters with less hassle.</text>
-          </view>
-
-          <view class="footer-contact-row">
-            <text class="footer-contact">support@scootergo.com</text>
-            <text class="footer-contact-divider">•</text>
-            <text class="footer-contact">+44 20 1234 5678</text>
-          </view>
-        </view>
-
         <!-- Footer Bottom Section -->
         <view class="footer-bottom">
           <view class="footer-bottom-left">
             <text class="copyright">© 2026 ScooterGo Ltd. All rights reserved.</text>
           </view>
           <view class="footer-bottom-right">
-            <text class="footer-legal">Privacy Policy</text>
+            <text class="footer-legal" @tap="openLegalNotice('Privacy Policy')">Privacy Policy</text>
             <text class="footer-divider">•</text>
-            <text class="footer-legal">Terms of Service</text>
+            <text class="footer-legal" @tap="openLegalNotice('Terms of Service')">Terms of Service</text>
             <text class="footer-divider">•</text>
-            <text class="footer-legal">Cookie Policy</text>
+            <text class="footer-legal" @tap="openLegalNotice('Cookie Policy')">Cookie Policy</text>
           </view>
         </view>
       </view>
@@ -269,7 +248,7 @@ const userInitial = computed(() => {
 })
 
 const canAccessDashboard = computed(() =>
-  ['ADMIN', 'MANAGER'].includes(String(userRole.value || '').toUpperCase()) || props.currentPage === 'admin-dashboard'
+  ['ADMIN', 'MANAGER'].includes(String(userRole.value || '').toUpperCase())
 )
 
 const activeMobileNavPage = computed(() => {
@@ -399,6 +378,14 @@ const goToFooterService = (target) => {
   }
 
   openIndexSection(target)
+}
+
+const openLegalNotice = (documentName) => {
+  uni.showToast({
+    title: `${documentName} coming soon`,
+    icon: 'none',
+    duration: 1800
+  })
 }
 
 const goToBooking = () => {
@@ -700,14 +687,6 @@ const mobileNavItems = computed(() => ([
   padding: 44rpx 80rpx 28rpx;
 }
 
-.footer-main {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 28rpx;
-  padding-bottom: 24rpx;
-}
-
 .footer-brand {
   display: flex;
   flex-direction: column;
@@ -752,24 +731,10 @@ const mobileNavItems = computed(() => ([
   max-width: 760rpx;
 }
 
-.footer-contact-row {
-  display: flex;
-  align-items: center;
-  gap: 16rpx;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
 .footer-contact {
   font-size: 24rpx;
   color: #6B7280;
   white-space: nowrap;
-}
-
-.footer-contact-divider {
-  font-size: 24rpx;
-  color: #CBD5E1;
-  display: none;
 }
 
 .footer-bottom {
@@ -858,16 +823,6 @@ const mobileNavItems = computed(() => ([
     padding: 36rpx 40rpx 24rpx;
   }
 
-  .footer-main {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 18rpx;
-  }
-
-  .footer-contact-row {
-    justify-content: flex-start;
-  }
-
   .footer-bottom {
     flex-direction: column;
     align-items: flex-start;
@@ -901,10 +856,6 @@ const mobileNavItems = computed(() => ([
   display: flex;
   flex-direction: column;
   gap: 24rpx;
-}
-
-.footer-main {
-  display: none;
 }
 
 .footer-brand {
@@ -1094,9 +1045,7 @@ const mobileNavItems = computed(() => ([
   color: #D1D5DB;
 }
 
-.footer-caption,
-.footer-contact-row,
-.footer-contact-divider {
+.footer-caption {
   display: none;
 }
 

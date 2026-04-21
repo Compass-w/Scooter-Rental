@@ -264,7 +264,7 @@ import BaseLayout from '@/pages/BaseLayout.vue'
 import BookingOptions from '@/components/BookingOptions.vue'
 import { getAllScooters, startRide as startRideApi } from '@/api/scooter.js'
 import { getUserBookings } from '@/api/booking.js'
-import { findActiveRide, getStoredActiveRide, setStoredActiveRide } from '@/utils/activeRide.js'
+import { findActiveRide, getStoredActiveRide, getStoredUserId, setStoredActiveRide } from '@/utils/activeRide.js'
 import { applyRidePricing, formatCny, HOME_PRICING } from '@/utils/pricing.js'
 import { enrichScooter } from '@/utils/scooterCatalog.js'
 
@@ -891,19 +891,6 @@ const selectScooterFromList = (scooter) => {
   focusScooter(scooter)
 }
 
-/**
- * Read the cached user info and return the current user ID if available.
- */
-const getStoredUserId = () => {
-  try {
-    const cached = uni.getStorageSync('userInfo')
-    const userInfo = typeof cached === 'string' ? JSON.parse(cached) : cached
-    return userInfo?.userId || userInfo?.id || ''
-  } catch {
-    return ''
-  }
-}
-
 const getCurrentActiveRide = async (userId) => {
   const cachedRide = getStoredActiveRide()
   const matchingCachedRide = cachedRide?.userId && String(cachedRide.userId) === String(userId) && String(cachedRide.status || '').toUpperCase() === 'ACTIVE'
@@ -1093,13 +1080,7 @@ const confirmRideStart = async (paymentData) => {
 const startRide = async (scooter) => {
   if (scooter.status !== 'AVAILABLE') return
 
-  // Get userId from local storage
-  let userId
-  try {
-    const userInfo = uni.getStorageSync('userInfo')
-    userId = userInfo?.userId
-  } catch { }
-
+  const userId = getStoredUserId()
   if (!userId) {
     uni.showToast({ title: 'Please login first', icon: 'none' })
     setTimeout(() => uni.reLaunch({ url: '/pages/login' }), 1500)

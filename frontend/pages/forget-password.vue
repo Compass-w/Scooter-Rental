@@ -143,7 +143,18 @@ const handleReset = async () => {
  * Navigate to login page
  */
 const goToLogin = () => {
-  uni.navigateTo({ url: '/pages/login' })
+  try {
+    const pages = getCurrentPages()
+    const previousRoute = pages[pages.length - 2]?.route || ''
+    if (previousRoute === 'pages/login') {
+      uni.navigateBack()
+      return
+    }
+  } catch {
+    // Fall through to redirect when the current stack cannot be inspected.
+  }
+
+  uni.redirectTo({ url: '/pages/login' })
 }
 </script>
 

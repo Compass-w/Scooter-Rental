@@ -907,6 +907,8 @@ import {
 import { logout as apiLogout } from '@/api/user.js'
 import { formatCny } from '@/utils/pricing.js'
 
+const PROFILE_REFRESH_TTL_MS = 30 * 1000
+
 // Reactive state — user profile
 const userInfo    = ref({ username: '', name: '', email: '', phone: '', city: '', avatar: '', avatarUrl: '', createdAt: '' })
 const editingInfo = ref(false)
@@ -933,6 +935,8 @@ const recentTrips      = ref([])
 const bookingTab       = ref('upcoming')
 const upcomingBookings = ref([])
 const pastBookings     = ref([])
+const profileNeedsRefresh = ref(true)
+const lastProfileRefreshAt = ref(0)
 
 // Reactive state — settings
 const settings = ref({ notifications: true, emailNotif: false, location: true, dataShare: true, autoTopUp: false })
@@ -967,6 +971,8 @@ const memberSince = computed(() => {
   if (!userInfo.value.createdAt) return '2024'
   return new Date(userInfo.value.createdAt).getFullYear()
 })
+
+let profileRefreshPromise = null
 
 const readStoredProfileUser = () => {
   try {
@@ -1003,6 +1009,8 @@ const toNullableText = (value) => {
   const nextValue = String(value ?? '').trim()
   return nextValue ? nextValue : null
 }
+
+const validateEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim())
 
 const readAsDataUrlWithFileReader = (filePath) => new Promise((resolve, reject) => {
   if (typeof fetch !== 'function' || typeof FileReader === 'undefined') {
@@ -1184,14 +1192,43 @@ async function loadSettings() {
  * Component mounted lifecycle hook
  * Load all page data in parallel
  */
-const refreshProfilePage = () => Promise.all([
-  loadProfile(),
-  loadStats('Month'),
-  loadWallet(),
-  loadRecentTrips(),
-  loadSettings(),
-  loadBookings('upcoming')
-])
+const shouldRefreshProfilePage = (force = false) => {
+  if (force) return true
+  if (profileNeedsRefresh.value) return true
+  if (!lastProfileRefreshAt.value) return true
+
+  return (Date.now() - lastProfileRefreshAt.value) > PROFILE_REFRESH_TTL_MS
+}
+
+const markProfileDirty = () => {
+  profileNeedsRefresh.value = true
+}
+
+const refreshProfilePage = ({ force = false } = {}) => {
+  if (!shouldRefreshProfilePage(force)) {
+    return profileRefreshPromise || Promise.resolve()
+  }
+
+  if (profileRefreshPromise) {
+    return profileRefreshPromise
+  }
+
+  profileRefreshPromise = Promise.all([
+    loadProfile(),
+    loadStats(activePeriod.value || 'Month'),
+    loadWallet(),
+    loadRecentTrips(),
+    loadSettings(),
+    loadBookings('upcoming'),
+    loadBookings('past')
+  ]).finally(() => {
+    lastProfileRefreshAt.value = Date.now()
+    profileNeedsRefresh.value = false
+    profileRefreshPromise = null
+  })
+
+  return profileRefreshPromise
+}
 
 onShow(() => {
   refreshProfilePage()
@@ -1227,6 +1264,11 @@ const cancelEditInfo = () => {
 const saveInfo = async () => {
   if (!editForm.value.email) {
     uni.showToast({ title: 'Email is required', icon: 'none' })
+    return
+  }
+
+  if (!validateEmail(editForm.value.email)) {
+    uni.showToast({ title: 'Please enter a valid email', icon: 'none' })
     return
   }
 
@@ -1273,6 +1315,8 @@ const saveInfo = async () => {
     userInfo.value = nextProfile
     uni.setStorageSync('userInfo', JSON.stringify(userInfo.value))
     uni.$emit('user-profile-updated')
+    lastProfileRefreshAt.value = Date.now()
+    profileNeedsRefresh.value = false
     editingInfo.value = false
     uni.showToast({ title: 'Profile updated!', icon: 'success' })
   } catch (e) {
@@ -1333,6 +1377,8 @@ const changeAvatar = () => {
 
         uni.setStorageSync('userInfo', JSON.stringify(userInfo.value))
         uni.$emit('user-profile-updated')
+        lastProfileRefreshAt.value = Date.now()
+        profileNeedsRefresh.value = false
         uni.showToast({ title: 'Avatar updated', icon: 'success' })
       } catch (error) {
         console.error('Failed to save avatar:', error)
@@ -1395,6 +1441,8 @@ const confirmCancelBooking = async (booking) => {
     await cancelBooking(booking.bookingId ?? booking.id)
     upcomingBookings.value = upcomingBookings.value.filter(b => b.id !== booking.id)
     cancelModal.value.open = false
+    lastProfileRefreshAt.value = Date.now()
+    profileNeedsRefresh.value = false
     uni.showToast({ title: 'Booking cancelled', icon: 'success' })
   } catch {
     cancelModal.value.loading = false
@@ -1418,6 +1466,8 @@ const setDefaultCard = async (index) => {
     wallet.value.paymentMethods = wallet.value.paymentMethods.map(
       (c, i) => ({ ...c, isDefault: i === index })
     )
+    lastProfileRefreshAt.value = Date.now()
+    profileNeedsRefresh.value = false
     uni.showToast({ title: 'Default card updated', icon: 'success' })
   } catch (e) {
     console.error('Failed to set default card:', e)
@@ -1439,6 +1489,8 @@ const removeCard = (index) => {
       try {
         await apiRemoveCard(card?.cardId ?? card?.id)
         wallet.value.paymentMethods.splice(index, 1)
+        lastProfileRefreshAt.value = Date.now()
+        profileNeedsRefresh.value = false
         uni.showToast({ title: 'Card removed', icon: 'success' })
       } catch (e) {
         console.error('Failed to remove card:', e)
@@ -1453,7 +1505,7 @@ const removeCard = (index) => {
  */
 const addNewCard = async () => {
   const raw = newCard.value.number.replace(/\s/g, '')
-  if (raw.length < 16) {
+  if (!/^\d{16}$/.test(raw)) {
     uni.showToast({ title: 'Invalid card number', icon: 'none' })
     return
   }
@@ -1474,6 +1526,8 @@ const addNewCard = async () => {
     wallet.value.paymentMethods.push(saved)
     newCard.value = { number: '', expires: '', cvv: '' }
     walletModal.value.showAddForm = false
+    lastProfileRefreshAt.value = Date.now()
+    profileNeedsRefresh.value = false
     uni.showToast({ title: 'Card added securely', icon: 'success' })
   } catch (e) {
     console.error('Failed to add card:', e)
@@ -1515,8 +1569,14 @@ const toggleAutoTopUp  = () => {
 /**
  * Navigation helpers
  */
-const goToFindScooter    = () => uni.navigateTo({ url: '/pages/find-scooter' })
-const viewAllTrips       = () => uni.navigateTo({ url: '/pages/active-ride?source=trip' })
+const goToFindScooter = () => {
+  markProfileDirty()
+  uni.navigateTo({ url: '/pages/find-scooter' })
+}
+const viewAllTrips       = () => {
+  markProfileDirty()
+  uni.navigateTo({ url: '/pages/active-ride?source=trip' })
+}
 /**
  * Navigate to the change password page
  * Passes source=profile so the reset-password page skips token verification

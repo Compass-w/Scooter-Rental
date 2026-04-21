@@ -924,18 +924,23 @@ const syncActiveRide = async () => {
   const cached = getStoredActiveRide()
   if (cached) activeRide.value = cached
   const userId = getStoredUserId()
-  if (!userId) return
+  if (!userId) {
+    updateActiveRideState(null)
+    return null
+  }
   syncing.value = true
   try {
     const bookings = await getUserBookings(userId)
     const liveRide = findActiveRide(bookings, cached || activeRide.value || {})
     if (!liveRide) {
       updateActiveRideState(null)
-      return
+      return null
     }
     updateActiveRideState(await enrichRideDetails(liveRide))
+    return activeRide.value
   } catch (error) {
     console.error('Failed to sync active ride:', error)
+    return activeRide.value || cached || null
   } finally {
     syncing.value = false
   }
@@ -985,12 +990,13 @@ const handleEndRide = () => {
     success: async ({ confirm }) => {
       if (!confirm) return
       busyAction.value = 'end'
+      const endingBookingId = activeRide.value?.bookingId
       try {
-        const result = await endRide(activeRide.value.bookingId)
+        const result = await endRide(endingBookingId)
         updateActiveRideState(null)
-        await syncActiveRide()
-        const followUpMessage = activeRide.value?.bookingId
-          ? ` Another active booking (#${activeRide.value.bookingId}) is still open, so please end it before starting a new scooter.`
+        const nextActiveRide = await syncActiveRide()
+        const followUpMessage = nextActiveRide?.bookingId && String(nextActiveRide.bookingId) !== String(endingBookingId)
+          ? ` Another active booking (#${nextActiveRide.bookingId}) is still open, so please end it before starting a new scooter.`
           : ''
         uni.showModal({
           title: 'Ride ended',

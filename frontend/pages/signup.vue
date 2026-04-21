@@ -105,7 +105,7 @@
                 <input
                   class="input-pill"
                   v-model="phone"
-                  type="text"
+                  type="number"
                   :placeholder="selectedCountry.example"
                   @blur="validateField('phone')"
                   @input="handlePhoneInput"
@@ -290,7 +290,7 @@
               <label class="checkbox-container">
                 <checkbox value="agree" :checked="agreeTerms" color="#2563EB" style="transform:scale(0.8)" />
                 <text class="checkbox-label">
-                  I agree to the <text class="link-text">Terms of Service</text> and <text class="link-text">Privacy Policy</text>
+                  I agree to the <text class="link-text" @tap.stop="openLegalNotice('Terms of Service')">Terms of Service</text> and <text class="link-text" @tap.stop="openLegalNotice('Privacy Policy')">Privacy Policy</text>
                 </text>
               </label>
             </checkbox-group>
@@ -630,6 +630,14 @@ const handleSignup = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const openLegalNotice = (documentName) => {
+  uni.showToast({
+    title: `${documentName} coming soon`,
+    icon: 'none',
+    duration: 1800
+  })
 }
 
 const goToLogin = () => { uni.navigateTo({ url: '/pages/login' }) }

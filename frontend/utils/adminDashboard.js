@@ -1,3 +1,5 @@
+import { formatCny } from '@/utils/pricing.js'
+
 const H5_WINDOW = typeof window !== 'undefined' ? window : null
 
 const toSafeNumber = (value, fallback = 0) => {
@@ -7,6 +9,9 @@ const toSafeNumber = (value, fallback = 0) => {
 
 export const formatCurrency = (value, currency = 'CNY') => {
   const amount = toSafeNumber(value, 0)
+  if (currency === 'CNY') {
+    return formatCny(amount)
+  }
   try {
     return new Intl.NumberFormat(currency === 'CNY' ? 'zh-CN' : 'en-GB', {
       style: 'currency',

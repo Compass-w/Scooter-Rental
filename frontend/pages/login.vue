@@ -87,6 +87,7 @@ const password = ref('')
 const showPwd = ref(false)
 const remember = ref(false)
 const loading = ref(false)
+const navigating = ref(false)
 
 /**
  * Component mounted lifecycle hook
@@ -124,6 +125,8 @@ const toggleRemember = () => {
  * Validates input, calls login API, and handles navigation based on user role
  */
 const handleLogin = async () => {
+  if (loading.value) return
+
   // Validate required fields
   if (!username.value || !password.value) {
     uni.showToast({ 
@@ -135,6 +138,7 @@ const handleLogin = async () => {
 
   // Start loading state
   loading.value = true
+  navigating.value = false
 
   try {
     // Call login API
@@ -177,20 +181,29 @@ const handleLogin = async () => {
     uni.$emit('login-success')
 
     // Navigate to appropriate page based on user role
+    navigating.value = true
     setTimeout(() => {
       const normalizedRole = String(role || '').toUpperCase()
-      if (normalizedRole === 'ADMIN' || normalizedRole === 'MANAGER') {
-        uni.reLaunch({ url: '/pages/admin-dashboard' })  // Navigate to admin dashboard
-      } else {
-        uni.reLaunch({ url: '/pages/index' })  // Navigate to user home
-      }
+      const targetUrl = normalizedRole === 'ADMIN' || normalizedRole === 'MANAGER'
+        ? '/pages/admin-dashboard'
+        : '/pages/index'
+
+      uni.reLaunch({
+        url: targetUrl,
+        fail: () => {
+          navigating.value = false
+          loading.value = false
+        }
+      })
     }, 1500)
 
   } catch (error) {
     console.error('Login failed:', error)
     // Error message is handled by request.js
   } finally {
-    loading.value = false
+    if (!navigating.value) {
+      loading.value = false
+    }
   }
 }
 
