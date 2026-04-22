@@ -7,28 +7,40 @@ public class EndRideResponse {
     private Integer bookingId;
     private Integer scooterId;
     private Integer durationMinutes;
+    private BigDecimal baseCost;
+    private BigDecimal overtimeChargeTotal;
+    private BigDecimal damageChargeTotal;
     private BigDecimal totalCost;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private String bookingStatus;
+    private String paymentStatus;
     private String scooterStatus;
 
     public EndRideResponse(
             Integer bookingId,
             Integer scooterId,
             Integer durationMinutes,
+            BigDecimal baseCost,
+            BigDecimal overtimeChargeTotal,
+            BigDecimal damageChargeTotal,
             BigDecimal totalCost,
             LocalDateTime startTime,
             LocalDateTime endTime,
             String bookingStatus,
+            String paymentStatus,
             String scooterStatus) {
         this.bookingId = bookingId;
         this.scooterId = scooterId;
         this.durationMinutes = durationMinutes;
+        this.baseCost = baseCost;
+        this.overtimeChargeTotal = overtimeChargeTotal;
+        this.damageChargeTotal = damageChargeTotal;
         this.totalCost = totalCost;
         this.startTime = startTime;
         this.endTime = endTime;
         this.bookingStatus = bookingStatus;
+        this.paymentStatus = paymentStatus;
         this.scooterStatus = scooterStatus;
     }
 
@@ -54,6 +66,30 @@ public class EndRideResponse {
 
     public void setDurationMinutes(Integer durationMinutes) {
         this.durationMinutes = durationMinutes;
+    }
+
+    public BigDecimal getBaseCost() {
+        return baseCost;
+    }
+
+    public void setBaseCost(BigDecimal baseCost) {
+        this.baseCost = baseCost;
+    }
+
+    public BigDecimal getOvertimeChargeTotal() {
+        return overtimeChargeTotal;
+    }
+
+    public void setOvertimeChargeTotal(BigDecimal overtimeChargeTotal) {
+        this.overtimeChargeTotal = overtimeChargeTotal;
+    }
+
+    public BigDecimal getDamageChargeTotal() {
+        return damageChargeTotal;
+    }
+
+    public void setDamageChargeTotal(BigDecimal damageChargeTotal) {
+        this.damageChargeTotal = damageChargeTotal;
     }
 
     public BigDecimal getTotalCost() {
@@ -86,6 +122,14 @@ public class EndRideResponse {
 
     public void setBookingStatus(String bookingStatus) {
         this.bookingStatus = bookingStatus;
+    }
+
+    public String getPaymentStatus() {
+        return paymentStatus;
+    }
+
+    public void setPaymentStatus(String paymentStatus) {
+        this.paymentStatus = paymentStatus;
     }
 
     public String getScooterStatus() {

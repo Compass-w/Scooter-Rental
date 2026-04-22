@@ -13,6 +13,14 @@ public class StaffBooking {
     private Integer scooterId;
     private String scooterModel;
     private String hirePeriod;
+    private String bookingChannel;
+    private String pickupStoreCode;
+    private String pickupStoreName;
+    private String returnStoreCode;
+    private String returnStoreName;
+    private Integer pickupBatteryLevel;
+    private Integer expectedReturnBatteryLevel;
+    private BigDecimal electricityDelta;
     private LocalDateTime desiredStartTime;
     private BigDecimal estimatedCost;
     private String bookingStatus;

@@ -90,4 +90,18 @@ public class BookingController {
                     .body(Result.error(400, ex.getMessage()));
         }
     }
+
+    @PostMapping("/{bookingId}/telemetry")
+    @Operation(summary = "Record ride telemetry", description = "Receive ride heartbeat, battery, and location updates from the unlocked scooter session")
+    public ResponseEntity<Result<Map<String, Object>>> recordTelemetry(
+            @PathVariable Integer bookingId,
+            @RequestBody(required = false) Map<String, Object> payload
+    ) {
+        try {
+            return ResponseEntity.ok(Result.success(bookingService.recordTelemetry(bookingId, payload)));
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Result.error(400, ex.getMessage()));
+        }
+    }
 }

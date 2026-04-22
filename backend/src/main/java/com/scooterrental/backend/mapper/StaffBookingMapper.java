@@ -21,6 +21,14 @@ public interface StaffBookingMapper {
                 guest_email VARCHAR(160),
                 scooter_id INTEGER NOT NULL,
                 hire_period VARCHAR(24) NOT NULL,
+                booking_channel VARCHAR(32) NOT NULL DEFAULT 'WALK_IN_COUNTER',
+                pickup_store_code VARCHAR(64),
+                pickup_store_name VARCHAR(120),
+                return_store_code VARCHAR(64),
+                return_store_name VARCHAR(120),
+                pickup_battery_level INTEGER,
+                expected_return_battery_level INTEGER,
+                electricity_delta DECIMAL(10, 2) NOT NULL DEFAULT 0,
                 desired_start_time TIMESTAMP NOT NULL,
                 estimated_cost DECIMAL(10, 2) NOT NULL,
                 booking_status VARCHAR(24) NOT NULL DEFAULT 'BOOKED',
@@ -32,12 +40,44 @@ public interface StaffBookingMapper {
             """)
     void createTableIfNotExists();
 
+    @Update("ALTER TABLE staff_bookings ADD COLUMN IF NOT EXISTS booking_channel VARCHAR(32) NOT NULL DEFAULT 'WALK_IN_COUNTER'")
+    void addBookingChannelColumn();
+
+    @Update("ALTER TABLE staff_bookings ADD COLUMN IF NOT EXISTS pickup_store_code VARCHAR(64)")
+    void addPickupStoreCodeColumn();
+
+    @Update("ALTER TABLE staff_bookings ADD COLUMN IF NOT EXISTS pickup_store_name VARCHAR(120)")
+    void addPickupStoreNameColumn();
+
+    @Update("ALTER TABLE staff_bookings ADD COLUMN IF NOT EXISTS return_store_code VARCHAR(64)")
+    void addReturnStoreCodeColumn();
+
+    @Update("ALTER TABLE staff_bookings ADD COLUMN IF NOT EXISTS return_store_name VARCHAR(120)")
+    void addReturnStoreNameColumn();
+
+    @Update("ALTER TABLE staff_bookings ADD COLUMN IF NOT EXISTS pickup_battery_level INTEGER")
+    void addPickupBatteryLevelColumn();
+
+    @Update("ALTER TABLE staff_bookings ADD COLUMN IF NOT EXISTS expected_return_battery_level INTEGER")
+    void addExpectedReturnBatteryLevelColumn();
+
+    @Update("ALTER TABLE staff_bookings ADD COLUMN IF NOT EXISTS electricity_delta DECIMAL(10, 2) NOT NULL DEFAULT 0")
+    void addElectricityDeltaColumn();
+
     @Insert("""
             INSERT INTO staff_bookings (
                 guest_name,
                 guest_email,
                 scooter_id,
                 hire_period,
+                booking_channel,
+                pickup_store_code,
+                pickup_store_name,
+                return_store_code,
+                return_store_name,
+                pickup_battery_level,
+                expected_return_battery_level,
+                electricity_delta,
                 desired_start_time,
                 estimated_cost,
                 booking_status,
@@ -50,6 +90,14 @@ public interface StaffBookingMapper {
                 #{guestEmail},
                 #{scooterId},
                 #{hirePeriod},
+                #{bookingChannel},
+                #{pickupStoreCode},
+                #{pickupStoreName},
+                #{returnStoreCode},
+                #{returnStoreName},
+                #{pickupBatteryLevel},
+                #{expectedReturnBatteryLevel},
+                #{electricityDelta},
                 #{desiredStartTime},
                 #{estimatedCost},
                 #{bookingStatus},
@@ -68,6 +116,14 @@ public interface StaffBookingMapper {
                    sb.scooter_id AS scooterId,
                    s.model AS scooterModel,
                    sb.hire_period AS hirePeriod,
+                   sb.booking_channel AS bookingChannel,
+                   sb.pickup_store_code AS pickupStoreCode,
+                   sb.pickup_store_name AS pickupStoreName,
+                   sb.return_store_code AS returnStoreCode,
+                   sb.return_store_name AS returnStoreName,
+                   sb.pickup_battery_level AS pickupBatteryLevel,
+                   sb.expected_return_battery_level AS expectedReturnBatteryLevel,
+                   sb.electricity_delta AS electricityDelta,
                    sb.desired_start_time AS desiredStartTime,
                    sb.estimated_cost AS estimatedCost,
                    sb.booking_status AS bookingStatus,
@@ -88,6 +144,14 @@ public interface StaffBookingMapper {
                    sb.scooter_id AS scooterId,
                    s.model AS scooterModel,
                    sb.hire_period AS hirePeriod,
+                   sb.booking_channel AS bookingChannel,
+                   sb.pickup_store_code AS pickupStoreCode,
+                   sb.pickup_store_name AS pickupStoreName,
+                   sb.return_store_code AS returnStoreCode,
+                   sb.return_store_name AS returnStoreName,
+                   sb.pickup_battery_level AS pickupBatteryLevel,
+                   sb.expected_return_battery_level AS expectedReturnBatteryLevel,
+                   sb.electricity_delta AS electricityDelta,
                    sb.desired_start_time AS desiredStartTime,
                    sb.estimated_cost AS estimatedCost,
                    sb.booking_status AS bookingStatus,

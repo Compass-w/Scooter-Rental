@@ -105,6 +105,14 @@
             <text class="trip-return-label">Return mode</text>
             <text class="trip-return-value">{{ activeRide.marketLabel || 'China Mainland' }} · {{ activeRide.serviceLabel || 'Sharing Scooters' }}</text>
           </view>
+          <view v-if="activeRide.serviceMode === 'WALK_IN'" class="trip-return-item">
+            <text class="trip-return-label">Booking channel</text>
+            <text class="trip-return-value">{{ activeRide.bookingChannelLabel || 'Store rental' }}</text>
+          </view>
+          <view v-if="activeRide.serviceMode === 'WALK_IN'" class="trip-return-item">
+            <text class="trip-return-label">Store handover</text>
+            <text class="trip-return-value">{{ storeHandoverLabel }}</text>
+          </view>
           <view class="trip-return-item">
             <text class="trip-return-label">Battery delta</text>
             <text class="trip-return-value">{{ activeRide.startBatteryLevel || 0 }}% → {{ activeRide.estimatedReturnBattery || 0 }}%</text>
@@ -833,6 +841,12 @@ const rideTelemetryText = computed(() => {
     return 'GPS, mileage, battery, and unlock status will be synced to the backend once the scooter is paired.'
   }
   return rideVehicle.value.telemetry.join(' · ')
+})
+const storeHandoverLabel = computed(() => {
+  if (!activeRide.value || activeRide.value.serviceMode !== 'WALK_IN') return 'Not applicable'
+  const pickup = activeRide.value.pickupStoreName || 'Pickup store'
+  const dropOff = activeRide.value.returnStoreName || pickup
+  return `${pickup} → ${dropOff}`
 })
 
 const formatDateTime = (value) => {

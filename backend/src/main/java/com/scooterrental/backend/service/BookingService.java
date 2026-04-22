@@ -5,9 +5,9 @@ import com.scooterrental.backend.dto.booking.StartRideRequest;
 import com.scooterrental.backend.dto.booking.StartRideResponse;
 import com.scooterrental.backend.entity.Booking;
 import com.scooterrental.backend.entity.Scooter;
+import com.scooterrental.backend.entity.VehicleUnlockSession;
 import com.scooterrental.backend.mapper.BookingMapper;
 import com.scooterrental.backend.mapper.ScooterMapper;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,8 +16,8 @@ import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @Service
@@ -44,26 +44,54 @@ public class BookingService {
     private static final BigDecimal PRICE_ONE_WEEK = BigDecimal.valueOf(100.00);
     private static final BigDecimal PRICE_ONE_MONTH = BigDecimal.valueOf(280.00);
 
-    @Autowired
-    private BookingMapper bookingMapper;
+    private final BookingMapper bookingMapper;
+    private final ScooterMapper scooterMapper;
+    private final VehicleIntegrationService vehicleIntegrationService;
+    private final PaymentGatewayService paymentGatewayService;
 
-    @Autowired
-    private ScooterMapper scooterMapper;
+    public BookingService(
+            BookingMapper bookingMapper,
+            ScooterMapper scooterMapper,
+            VehicleIntegrationService vehicleIntegrationService,
+            PaymentGatewayService paymentGatewayService) {
+        this.bookingMapper = bookingMapper;
+        this.scooterMapper = scooterMapper;
+        this.vehicleIntegrationService = vehicleIntegrationService;
+        this.paymentGatewayService = paymentGatewayService;
+    }
+
+    public void ensureOperationalTables() {
+        bookingMapper.addPlannedEndTimeColumn();
+        bookingMapper.addPlanTypeColumn();
+        bookingMapper.addPaymentStatusColumn();
+        bookingMapper.addUnlockStatusColumn();
+        bookingMapper.addUnlockReferenceColumn();
+        bookingMapper.addOvertimeFeeColumn();
+        bookingMapper.addOvertimeChargeTotalColumn();
+        bookingMapper.addDamageChargeTotalColumn();
+        bookingMapper.addLastReminderAtColumn();
+        vehicleIntegrationService.ensureVehicleTables();
+        paymentGatewayService.ensureGatewayTables();
+    }
 
     public List<Booking> getHistory(Integer userId) {
+        ensureOperationalTables();
         return bookingMapper.selectByUserId(userId);
     }
 
     public boolean cancel(Integer bookingId, Integer userId) {
+        ensureOperationalTables();
         return bookingMapper.cancelBooking(bookingId, userId) > 0;
     }
 
     public List<Map<String, Object>> getStats(Integer userId) {
+        ensureOperationalTables();
         return bookingMapper.getWeeklyStats(userId);
     }
 
     @Transactional
     public StartRideResponse startRide(StartRideRequest request) {
+        ensureOperationalTables();
         validateStartRideRequest(request);
 
         Booking existingActiveBooking = bookingMapper.selectActiveBookingByUserId(request.getUserId());
@@ -83,16 +111,37 @@ public class BookingService {
         String normalizedPlanType = normalizePlanType(request.getPlanType());
         Integer durationMinutes = resolveDurationMinutes(normalizedPlanType);
         BigDecimal estimatedCost = calculateCost(scooter, normalizedPlanType, durationMinutes);
+        LocalDateTime startTime = LocalDateTime.now();
 
         Booking booking = new Booking();
         booking.setUserId(request.getUserId());
         booking.setScooterId(request.getScooterId());
-        booking.setStartTime(LocalDateTime.now());
+        booking.setStartTime(startTime);
         booking.setDurationMinutes(durationMinutes);
+        booking.setPlanType(normalizedPlanType);
+        booking.setPlannedEndTime(durationMinutes == null ? null : startTime.plusMinutes(durationMinutes));
         booking.setTotalCost(estimatedCost);
         booking.setStatus(BOOKING_ACTIVE);
+        booking.setPaymentStatus("PENDING");
+        booking.setUnlockStatus("PENDING");
+        booking.setUnlockReference(null);
+        booking.setOvertimeFeePer15Minutes(resolveOvertimeFee(request.getOvertimeFeePer15Minutes(), estimatedCost));
+        booking.setOvertimeChargeTotal(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
+        booking.setDamageChargeTotal(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
+        booking.setLastReminderAt(null);
 
         bookingMapper.insertBooking(booking);
+
+        paymentGatewayService.authorizeStartRide(
+                booking,
+                estimatedCost,
+                "Trip deposit authorised before unlock for " + normalizedPlanType + ".");
+        booking.setPaymentStatus("AUTHORIZED");
+
+        VehicleUnlockSession unlockSession = vehicleIntegrationService.dispatchUnlockCommand(booking, scooter, request.getScanToken());
+        booking.setUnlockStatus(unlockSession.getLockState());
+        booking.setUnlockReference("CMD-" + unlockSession.getCommandId());
+        bookingMapper.updateAutomationState(booking);
 
         scooter.setStatus(SCOOTER_IN_USE);
         scooterMapper.updateById(scooter);
@@ -105,11 +154,18 @@ public class BookingService {
                 durationMinutes,
                 estimatedCost,
                 booking.getStatus(),
-                scooter.getStatus());
+                booking.getPaymentStatus(),
+                booking.getUnlockStatus(),
+                booking.getUnlockReference(),
+                unlockSession.getDeviceMessage(),
+                scooter.getStatus(),
+                booking.getPlannedEndTime());
     }
 
     @Transactional
     public EndRideResponse endRide(Integer bookingId) {
+        ensureOperationalTables();
+
         Booking booking = bookingMapper.selectByBookingId(bookingId);
         if (booking == null) {
             throw new IllegalArgumentException("Booking not found");
@@ -128,13 +184,25 @@ public class BookingService {
         int billableMinutes = booking.getDurationMinutes() != null && booking.getDurationMinutes() > 0
                 ? booking.getDurationMinutes()
                 : actualMinutes;
-        BigDecimal finalCost = calculateCost(scooter, null, billableMinutes);
+        BigDecimal baseCost = calculateCost(scooter, booking.getPlanType(), billableMinutes);
+        BigDecimal overtimeCharge = normalizeMoney(booking.getOvertimeChargeTotal());
+        BigDecimal damageCharge = normalizeMoney(booking.getDamageChargeTotal());
+        BigDecimal finalCost = baseCost.add(overtimeCharge).add(damageCharge).setScale(2, RoundingMode.HALF_UP);
+
+        paymentGatewayService.captureBaseCharge(
+                booking,
+                baseCost,
+                "Base ride charge captured when the scooter was returned.");
 
         booking.setEndTime(endTime);
         booking.setDurationMinutes(billableMinutes);
         booking.setTotalCost(finalCost);
         booking.setStatus(BOOKING_COMPLETED);
+        booking.setPaymentStatus("CAPTURED");
+        booking.setUnlockStatus("LOCKED");
         bookingMapper.completeBooking(booking);
+
+        vehicleIntegrationService.completeRideSession(bookingId);
 
         scooter.setStatus(SCOOTER_AVAILABLE);
         scooterMapper.updateById(scooter);
@@ -143,15 +211,21 @@ public class BookingService {
                 booking.getBookingId(),
                 booking.getScooterId(),
                 booking.getDurationMinutes(),
+                baseCost,
+                overtimeCharge,
+                damageCharge,
                 booking.getTotalCost(),
                 booking.getStartTime(),
                 booking.getEndTime(),
                 booking.getStatus(),
+                booking.getPaymentStatus(),
                 scooter.getStatus());
     }
 
     @Transactional
     public Map<String, Object> extendRide(Integer bookingId, Integer extraMinutes) {
+        ensureOperationalTables();
+
         if (extraMinutes == null || extraMinutes <= 0) {
             throw new IllegalArgumentException("Extension time must be greater than 0 minutes");
         }
@@ -171,11 +245,17 @@ public class BookingService {
 
         int currentDuration = booking.getDurationMinutes() != null ? booking.getDurationMinutes() : 0;
         int nextDuration = currentDuration + extraMinutes;
-        BigDecimal updatedCost = calculateCost(scooter, null, nextDuration);
+        BigDecimal updatedBaseCost = calculateCost(scooter, booking.getPlanType(), nextDuration);
+        BigDecimal updatedCost = updatedBaseCost
+                .add(normalizeMoney(booking.getOvertimeChargeTotal()))
+                .add(normalizeMoney(booking.getDamageChargeTotal()))
+                .setScale(2, RoundingMode.HALF_UP);
 
         booking.setDurationMinutes(nextDuration);
         booking.setTotalCost(updatedCost);
+        booking.setPlannedEndTime(booking.getStartTime().plusMinutes(nextDuration));
         bookingMapper.extendActiveBooking(booking);
+        bookingMapper.updateAutomationState(booking);
 
         Map<String, Object> response = new HashMap<>();
         response.put("bookingId", booking.getBookingId());
@@ -183,8 +263,51 @@ public class BookingService {
         response.put("addedMinutes", extraMinutes);
         response.put("durationMinutes", booking.getDurationMinutes());
         response.put("totalCost", booking.getTotalCost());
-        response.put("plannedEndTime", booking.getStartTime().plusMinutes(booking.getDurationMinutes()));
+        response.put("plannedEndTime", booking.getPlannedEndTime());
         response.put("bookingStatus", booking.getStatus());
+        return response;
+    }
+
+    @Transactional
+    public Map<String, Object> recordTelemetry(Integer bookingId, Map<String, Object> payload) {
+        ensureOperationalTables();
+
+        Booking booking = bookingMapper.selectByBookingId(bookingId);
+        if (booking == null) {
+            throw new IllegalArgumentException("Booking not found");
+        }
+
+        Scooter scooter = scooterMapper.selectById(booking.getScooterId());
+        if (scooter == null) {
+            throw new IllegalArgumentException("Scooter not found");
+        }
+
+        Double latitude = parseDouble(payload == null ? null : payload.get("latitude"));
+        Double longitude = parseDouble(payload == null ? null : payload.get("longitude"));
+        Integer batteryLevel = parseInteger(payload == null ? null : payload.get("batteryLevel"));
+        String lockState = payload == null ? null : String.valueOf(payload.getOrDefault("lockState", "UNLOCKED"));
+
+        if (latitude != null) {
+            scooter.setLatitude(latitude);
+        }
+        if (longitude != null) {
+            scooter.setLongitude(longitude);
+        }
+        if (batteryLevel != null) {
+            scooter.setBatteryLevel(Math.max(0, Math.min(100, batteryLevel)));
+        }
+        scooterMapper.updateById(scooter);
+
+        vehicleIntegrationService.recordTelemetry(bookingId, lockState, "Telemetry heartbeat received from the ride session.");
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("bookingId", bookingId);
+        response.put("scooterId", scooter.getScooterId());
+        response.put("latitude", scooter.getLatitude());
+        response.put("longitude", scooter.getLongitude());
+        response.put("batteryLevel", scooter.getBatteryLevel());
+        response.put("unlockStatus", lockState == null ? booking.getUnlockStatus() : lockState);
+        response.put("telemetryStatus", "LIVE");
         return response;
     }
 
@@ -197,6 +320,9 @@ public class BookingService {
         }
         if (request.getScooterId() == null) {
             throw new IllegalArgumentException("Scooter ID is required");
+        }
+        if (request.getScanToken() == null || request.getScanToken().isBlank()) {
+            throw new IllegalArgumentException("A QR scan token is required before unlock");
         }
     }
 
@@ -243,7 +369,7 @@ public class BookingService {
         BigDecimal pricePerMinute = scooter.getPricePerMin() != null ? scooter.getPricePerMin() : BigDecimal.ZERO;
         BigDecimal matchedPackagePrice = resolvePackagePriceByDuration(durationMinutes);
         if (matchedPackagePrice != null) {
-          return matchedPackagePrice.setScale(2, RoundingMode.HALF_UP);
+            return matchedPackagePrice.setScale(2, RoundingMode.HALF_UP);
         }
 
         PackageTier packageTier = resolvePackageTier(durationMinutes);
@@ -311,6 +437,41 @@ public class BookingService {
         }
 
         return null;
+    }
+
+    private BigDecimal resolveOvertimeFee(BigDecimal incomingFee, BigDecimal estimatedCost) {
+        BigDecimal resolved = incomingFee != null && incomingFee.compareTo(BigDecimal.ZERO) > 0
+                ? incomingFee
+                : estimatedCost.multiply(BigDecimal.valueOf(0.12));
+        return resolved.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal normalizeMoney(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP) : value.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private Integer parseInteger(Object value) {
+        if (value == null) return null;
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        try {
+            return Integer.parseInt(String.valueOf(value).trim());
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    private Double parseDouble(Object value) {
+        if (value == null) return null;
+        if (value instanceof Number number) {
+            return number.doubleValue();
+        }
+        try {
+            return Double.parseDouble(String.valueOf(value).trim());
+        } catch (NumberFormatException ex) {
+            return null;
+        }
     }
 
     private record PackageTier(int durationMinutes, BigDecimal price) {}

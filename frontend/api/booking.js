@@ -22,6 +22,10 @@ export const extendRide = (bookingId, extraMinutes) => {
   return request.post(`/bookings/${bookingId}/extend`, { extraMinutes })
 }
 
+export const sendRideTelemetry = (bookingId, data = {}) => {
+  return request.post(`/bookings/${bookingId}/telemetry`, data)
+}
+
 export const endRide = (bookingId, options = {}) => {
   const { useLegacy = true, ...payload } = options
 

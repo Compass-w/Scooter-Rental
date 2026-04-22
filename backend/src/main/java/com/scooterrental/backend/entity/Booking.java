@@ -11,9 +11,18 @@ public class Booking {
     private Integer scooterId;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
+    private LocalDateTime plannedEndTime;
     private BigDecimal totalCost;
     private Integer durationMinutes;
     private String status; // PENDING, ACTIVE, COMPLETED, CANCELLED
+    private String planType;
+    private String paymentStatus;
+    private String unlockStatus;
+    private String unlockReference;
+    private BigDecimal overtimeFeePer15Minutes;
+    private BigDecimal overtimeChargeTotal;
+    private BigDecimal damageChargeTotal;
+    private LocalDateTime lastReminderAt;
     private String scooterModel; // To be displayed on electronic receipt
     private LocalDateTime createdAt;
 }
