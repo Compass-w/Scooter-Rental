@@ -141,21 +141,25 @@
             <text class="input-label">Real name</text>
             <input
               v-model="identityForm.name"
-              class="input-control"
+              :class="['input-control', formErrors.identityName ? 'input-control-error' : '']"
               type="text"
               maxlength="40"
               placeholder="Zhang Wei"
+              @input="clearFieldError('identityName')"
             />
+            <text v-if="formErrors.identityName" class="input-error">{{ formErrors.identityName }}</text>
           </view>
           <view class="input-group">
             <text class="input-label">National ID / passport</text>
             <input
               v-model="identityForm.idNumber"
-              class="input-control"
+              :class="['input-control', formErrors.identityNumber ? 'input-control-error' : '']"
               type="text"
               maxlength="24"
               placeholder="110101199901011234"
+              @input="clearFieldError('identityNumber')"
             />
+            <text v-if="formErrors.identityNumber" class="input-error">{{ formErrors.identityNumber }}</text>
           </view>
           <text class="flow-note">China sharing flow: real-name verification must be completed before scan-to-unlock is enabled.</text>
         </view>
@@ -165,22 +169,26 @@
             <text class="input-label">{{ selectedServiceMode === 'WALK_IN' ? 'Customer name' : 'Cardholder name' }}</text>
             <input
               v-model="cardForm.name"
-              class="input-control"
+              :class="['input-control', formErrors.cardName ? 'input-control-error' : '']"
               type="text"
               maxlength="40"
               placeholder="Alex Rider"
+              @input="clearFieldError('cardName')"
             />
+            <text v-if="formErrors.cardName" class="input-error">{{ formErrors.cardName }}</text>
           </view>
 
           <view class="input-group">
             <text class="input-label">Card number</text>
             <input
               v-model="cardForm.number"
-              class="input-control"
+              :class="['input-control', formErrors.cardNumber ? 'input-control-error' : '']"
               type="number"
               maxlength="16"
               placeholder="4242424242424242"
+              @input="clearFieldError('cardNumber')"
             />
+            <text v-if="formErrors.cardNumber" class="input-error">{{ formErrors.cardNumber }}</text>
           </view>
 
           <view class="payment-row">
@@ -188,22 +196,26 @@
               <text class="input-label">Expiry</text>
               <input
                 v-model="cardForm.expiry"
-                class="input-control"
+                :class="['input-control', formErrors.cardExpiry ? 'input-control-error' : '']"
                 type="text"
                 maxlength="5"
                 placeholder="12/28"
+                @input="clearFieldError('cardExpiry')"
               />
+              <text v-if="formErrors.cardExpiry" class="input-error">{{ formErrors.cardExpiry }}</text>
             </view>
 
             <view class="input-group input-half">
               <text class="input-label">CVC</text>
               <input
                 v-model="cardForm.cvc"
-                class="input-control"
+                :class="['input-control', formErrors.cardCvc ? 'input-control-error' : '']"
                 type="number"
                 maxlength="4"
                 placeholder="123"
+                @input="clearFieldError('cardCvc')"
               />
+              <text v-if="formErrors.cardCvc" class="input-error">{{ formErrors.cardCvc }}</text>
             </view>
           </view>
 
@@ -212,11 +224,60 @@
         </view>
       </view>
 
+      <view v-if="selectedServiceMode === 'WALK_IN'" class="section-block">
+        <view class="section-row">
+          <text class="section-title">Store Rental Setup</text>
+          <view class="demo-badge">
+            <text class="demo-badge-text">{{ selectedStoreChannelProfile.label }}</text>
+          </view>
+        </view>
+
+        <view class="toggle-row">
+          <view
+            v-for="channel in storeRentalChannels"
+            :key="channel.code"
+            :class="['toggle-card', selectedStoreChannel === channel.code ? 'toggle-card-active' : '']"
+            @tap="selectedStoreChannel = channel.code"
+          >
+            <text class="toggle-title">{{ channel.label }}</text>
+            <text class="toggle-desc">{{ channel.summary }}</text>
+          </view>
+        </view>
+
+        <view class="payment-form">
+          <view class="input-group">
+            <text class="input-label">Pickup store</text>
+            <picker :range="storeBranchOptions" range-key="label" :value="pickupStoreIndex" @change="handlePickupStoreChange">
+              <view :class="['input-control', 'input-control-picker', formErrors.pickupStore ? 'input-control-error' : '']">{{ pickupStoreLabel }}</view>
+            </picker>
+            <text v-if="formErrors.pickupStore" class="input-error">{{ formErrors.pickupStore }}</text>
+            <text class="flow-note">{{ buildStoreAddressLabel(pickupStore) }}</text>
+          </view>
+
+          <view class="input-group">
+            <text class="input-label">Return store</text>
+            <picker :range="storeBranchOptions" range-key="label" :value="returnStoreIndex" @change="handleReturnStoreChange">
+              <view :class="['input-control', 'input-control-picker', formErrors.returnStore ? 'input-control-error' : '']">{{ returnStoreLabel }}</view>
+            </picker>
+            <text v-if="formErrors.returnStore" class="input-error">{{ formErrors.returnStore }}</text>
+            <text class="flow-note">{{ buildStoreAddressLabel(returnStore) }}</text>
+          </view>
+        </view>
+      </view>
+
       <view class="section-block">
         <label class="liability-check">
           <checkbox :checked="liabilityAccepted" color="#2563EB" style="transform:scale(0.82)" @tap.stop="toggleLiability" />
           <text class="liability-copy">I understand that road-law compliance remains the rider's responsibility, and uncovered penalties or damage may still be charged.</text>
         </label>
+        <text v-if="formErrors.liabilityAccepted" class="input-error input-error-block">{{ formErrors.liabilityAccepted }}</text>
+      </view>
+
+      <view v-if="validationSummary.length" class="section-block">
+        <view class="validation-card">
+          <text class="validation-title">Please complete the required information</text>
+          <text class="validation-copy">{{ validationSummary.join(' · ') }}</text>
+        </view>
       </view>
 
       <view class="section-block">
@@ -325,6 +386,14 @@
           <text class="pricing-label">Scenario</text>
           <text class="pricing-value">{{ selectedMarketProfile.label }} · {{ selectedServiceProfile.label }}</text>
         </view>
+        <view v-if="selectedServiceMode === 'WALK_IN'" class="pricing-row">
+          <text class="pricing-label">Store route</text>
+          <text class="pricing-value">{{ pickupStore.name }} → {{ returnStore.name }}</text>
+        </view>
+        <view v-if="selectedServiceMode === 'WALK_IN'" class="pricing-row">
+          <text class="pricing-label">Booking channel</text>
+          <text class="pricing-value">{{ selectedStoreChannelProfile.label }}</text>
+        </view>
         <view class="pricing-row">
           <text class="pricing-label">Hire period</text>
           <text class="pricing-value">{{ selectedOption.label }}</text>
@@ -389,6 +458,14 @@ import {
   getMarketProfile,
   getServiceModeProfile
 } from '@/utils/scooterCatalog.js'
+import {
+  STORE_BOOKING_CHANNELS,
+  STORE_BRANCHES,
+  buildStoreAddressLabel,
+  buildStoreLabel,
+  getStoreBookingChannel,
+  getStoreBranch
+} from '@/utils/storeRental.js'
 
 const props = defineProps({
   visible: {
@@ -413,9 +490,13 @@ const emit = defineEmits(['close', 'confirm'])
 
 const marketProfiles = MARKET_PROFILES
 const serviceModes = SERVICE_MODE_PROFILES
+const storeRentalChannels = STORE_BOOKING_CHANNELS
 const selectedPlan = ref('1_HOUR')
 const selectedMarketCode = ref('CN')
 const selectedServiceMode = ref('SHARING')
+const selectedStoreChannel = ref('WALK_IN_COUNTER')
+const pickupStoreCode = ref(STORE_BRANCHES[0]?.code || '')
+const returnStoreCode = ref(STORE_BRANCHES[0]?.code || '')
 const selectedVehicleSlug = ref('')
 const previewVisible = ref(false)
 const paymentProcessing = ref(false)
@@ -430,10 +511,21 @@ const identityForm = ref({
   idNumber: ''
 })
 const cardForm = ref({
-  name: 'Scooter Rider',
-  number: '4242424242424242',
-  expiry: '12/28',
-  cvc: '123'
+  name: '',
+  number: '',
+  expiry: '',
+  cvc: ''
+})
+const formErrors = ref({
+  identityName: '',
+  identityNumber: '',
+  cardName: '',
+  cardNumber: '',
+  cardExpiry: '',
+  cardCvc: '',
+  pickupStore: '',
+  returnStore: '',
+  liabilityAccepted: ''
 })
 
 const baseVehicle = computed(() => enrichScooter(props.scooter || {}))
@@ -450,9 +542,23 @@ const selectedVehicle = computed(() =>
 
 const selectedMarketProfile = computed(() => getMarketProfile(selectedMarketCode.value))
 const selectedServiceProfile = computed(() => getServiceModeProfile(selectedServiceMode.value))
+const selectedStoreChannelProfile = computed(() => getStoreBookingChannel(selectedStoreChannel.value))
+const pickupStore = computed(() => getStoreBranch(pickupStoreCode.value))
+const returnStore = computed(() => getStoreBranch(returnStoreCode.value))
+const storeBranchOptions = computed(() =>
+  STORE_BRANCHES.map(branch => ({
+    value: branch.code,
+    label: buildStoreLabel(branch)
+  }))
+)
+const pickupStoreIndex = computed(() => Math.max(0, storeBranchOptions.value.findIndex(option => option.value === pickupStoreCode.value)))
+const returnStoreIndex = computed(() => Math.max(0, storeBranchOptions.value.findIndex(option => option.value === returnStoreCode.value)))
 const requiresRealName = computed(() => selectedMarketCode.value === 'CN' && selectedServiceMode.value === 'SHARING')
 const requiresCardBinding = computed(() => !requiresRealName.value)
 const telemetrySummary = computed(() => (selectedVehicle.value.telemetry || []).join(', '))
+const validationSummary = computed(() =>
+  Object.values(formErrors.value).filter(Boolean)
+)
 
 const modelPricing = computed(() => createPlanPricingForProfile(selectedVehicle.value, RENTAL_PACKAGE_PRICING))
 const modelPricingFor = (vehicle) => createPlanPricingForProfile(vehicle, RENTAL_PACKAGE_PRICING)
@@ -507,6 +613,8 @@ const electricityFeeEstimate = computed(() => {
 })
 const overtimeFeePer15Minutes = computed(() => Number((selectedOption.value.fixedPrice * 0.12).toFixed(2)))
 const totalPrice = computed(() => Number((selectedOption.value.fixedPrice + electricityFeeEstimate.value).toFixed(2)))
+const pickupStoreLabel = computed(() => buildStoreLabel(pickupStore.value))
+const returnStoreLabel = computed(() => buildStoreLabel(returnStore.value))
 
 const parkingRule = computed(() =>
   selectedServiceMode.value === 'SHARING'
@@ -526,6 +634,16 @@ const insurancePolicy = computed(() =>
     : 'Verified riders see accident-coverage notes, helmet guidance, and liability exclusions before each unlock.'
 )
 
+const handlePickupStoreChange = (event) => {
+  const option = storeBranchOptions.value[Number(event?.detail?.value ?? 0)]
+  pickupStoreCode.value = option?.value || STORE_BRANCHES[0]?.code || ''
+}
+
+const handleReturnStoreChange = (event) => {
+  const option = storeBranchOptions.value[Number(event?.detail?.value ?? 0)]
+  returnStoreCode.value = option?.value || pickupStoreCode.value || STORE_BRANCHES[0]?.code || ''
+}
+
 watch(
   () => [props.visible, props.scooter?.id, props.preferredPlan],
   ([isVisible]) => {
@@ -541,6 +659,9 @@ watch(
     selectedVehicleSlug.value = baseVehicle.value.profileSlug
     selectedMarketCode.value = 'CN'
     selectedServiceMode.value = 'SHARING'
+    selectedStoreChannel.value = 'WALK_IN_COUNTER'
+    pickupStoreCode.value = STORE_BRANCHES[0]?.code || ''
+    returnStoreCode.value = STORE_BRANCHES[0]?.code || ''
     detailSections.value = {
       vehicle: false,
       rules: false,
@@ -549,11 +670,12 @@ watch(
     liabilityAccepted.value = false
     identityForm.value = { name: '', idNumber: '' }
     cardForm.value = {
-      name: 'Scooter Rider',
-      number: '4242424242424242',
-      expiry: '12/28',
-      cvc: '123'
+      name: '',
+      number: '',
+      expiry: '',
+      cvc: ''
     }
+    resetFormErrors()
     paymentProcessing.value = false
     previewVisible.value = false
   },
@@ -572,6 +694,9 @@ const handleClose = () => {
 
 const toggleLiability = () => {
   liabilityAccepted.value = !liabilityAccepted.value
+  if (liabilityAccepted.value) {
+    clearFieldError('liabilityAccepted')
+  }
 }
 
 const toggleDisclosure = (section) => {
@@ -581,54 +706,122 @@ const toggleDisclosure = (section) => {
   }
 }
 
+const resetFormErrors = () => {
+  formErrors.value = {
+    identityName: '',
+    identityNumber: '',
+    cardName: '',
+    cardNumber: '',
+    cardExpiry: '',
+    cardCvc: '',
+    pickupStore: '',
+    returnStore: '',
+    liabilityAccepted: ''
+  }
+}
+
+const clearFieldError = (field) => {
+  formErrors.value = {
+    ...formErrors.value,
+    [field]: ''
+  }
+}
+
 const validateCard = () => {
   const digits = String(cardForm.value.number || '').replace(/\D/g, '')
   const expiry = String(cardForm.value.expiry || '').trim()
   const cvc = String(cardForm.value.cvc || '').replace(/\D/g, '')
+  const nextErrors = {}
 
   if (!String(cardForm.value.name || '').trim()) {
-    uni.showToast({ title: 'Enter the cardholder name', icon: 'none' })
-    return false
+    nextErrors.cardName = 'Enter the rider or cardholder name.'
   }
   if (digits.length < 12) {
-    uni.showToast({ title: 'Enter a valid card number', icon: 'none' })
-    return false
+    nextErrors.cardNumber = 'Enter a valid card number.'
   }
   if (!/^\d{2}\/\d{2}$/.test(expiry)) {
-    uni.showToast({ title: 'Use expiry in MM/YY', icon: 'none' })
-    return false
+    nextErrors.cardExpiry = 'Use expiry in MM/YY.'
   }
   if (cvc.length < 3) {
-    uni.showToast({ title: 'Enter a valid CVC', icon: 'none' })
-    return false
+    nextErrors.cardCvc = 'Enter a valid security code.'
   }
-  return true
+  formErrors.value = {
+    ...formErrors.value,
+    ...nextErrors
+  }
+  return !Object.keys(nextErrors).length
 }
 
 const validateIdentity = () => {
+  const nextErrors = {}
+
   if (!String(identityForm.value.name || '').trim()) {
-    uni.showToast({ title: 'Enter the rider real name', icon: 'none' })
-    return false
+    nextErrors.identityName = 'Enter the rider real name.'
   }
   if (String(identityForm.value.idNumber || '').trim().length < 8) {
-    uni.showToast({ title: 'Enter a valid ID number', icon: 'none' })
-    return false
+    nextErrors.identityNumber = 'Enter a valid ID or passport number.'
   }
-  return true
+  formErrors.value = {
+    ...formErrors.value,
+    ...nextErrors
+  }
+  return !Object.keys(nextErrors).length
+}
+
+const validateStoreFields = () => {
+  const nextErrors = {}
+
+  if (!pickupStore.value?.code) {
+    nextErrors.pickupStore = 'Select a pickup store.'
+  }
+  if (!returnStore.value?.code) {
+    nextErrors.returnStore = 'Select a return store.'
+  }
+
+  formErrors.value = {
+    ...formErrors.value,
+    ...nextErrors
+  }
+  return !Object.keys(nextErrors).length
+}
+
+const validateBookingForm = () => {
+  resetFormErrors()
+
+  let valid = true
+  if (!liabilityAccepted.value) {
+    formErrors.value = {
+      ...formErrors.value,
+      liabilityAccepted: 'Accept the liability notice before unlocking.'
+    }
+    valid = false
+  }
+
+  if (requiresRealName.value) {
+    valid = validateIdentity() && valid
+  }
+
+  if (requiresCardBinding.value) {
+    valid = validateCard() && valid
+  }
+
+  if (selectedServiceMode.value === 'WALK_IN') {
+    valid = validateStoreFields() && valid
+  }
+
+  if (!valid) {
+    uni.showToast({
+      title: 'Please complete the highlighted information',
+      icon: 'none'
+    })
+  }
+
+  return valid
 }
 
 const handleConfirm = async () => {
   if (!props.scooter || paymentProcessing.value || props.submitting) return
-  if (!liabilityAccepted.value) {
-    uni.showToast({ title: 'Accept the liability notice first', icon: 'none' })
-    return
-  }
-
-  if (requiresRealName.value && !validateIdentity()) {
-    return
-  }
-
-  if (requiresCardBinding.value && !validateCard()) {
+  if (!validateBookingForm()) {
     return
   }
 
@@ -654,6 +847,14 @@ const handleConfirm = async () => {
     marketLabel: selectedMarketProfile.value.label,
     serviceMode: selectedServiceMode.value,
     serviceLabel: selectedServiceProfile.value.label,
+    bookingChannel: selectedServiceMode.value === 'WALK_IN' ? selectedStoreChannel.value : '',
+    bookingChannelLabel: selectedServiceMode.value === 'WALK_IN' ? selectedStoreChannelProfile.value.label : '',
+    pickupStoreCode: selectedServiceMode.value === 'WALK_IN' ? pickupStore.value.code : '',
+    pickupStoreName: selectedServiceMode.value === 'WALK_IN' ? pickupStore.value.name : '',
+    pickupStoreAddress: selectedServiceMode.value === 'WALK_IN' ? buildStoreAddressLabel(pickupStore.value) : '',
+    returnStoreCode: selectedServiceMode.value === 'WALK_IN' ? returnStore.value.code : '',
+    returnStoreName: selectedServiceMode.value === 'WALK_IN' ? returnStore.value.name : '',
+    returnStoreAddress: selectedServiceMode.value === 'WALK_IN' ? buildStoreAddressLabel(returnStore.value) : '',
     startBatteryLevel: startingBatteryLevel.value,
     estimatedReturnBattery: estimatedReturnBattery.value,
     electricityFeeEstimate: electricityFeeEstimate.value,
@@ -1190,6 +1391,28 @@ const handleConfirm = async () => {
   color: #0f172a;
 }
 
+.input-control-error {
+  border-color: #DC2626;
+  background: #FEF2F2;
+}
+
+.input-control-picker {
+  display: flex;
+  align-items: center;
+}
+
+.input-error {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  line-height: 1.5;
+  color: #DC2626;
+}
+
+.input-error-block {
+  margin-left: 52rpx;
+}
+
 .flow-note {
   display: block;
   margin-top: 6rpx;
@@ -1289,6 +1512,28 @@ const handleConfirm = async () => {
   color: #64748b;
   line-height: 1.55;
   margin-bottom: 22rpx;
+}
+
+.validation-card {
+  border-radius: 24rpx;
+  padding: 20rpx 22rpx;
+  background: linear-gradient(180deg, #FFF7ED 0%, #FFFFFF 100%);
+  border: 1rpx solid rgba(249, 115, 22, 0.18);
+}
+
+.validation-title {
+  display: block;
+  font-size: 25rpx;
+  font-weight: 700;
+  color: #9A3412;
+}
+
+.validation-copy {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  line-height: 1.6;
+  color: #C2410C;
 }
 
 .confirm-button {
