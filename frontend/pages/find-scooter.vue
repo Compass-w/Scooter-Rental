@@ -263,7 +263,7 @@ import { onHide, onLoad, onShow } from '@dcloudio/uni-app'
 import BaseLayout from '@/pages/BaseLayout.vue'
 import BookingOptions from '@/components/BookingOptions.vue'
 import { getAllScooters, startRide as startRideApi } from '@/api/scooter.js'
-import { getUserBookings } from '@/api/booking.js'
+import { getUserBookings, sendRideTelemetry } from '@/api/booking.js'
 import { findActiveRide, getStoredActiveRide, getStoredUserId, setStoredActiveRide } from '@/utils/activeRide.js'
 import { applyRidePricing, formatCny, HOME_PRICING } from '@/utils/pricing.js'
 import { enrichScooter } from '@/utils/scooterCatalog.js'
@@ -467,6 +467,17 @@ const syncRideScooterToLocation = (location) => {
 
   if (mapReady.value) {
     sendToMap('updateScooters', scooters.value)
+  }
+
+  if (syncedRide?.bookingId) {
+    sendRideTelemetry(syncedRide.bookingId, {
+      latitude: location.lat,
+      longitude: location.lng,
+      batteryLevel: syncedRide.startBatteryLevel ?? selectedScooter.value?.batteryLevel ?? bookingScooter.value?.batteryLevel ?? null,
+      lockState: 'UNLOCKED'
+    }).catch(error => {
+      console.warn('Telemetry sync failed:', error)
+    })
   }
 
   return true
@@ -983,6 +994,7 @@ const closeBookingOptions = () => {
  */
 const confirmRideStart = async (paymentData) => {
   if (!bookingScooter.value) return
+  const rideScooter = bookingScooter.value
 
   const userId = getStoredUserId()
   if (!userId) {
@@ -1005,35 +1017,47 @@ const confirmRideStart = async (paymentData) => {
   try {
     const booking = await startRideApi({
       userId,
-      scooterId: bookingScooter.value.id,
-      planType: paymentData.planType
+      scooterId: rideScooter.id,
+      planType: paymentData.planType,
+      overtimeFeePer15Minutes: paymentData.overtimeFeePer15Minutes,
+      marketCode: paymentData.marketCode,
+      serviceMode: paymentData.serviceMode,
+      scanToken: `QR-${rideScooter.id}-${Date.now()}`
     })
 
-    updateScooterStatus(bookingScooter.value.id, 'IN_USE')
+    updateScooterStatus(rideScooter.id, 'IN_USE')
     setStoredActiveRide({
       ...booking,
       bookingId: booking?.bookingId,
       userId,
-      scooterId: bookingScooter.value.id,
-      scooterModel: paymentData.scooterModel || bookingScooter.value.model,
+      scooterId: rideScooter.id,
+      scooterModel: paymentData.scooterModel || rideScooter.model,
       startTime: new Date().toISOString(),
       durationMinutes: booking?.durationMinutes ?? paymentData.durationMinutes,
       totalCost: booking?.estimatedCost ?? paymentData.totalPrice,
-      basePrice: bookingScooter.value.basePrice,
-      pricePerMinute: bookingScooter.value.pricePerMin,
+      basePrice: rideScooter.basePrice,
+      pricePerMinute: rideScooter.pricePerMin,
       cardLast4: paymentData.cardLast4,
-      imageUrl: paymentData.imageUrl || bookingScooter.value.imageUrl,
-      gallery: paymentData.gallery || bookingScooter.value.gallery,
-      photoCredit: paymentData.photoCredit || bookingScooter.value.photoCredit,
-      profileSlug: paymentData.profileSlug || bookingScooter.value.profileSlug,
-      specs: paymentData.specs || bookingScooter.value.specs,
-      telemetry: paymentData.telemetry || bookingScooter.value.telemetry,
-      performanceSummary: paymentData.performanceSummary || bookingScooter.value.performanceSummary,
+      imageUrl: paymentData.imageUrl || rideScooter.imageUrl,
+      gallery: paymentData.gallery || rideScooter.gallery,
+      photoCredit: paymentData.photoCredit || rideScooter.photoCredit,
+      profileSlug: paymentData.profileSlug || rideScooter.profileSlug,
+      specs: paymentData.specs || rideScooter.specs,
+      telemetry: paymentData.telemetry || rideScooter.telemetry,
+      performanceSummary: paymentData.performanceSummary || rideScooter.performanceSummary,
       marketCode: paymentData.marketCode,
       marketLabel: paymentData.marketLabel,
       serviceMode: paymentData.serviceMode,
       serviceLabel: paymentData.serviceLabel,
-      startBatteryLevel: paymentData.startBatteryLevel ?? bookingScooter.value.batteryLevel,
+      bookingChannel: paymentData.bookingChannel,
+      bookingChannelLabel: paymentData.bookingChannelLabel,
+      pickupStoreCode: paymentData.pickupStoreCode,
+      pickupStoreName: paymentData.pickupStoreName,
+      pickupStoreAddress: paymentData.pickupStoreAddress,
+      returnStoreCode: paymentData.returnStoreCode,
+      returnStoreName: paymentData.returnStoreName,
+      returnStoreAddress: paymentData.returnStoreAddress,
+      startBatteryLevel: paymentData.startBatteryLevel ?? rideScooter.batteryLevel,
       estimatedReturnBattery: paymentData.estimatedReturnBattery,
       electricityFeeEstimate: paymentData.electricityFeeEstimate,
       overtimeFeePer15Minutes: paymentData.overtimeFeePer15Minutes,
@@ -1041,6 +1065,11 @@ const confirmRideStart = async (paymentData) => {
       damagePolicy: paymentData.damagePolicy,
       insurancePolicy: paymentData.insurancePolicy,
       liabilityAccepted: paymentData.liabilityAccepted,
+      unlockStatus: booking?.unlockStatus || 'UNLOCKED',
+      unlockReference: booking?.unlockReference || '',
+      paymentStatus: booking?.paymentStatus || 'AUTHORIZED',
+      plannedEndTime: booking?.plannedEndTime || null,
+      deviceMessage: booking?.deviceMessage || '',
       latitude: currentUserLocation.value?.lat ?? null,
       longitude: currentUserLocation.value?.lng ?? null,
       lat: currentUserLocation.value?.lat ?? null,
@@ -1052,6 +1081,16 @@ const confirmRideStart = async (paymentData) => {
     bookingScooter.value = null
     selectedScooter.value = null
     syncRideScooterToLocation(currentUserLocation.value)
+    if (booking?.bookingId && currentUserLocation.value) {
+      await sendRideTelemetry(booking.bookingId, {
+        latitude: currentUserLocation.value.lat,
+        longitude: currentUserLocation.value.lng,
+        batteryLevel: paymentData.startBatteryLevel ?? rideScooter.batteryLevel ?? null,
+        lockState: 'UNLOCKED'
+      }).catch(error => {
+        console.warn('Initial telemetry sync failed:', error)
+      })
+    }
     startRideLocationTracking()
 
     const estimatedCost = Number(booking?.estimatedCost ?? paymentData.totalPrice ?? 0).toFixed(2)
@@ -1435,6 +1474,7 @@ onUnmounted(() => {
 /* ========== Scooter Popup ========== */
 .scooter-popup {
   position: absolute;
+  top: calc(env(safe-area-inset-top) + 152rpx);
   bottom: 180rpx;
   left: 24rpx;
   right: 24rpx;
@@ -1444,6 +1484,7 @@ onUnmounted(() => {
   box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.15);
   z-index: 980;
   animation: slideUp 0.3s ease;
+  overflow-y: auto;
 }
 
 @keyframes slideUp {
@@ -2076,6 +2117,7 @@ onUnmounted(() => {
 
 @media (max-width: 750px) {
   .scooter-popup {
+    top: calc(env(safe-area-inset-top) + 156rpx);
     bottom: calc(env(safe-area-inset-bottom) + 152rpx);
   }
 
