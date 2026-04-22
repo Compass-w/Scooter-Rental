@@ -420,7 +420,6 @@
         <view v-if="!isMobileLayout || locationsExpanded" class="cities-grid">
           <view class="city-card" v-for="city in cities" :key="city.name">
             <view class="city-main">
-              <text v-if="city.flag" class="city-flag">{{ city.flag }}</text>
               <text class="city-name">{{ isMobileLayout && city.mobileName ? city.mobileName : city.name }}</text>
             </view>
             <view class="city-status" :class="city.live ? 'live' : 'soon'">
@@ -550,24 +549,24 @@ const safetyResponsibilities = ref([
 ])
 
 const cities = ref([
-  { name: 'Shanghai',   mobileName: 'Shanghai', flag: '🇨🇳', live: true  },
-  { name: 'Beijing',    mobileName: 'Beijing', flag: '🇨🇳', live: true  },
-  { name: 'Shenzhen',   mobileName: 'Shenzhen', flag: '🇨🇳', live: true  },
-  { name: 'Guangzhou',  mobileName: 'Guangzhou', flag: '🇨🇳', live: true  },
-  { name: 'Hangzhou',   mobileName: 'Hangzhou', flag: '🇨🇳', live: true  },
-  { name: 'Chengdu',    mobileName: 'Chengdu', flag: '🇨🇳', live: true  },
-  { name: 'Nanjing',    mobileName: 'Nanjing', flag: '🇨🇳', live: true  },
-  { name: 'Suzhou',     mobileName: 'Suzhou', flag: '🇨🇳', live: true  },
-  { name: 'HongKong',   mobileName: 'HK', flag: '🇭🇰', live: true  },
-  { name: 'Singapore',  mobileName: 'SG', flag: '🇸🇬', live: true  },
-  { name: 'Tokyo',      mobileName: 'Tokyo', flag: '🇯🇵', live: true  },
-  { name: 'London',     mobileName: 'London', flag: '🇬🇧', live: true  },
-  { name: 'Chongqing',  mobileName: 'CQ', flag: '🇨🇳', live: false },
-  { name: 'Wuhan',      mobileName: 'Wuhan', flag: '🇨🇳', live: false },
-  { name: "Xi'an",      mobileName: "Xi'an", flag: '🇨🇳', live: false },
-  { name: 'Seoul',      mobileName: 'Seoul', flag: '🇰🇷', live: false },
-  { name: 'Bangkok',    mobileName: 'Bangkok', flag: '🇹🇭', live: false },
-  { name: 'Dubai',      mobileName: 'Dubai', flag: '🇦🇪', live: false },
+  { name: 'Shanghai',   mobileName: 'Shanghai', live: true  },
+  { name: 'Beijing',    mobileName: 'Beijing', live: true  },
+  { name: 'Shenzhen',   mobileName: 'Shenzhen', live: true  },
+  { name: 'Guangzhou',  mobileName: 'Guangzhou', live: true  },
+  { name: 'Hangzhou',   mobileName: 'Hangzhou', live: true  },
+  { name: 'Chengdu',    mobileName: 'Chengdu', live: true  },
+  { name: 'Nanjing',    mobileName: 'Nanjing', live: true  },
+  { name: 'Suzhou',     mobileName: 'Suzhou', live: true  },
+  { name: 'HongKong',   mobileName: 'HK', live: true  },
+  { name: 'Singapore',  mobileName: 'SG', live: true  },
+  { name: 'Tokyo',      mobileName: 'Tokyo', live: true  },
+  { name: 'London',     mobileName: 'London', live: true  },
+  { name: 'Chongqing',  mobileName: 'CQ', live: false },
+  { name: 'Wuhan',      mobileName: 'Wuhan', live: false },
+  { name: "Xi'an",      mobileName: "Xi'an", live: false },
+  { name: 'Seoul',      mobileName: 'Seoul', live: false },
+  { name: 'Bangkok',    mobileName: 'Bangkok', live: false },
+  { name: 'Dubai',      mobileName: 'Dubai', live: false },
 ])
 
 const reviews = ref([

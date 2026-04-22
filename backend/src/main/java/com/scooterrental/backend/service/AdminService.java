@@ -602,6 +602,10 @@ public class AdminService {
             List<Scooter> scooters,
             List<IssueReport> issues,
             List<StaffBooking> staffBookings) {
+        long geoTaggedScooters = scooters.stream()
+                .filter(item -> item.getLatitude() != null && item.getLongitude() != null)
+                .count();
+
         List<Map<String, Object>> items = List.of(
                 mapOf(
                         "title", "Analytics dashboard",
@@ -612,7 +616,7 @@ public class AdminService {
                         "status", scooters.isEmpty() ? "WATCH" : "READY",
                         "detail", scooters.isEmpty()
                                 ? "Fleet data is empty, so configuration and heatmap views need seeded scooters."
-                                : "Scooter configuration, remote status override, charging queue, and maintenance history are available."),
+                                : "Scooter configuration, status override, charging queue, maintenance history, and paged fleet browsing are available."),
                 mapOf(
                         "title", "Issue workflow",
                         "status", "READY",
@@ -632,9 +636,19 @@ public class AdminService {
                         "status", "READY",
                         "detail", "Discount ladders are exposed in admin and the 4-hour package can now be surfaced consistently."),
                 mapOf(
-                        "title", "Operational caveats",
+                        "title", "Booking confirmations",
                         "status", "WATCH",
-                        "detail", "The heatmap is an ops visualization and booking confirmations are tracked in-app; a live GIS layer and real email provider are still optional follow-up work."));
+                        "detail", "Confirmation status is tracked in-app, but a real outbound email provider is still not wired in."),
+                mapOf(
+                        "title", "Map coverage",
+                        "status", "WATCH",
+                        "detail", geoTaggedScooters >= 5
+                                ? "Scooter coordinates are available and the customer map exists, but the admin board still uses an ops heatmap rather than a true geographic fleet map."
+                                : "Fewer than five scooters currently have usable coordinates, so the visual map requirement is only partially covered."),
+                mapOf(
+                        "title", "Responsive and accessibility QA",
+                        "status", "WATCH",
+                        "detail", "Responsive layouts are present, but a final accessibility pass on contrast, keyboard flow, and small-screen QA is still recommended."));
 
         long readyCount = items.stream().filter(item -> "READY".equals(item.get("status"))).count();
         long watchCount = items.stream().filter(item -> "WATCH".equals(item.get("status"))).count();

@@ -460,24 +460,62 @@
             <view class="fleet-main-grid">
               <view class="fleet-list-card">
                 <view class="subpanel-head">
-                  <text class="subpanel-title">Scooter Configuration</text>
-                  <text class="subpanel-copy">Add new fleet items or update base pricing and coordinates.</text>
+                  <view>
+                    <text class="subpanel-title">Scooter Configuration</text>
+                    <text class="subpanel-copy">Add new fleet items or update base pricing and coordinates.</text>
+                  </view>
+                  <text class="sync-pill">{{ fleetScooters.length || 0 }} scooters</text>
                 </view>
 
-                <scroll-view class="fleet-scroll" scroll-y enable-flex :show-scrollbar="false">
-                  <view
-                    v-for="scooter in fleetScooters"
-                    :key="scooter.id"
-                    :class="['fleet-row', scooter.id === selectedScooterId ? 'fleet-row-active' : '']"
-                    @tap="selectScooter(scooter)"
+                <view class="fleet-scroll-shell">
+                  <scroll-view
+                    v-if="pagedFleetScooters.length"
+                    class="fleet-scroll"
+                    scroll-y
+                    enable-flex
+                    :show-scrollbar="false"
                   >
-                    <view class="fleet-row-main">
-                      <text class="fleet-row-title">#{{ scooter.id }} {{ scooter.displayName }}</text>
-                      <text class="fleet-row-meta">{{ scooter.city }} · {{ scooter.batteryLevel }}% · {{ scooter.status }}</text>
+                    <view
+                      v-for="scooter in pagedFleetScooters"
+                      :key="scooter.id"
+                      :class="['fleet-row', scooter.id === selectedScooterId ? 'fleet-row-active' : '']"
+                      @tap="selectScooter(scooter)"
+                    >
+                      <view class="fleet-row-main">
+                        <text class="fleet-row-title">#{{ scooter.id }} {{ scooter.displayName }}</text>
+                        <text class="fleet-row-meta">{{ scooter.city }} · {{ scooter.batteryLevel }}% · {{ scooter.status }}</text>
+                        <text class="fleet-row-coordinates">
+                          {{ formatCoordinate(scooter.latitude, scooter.longitude) }}
+                        </text>
+                      </view>
+                      <button class="status-btn" @tap.stop="cycleStatus(scooter)">{{ nextStatusLabel(scooter.status) }}</button>
                     </view>
-                    <button class="status-btn" @tap.stop="cycleStatus(scooter)">{{ nextStatusLabel(scooter.status) }}</button>
+                  </scroll-view>
+                  <view v-else class="fleet-empty-state">
+                    <text class="empty-copy">No scooters are available yet. Add one from the form on the right to seed the fleet.</text>
                   </view>
-                </scroll-view>
+                </view>
+
+                <view v-if="fleetScooters.length" class="pagination-row">
+                  <text class="pagination-copy">{{ fleetPaginationLabel }}</text>
+                  <view class="pagination-actions">
+                    <button
+                      class="hero-btn hero-btn-ghost hero-btn-small"
+                      :disabled="fleetPage <= 1"
+                      @tap="goToFleetPage(fleetPage - 1)"
+                    >
+                      Previous
+                    </button>
+                    <text class="pagination-page">Page {{ fleetPage }} / {{ fleetTotalPages }}</text>
+                    <button
+                      class="hero-btn hero-btn-ghost hero-btn-small"
+                      :disabled="fleetPage >= fleetTotalPages"
+                      @tap="goToFleetPage(fleetPage + 1)"
+                    >
+                      Next
+                    </button>
+                  </view>
+                </view>
               </view>
 
               <view class="fleet-form-card">
@@ -841,6 +879,7 @@ const highPriorityOnly = ref(false)
 const selectedScooterId = ref(null)
 const selectedPreviewImage = ref('')
 const customerPage = ref(1)
+const fleetPage = ref(1)
 const issuePage = ref(1)
 const maintenanceLogs = ref([])
 const submittingScooter = ref(false)
@@ -849,6 +888,7 @@ const submittingPos = ref(false)
 const redirectingUnauthorized = ref(false)
 
 const CUSTOMER_PAGE_SIZE = 6
+const FLEET_PAGE_SIZE = 10
 const ISSUE_PAGE_SIZE = 5
 const ADMIN_ROLES = ['ADMIN', 'MANAGER']
 
@@ -933,10 +973,15 @@ const discountRuleRows = computed(() => snapshot.discountRules?.rules || [])
 const releaseAuditSummary = computed(() => snapshot.releaseAudit?.summary || {})
 const releaseAuditItems = computed(() => snapshot.releaseAudit?.items || [])
 const customerTotalPages = computed(() => Math.max(1, Math.ceil(syncedUsers.value.length / CUSTOMER_PAGE_SIZE)))
+const fleetTotalPages = computed(() => Math.max(1, Math.ceil(fleetScooters.value.length / FLEET_PAGE_SIZE)))
 const issueTotalPages = computed(() => Math.max(1, Math.ceil(displayedIssues.value.length / ISSUE_PAGE_SIZE)))
 const pagedUsers = computed(() => {
   const start = (customerPage.value - 1) * CUSTOMER_PAGE_SIZE
   return syncedUsers.value.slice(start, start + CUSTOMER_PAGE_SIZE)
+})
+const pagedFleetScooters = computed(() => {
+  const start = (fleetPage.value - 1) * FLEET_PAGE_SIZE
+  return fleetScooters.value.slice(start, start + FLEET_PAGE_SIZE)
 })
 const pagedIssues = computed(() => {
   const start = (issuePage.value - 1) * ISSUE_PAGE_SIZE
@@ -944,6 +989,9 @@ const pagedIssues = computed(() => {
 })
 const customerPaginationLabel = computed(() =>
   buildPaginationLabel(customerPage.value, CUSTOMER_PAGE_SIZE, syncedUsers.value.length, 'customers')
+)
+const fleetPaginationLabel = computed(() =>
+  buildPaginationLabel(fleetPage.value, FLEET_PAGE_SIZE, fleetScooters.value.length, 'scooters')
 )
 const issuePaginationLabel = computed(() =>
   buildPaginationLabel(issuePage.value, ISSUE_PAGE_SIZE, displayedIssues.value.length, 'issues')
@@ -1158,6 +1206,23 @@ const nextStatusLabel = (status) => {
   return `Set ${next}`
 }
 
+const syncFleetPageWithSelection = () => {
+  if (!fleetScooters.value.length) {
+    fleetPage.value = 1
+    return
+  }
+
+  const selectedIndex = fleetScooters.value.findIndex(item => String(item.id) === String(selectedScooterId.value))
+  if (selectedIndex >= 0) {
+    fleetPage.value = Math.floor(selectedIndex / FLEET_PAGE_SIZE) + 1
+    return
+  }
+
+  if (fleetPage.value > fleetTotalPages.value) {
+    fleetPage.value = fleetTotalPages.value
+  }
+}
+
 const handleScooterStatusChange = (event) => {
   const index = Number(event?.detail?.value ?? 0)
   scooterForm.status = statusOptions[index] || 'AVAILABLE'
@@ -1245,6 +1310,10 @@ const goToCustomerPage = (page) => {
   customerPage.value = Math.min(customerTotalPages.value, Math.max(1, page))
 }
 
+const goToFleetPage = (page) => {
+  fleetPage.value = Math.min(fleetTotalPages.value, Math.max(1, page))
+}
+
 const goToIssuePage = (page) => {
   issuePage.value = Math.min(issueTotalPages.value, Math.max(1, page))
 }
@@ -1304,6 +1373,7 @@ const formatPercent = (value) => {
 }
 
 const deriveUserInitial = (value) => String(value || 'U').trim().charAt(0).toUpperCase() || 'U'
+const formatCoordinate = (latitude, longitude) => `${Number(latitude || 0).toFixed(4)}, ${Number(longitude || 0).toFixed(4)}`
 
 const exportDashboardCsv = () => {
   const analyticsRows = (analytics.value.dailyRevenueTable || []).map(item => ({
@@ -1395,6 +1465,12 @@ watch(
       customerPage.value = customerTotalPages.value
     }
   },
+  { immediate: true }
+)
+
+watch(
+  [() => fleetScooters.value.length, selectedScooterId],
+  syncFleetPageWithSelection,
   { immediate: true }
 )
 
@@ -1895,6 +1971,11 @@ watch(
   padding: 26rpx;
 }
 
+.fleet-list-card,
+.fleet-form-card {
+  height: 100%;
+}
+
 .mini-title,
 .subpanel-title,
 .chart-title {
@@ -2109,7 +2190,32 @@ watch(
 
 /* ─── Fleet ─── */
 .fleet-scroll {
-  max-height: 620rpx;
+  flex: 1;
+  height: 100%;
+  min-height: 620rpx;
+}
+
+.fleet-scroll-shell {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.fleet-list-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.fleet-empty-state {
+  display: flex;
+  flex: 1;
+  min-height: 620rpx;
+  align-items: center;
+  justify-content: center;
+  padding: 24rpx;
+  border-radius: 24rpx;
+  background: linear-gradient(135deg, #F8FAFF 0%, #EEF5FF 100%);
+  border: 1px dashed rgba(37, 99, 235, 0.18);
 }
 
 .fleet-row-active {
@@ -2127,6 +2233,11 @@ watch(
 .fleet-row-meta {
   font-size: 22rpx;
   color: #6B7280;
+}
+
+.fleet-row-coordinates {
+  font-size: 20rpx;
+  color: #94A3B8;
 }
 
 .status-btn {
@@ -2645,6 +2756,11 @@ watch(
 
   .chart-label-row-bars {
     gap: 8rpx;
+  }
+
+  .fleet-scroll,
+  .fleet-empty-state {
+    min-height: 420rpx;
   }
 
   .discount-metrics,
