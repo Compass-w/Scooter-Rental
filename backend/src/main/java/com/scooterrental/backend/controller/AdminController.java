@@ -3,6 +3,7 @@ package com.scooterrental.backend.controller;
 import com.scooterrental.backend.common.Result;
 import com.scooterrental.backend.entity.IssueReport;
 import com.scooterrental.backend.entity.MaintenanceLog;
+import com.scooterrental.backend.entity.OpsAssignment;
 import com.scooterrental.backend.entity.Scooter;
 import com.scooterrental.backend.entity.StaffBooking;
 import com.scooterrental.backend.service.AdminService;
@@ -132,6 +133,28 @@ public class AdminController {
                 resolvedEmail = String.valueOf(payload.get("email"));
             }
             return ResponseEntity.ok(Result.success(adminService.sendConfirmation(bookingId, resolvedEmail)));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Result.error(400, ex.getMessage()));
+        }
+    }
+
+    @PostMapping("/ops/assignments")
+    @Operation(summary = "Create deployment or collection assignment")
+    public ResponseEntity<Result<OpsAssignment>> createOpsAssignment(@RequestBody Map<String, Object> payload) {
+        try {
+            return ResponseEntity.ok(Result.success(adminService.createOpsAssignment(payload)));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Result.error(400, ex.getMessage()));
+        }
+    }
+
+    @PatchMapping("/ops/assignments/{assignmentId}")
+    @Operation(summary = "Update operations assignment shift status")
+    public ResponseEntity<Result<OpsAssignment>> updateOpsAssignmentStatus(
+            @PathVariable Integer assignmentId,
+            @RequestBody Map<String, Object> payload) {
+        try {
+            return ResponseEntity.ok(Result.success(adminService.updateOpsAssignmentStatus(assignmentId, payload)));
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Result.error(400, ex.getMessage()));
         }

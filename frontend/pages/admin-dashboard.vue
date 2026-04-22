@@ -310,30 +310,53 @@
                   </view>
                 </view>
 
-                <view class="audit-card">
+                <view class="automation-card">
                   <view class="subpanel-head">
                     <view>
-                      <text class="subpanel-title">Backlog Check</text>
-                      <text class="subpanel-copy">A quick pass over the delivery checklist and the remaining caveats still worth watching.</text>
+                      <text class="subpanel-title">Automation & Billing Flow</text>
+                      <text class="subpanel-copy">Unlock acknowledgement, reminder tasks, overdue charging, and damage deductions now run through persisted backend jobs.</text>
                     </view>
-                    <text class="sync-pill">{{ releaseAuditSummary.ready || 0 }} ready</text>
+                    <text class="sync-pill">{{ automationSummary.automationEvents || 0 }} events</text>
+                  </view>
+
+                  <view class="user-summary-grid automation-summary-grid">
+                    <view class="mini-card">
+                      <text class="mini-title">Unlocked Trips</text>
+                      <text class="mini-value">{{ automationSummary.unlockedTrips || 0 }}</text>
+                    </view>
+                    <view class="mini-card">
+                      <text class="mini-title">Live Sessions</text>
+                      <text class="mini-value">{{ automationSummary.liveSessions || 0 }}</text>
+                    </view>
+                    <view class="mini-card">
+                      <text class="mini-title">Overtime Captured</text>
+                      <text class="mini-value mini-value-compact">{{ formatCurrency(automationSummary.overtimeCaptured) }}</text>
+                    </view>
+                    <view class="mini-card">
+                      <text class="mini-title">Damage Captured</text>
+                      <text class="mini-value mini-value-compact">{{ formatCurrency(automationSummary.damageCaptured) }}</text>
+                    </view>
                   </view>
 
                   <view class="audit-list">
                     <view
-                      v-for="item in releaseAuditItems"
-                      :key="item.title"
+                      v-for="event in automationEvents"
+                      :key="`${event.eventId}-${event.eventType}`"
                       class="audit-row"
                     >
                       <view class="audit-row-head">
-                        <text class="audit-title">{{ item.title }}</text>
-                        <text :class="['audit-status', item.status === 'READY' ? 'audit-status-ready' : 'audit-status-watch']">
-                          {{ item.status }}
+                        <text class="audit-title">{{ event.eventType }}</text>
+                        <text :class="['audit-status', event.status === 'COMPLETED' ? 'audit-status-ready' : 'audit-status-watch']">
+                          {{ event.status }}
                         </text>
                       </view>
-                      <text class="audit-copy">{{ item.detail }}</text>
+                      <text class="audit-copy">{{ event.detail }}</text>
+                      <text class="audit-copy audit-copy-meta">
+                        Booking #{{ event.bookingId || 'N/A' }} · {{ formatCurrency(event.amount) }} · {{ formatDateTime(event.processedAt || event.dueAt) }}
+                      </text>
                     </view>
                   </view>
+                  <text v-if="!automationEvents.length" class="empty-copy">Automation jobs will appear here once reminders, unlocks, or extra charges have been processed.</text>
                 </view>
               </view>
             </view>
@@ -722,10 +745,41 @@
                       <view class="field-picker">{{ posForm.hirePeriod }}</view>
                     </picker>
                   </view>
+                  <view class="field">
+                    <text class="field-label">Booking Channel</text>
+                    <picker :range="posChannelOptions" range-key="label" @change="handlePosChannelChange">
+                      <view class="field-picker">{{ posChannelLabel }}</view>
+                    </picker>
+                  </view>
+                  <view class="field">
+                    <text class="field-label">Pickup Store</text>
+                    <picker :range="posStoreOptions" range-key="label" @change="handlePosPickupStoreChange">
+                      <view class="field-picker">{{ posPickupStoreLabel }}</view>
+                    </picker>
+                  </view>
+                  <view class="field">
+                    <text class="field-label">Return Store</text>
+                    <picker :range="posStoreOptions" range-key="label" @change="handlePosReturnStoreChange">
+                      <view class="field-picker">{{ posReturnStoreLabel }}</view>
+                    </picker>
+                  </view>
+                  <view class="field">
+                    <text class="field-label">Pickup Battery %</text>
+                    <input v-model="posForm.pickupBatteryLevel" class="field-input" type="number" placeholder="92" />
+                  </view>
+                  <view class="field">
+                    <text class="field-label">Expected Return %</text>
+                    <input v-model="posForm.expectedReturnBatteryLevel" class="field-input" type="number" placeholder="74" />
+                  </view>
                   <view class="field field-wide">
                     <text class="field-label">Notes</text>
                     <textarea v-model="posForm.notes" class="field-textarea" placeholder="Store pickup, helmet handover, or special reminder." />
                   </view>
+                </view>
+                <view class="mini-card pos-summary-card">
+                  <text class="mini-title">Store Rental Summary</text>
+                  <text class="mini-copy">{{ posChannelLabel }} · {{ posPickupStoreLabel }} → {{ posReturnStoreLabel }}</text>
+                  <text class="mini-copy">Battery {{ posForm.pickupBatteryLevel || 0 }}% → {{ posForm.expectedReturnBatteryLevel || 0 }}% · Electricity delta {{ formatCurrency(posElectricityDelta) }}</text>
                 </view>
                 <view class="checkbox-row" @tap="toggleSendConfirmation">
                   <view :class="['checkbox-faux', posForm.sendConfirmation ? 'checkbox-faux-active' : '']"></view>
@@ -757,6 +811,12 @@
                       <text class="pos-row-meta">
                         {{ booking.bookingStatus }} · {{ formatDateTime(booking.desiredStartTime) }}
                       </text>
+                      <text class="pos-row-meta">
+                        {{ booking.bookingChannelLabel || booking.bookingChannel }} · {{ booking.pickupStoreName || 'Store pickup' }} → {{ booking.returnStoreName || booking.pickupStoreName || 'Store return' }}
+                      </text>
+                      <text class="pos-row-meta">
+                        Battery {{ booking.pickupBatteryLevel || 0 }}% → {{ booking.expectedReturnBatteryLevel || 0 }}% · Electricity {{ formatCurrency(booking.electricityDelta) }}
+                      </text>
                     </view>
                     <button class="hero-btn hero-btn-ghost hero-btn-small" @tap="sendConfirmation(booking)">
                       Send confirmation
@@ -764,6 +824,93 @@
                   </view>
                 </view>
                 <text v-else class="empty-copy">No staff bookings yet.</text>
+              </view>
+            </view>
+          </view>
+
+          <view class="panel panel-ops">
+            <view class="panel-head">
+              <view>
+                <text class="panel-title">Deployment & Collection Team</text>
+                <text class="panel-subtitle">Dedicated operations roster for deployment, collection, and charging staff with live shift management.</text>
+              </view>
+            </view>
+
+            <view class="ops-grid">
+              <view class="ops-form-card">
+                <view class="subpanel-head">
+                  <text class="subpanel-title">Create Ops Assignment</text>
+                  <text class="subpanel-copy">Register deployment or collection staff and assign their current zone coverage.</text>
+                </view>
+                <view class="form-grid">
+                  <view class="field">
+                    <text class="field-label">Staff Name</text>
+                    <input v-model="opsForm.staffName" class="field-input" placeholder="Chen Yu" />
+                  </view>
+                  <view class="field">
+                    <text class="field-label">Role</text>
+                    <picker :range="opsRoleOptions" @change="handleOpsRoleChange">
+                      <view class="field-picker">{{ opsForm.staffRole }}</view>
+                    </picker>
+                  </view>
+                  <view class="field">
+                    <text class="field-label">Zone</text>
+                    <input v-model="opsForm.zoneLabel" class="field-input" placeholder="Pidu Campus Core" />
+                  </view>
+                  <view class="field">
+                    <text class="field-label">Phone</text>
+                    <input v-model="opsForm.contactPhone" class="field-input" placeholder="138-0000-1024" />
+                  </view>
+                  <view class="field">
+                    <text class="field-label">Tasks In Queue</text>
+                    <input v-model="opsForm.tasksInQueue" class="field-input" type="number" placeholder="4" />
+                  </view>
+                  <view class="field">
+                    <text class="field-label">Assigned Scooters</text>
+                    <input v-model="opsForm.assignedScooters" class="field-input" type="number" placeholder="12" />
+                  </view>
+                  <view class="field field-wide">
+                    <text class="field-label">Notes</text>
+                    <textarea v-model="opsForm.notes" class="field-textarea" placeholder="Deployment route, collection target, or charging task details." />
+                  </view>
+                </view>
+                <view class="mini-card pos-summary-card">
+                  <text class="mini-title">Shift Snapshot</text>
+                  <text class="mini-copy">{{ opsTeamSummary.totalStaff || 0 }} staff tracked · {{ opsTeamSummary.activeShifts || 0 }} active shifts</text>
+                  <text class="mini-copy">Deployment {{ opsTeamSummary.deployments || 0 }} · Collection {{ opsTeamSummary.collections || 0 }}</text>
+                </view>
+                <view class="form-actions">
+                  <button class="hero-btn hero-btn-primary" :disabled="submittingOps" @tap="submitOpsAssignment">
+                    {{ submittingOps ? 'Saving...' : 'Create assignment' }}
+                  </button>
+                </view>
+              </view>
+
+              <view class="ops-list-card">
+                <view class="subpanel-head">
+                  <text class="subpanel-title">Live Operations Roster</text>
+                  <text class="subpanel-copy">Shift status can be updated without leaving the admin board.</text>
+                </view>
+
+                <view v-if="opsAssignments.length" class="pos-list">
+                  <view
+                    v-for="assignment in opsAssignments"
+                    :key="assignment.assignmentId"
+                    class="pos-row"
+                  >
+                    <view class="pos-row-main">
+                      <text class="pos-row-title">{{ assignment.staffName }} · {{ assignment.staffRole }}</text>
+                      <text class="pos-row-meta">{{ assignment.zoneLabel }} · {{ assignment.shiftStatus }}</text>
+                      <text class="pos-row-meta">Queue {{ assignment.tasksInQueue || 0 }} · Scooters {{ assignment.assignedScooters || 0 }}</text>
+                      <text class="pos-row-meta">{{ assignment.contactPhone || 'No contact phone' }} · Last seen {{ formatDateTime(assignment.lastSeenAt) }}</text>
+                      <text class="pos-row-meta">{{ assignment.notes || 'No notes' }}</text>
+                    </view>
+                    <button class="hero-btn hero-btn-ghost hero-btn-small" @tap="cycleOpsShift(assignment)">
+                      {{ nextOpsShiftLabel(assignment.shiftStatus) }}
+                    </button>
+                  </view>
+                </view>
+                <text v-else class="empty-copy">No deployment or collection staff have been registered yet.</text>
               </view>
             </view>
           </view>
@@ -779,16 +926,24 @@ import { onShow } from '@dcloudio/uni-app'
 import BaseLayout from './BaseLayout.vue'
 import {
   addMaintenanceLog,
+  createOpsAssignment,
   createAdminScooter,
   createStaffBooking,
   getAdminDashboard,
   getMaintenanceLogs,
   overrideScooterStatus,
   sendStaffConfirmation,
+  updateOpsAssignmentStatus,
   updateAdminIssue,
   updateAdminScooter
 } from '@/api/admin.js'
-import { enrichScooter } from '@/utils/scooterCatalog.js'
+import { enrichScooter, estimateElectricityAdjustment } from '@/utils/scooterCatalog.js'
+import {
+  STORE_BOOKING_CHANNELS,
+  STORE_BRANCHES,
+  buildStoreLabel,
+  getStoreBookingChannel
+} from '@/utils/storeRental.js'
 import {
   buildBarChartGeometry,
   buildLineChartGeometry,
@@ -842,6 +997,28 @@ const createEmptySnapshot = () => ({
     },
     recentBookings: []
   },
+  automation: {
+    summary: {
+      automationEvents: 0,
+      unlockedTrips: 0,
+      liveSessions: 0,
+      capturedTransactions: 0,
+      overtimeCaptured: 0,
+      damageCaptured: 0
+    },
+    events: [],
+    payments: [],
+    unlockSessions: []
+  },
+  opsTeam: {
+    summary: {
+      totalStaff: 0,
+      deployments: 0,
+      collections: 0,
+      activeShifts: 0
+    },
+    records: []
+  },
   users: {
     summary: {
       totalUsers: 0,
@@ -885,6 +1062,7 @@ const maintenanceLogs = ref([])
 const submittingScooter = ref(false)
 const submittingMaintenance = ref(false)
 const submittingPos = ref(false)
+const submittingOps = ref(false)
 const redirectingUnauthorized = ref(false)
 
 const CUSTOMER_PAGE_SIZE = 6
@@ -896,6 +1074,8 @@ const statusOptions = ['AVAILABLE', 'IN_USE', 'MAINTENANCE', 'LOW_BATTERY', 'REM
 const priorityOptions = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']
 const workflowOptions = ['REPORTED', 'IN_PROGRESS', 'FIXED']
 const hirePeriodOptions = ['1_HOUR', '4_HOURS', '1_DAY', '1_WEEK']
+const opsRoleOptions = ['DEPLOYMENT', 'COLLECTION', 'CHARGING']
+const opsShiftOptions = ['READY', 'ON_ROUTE', 'BREAK', 'OFF_SHIFT']
 
 const scooterForm = reactive({
   id: '',
@@ -920,8 +1100,23 @@ const posForm = reactive({
   guestEmail: '',
   scooterId: '',
   hirePeriod: '1_HOUR',
+  bookingChannel: 'WALK_IN_COUNTER',
+  pickupStoreCode: STORE_BRANCHES[0]?.code || '',
+  returnStoreCode: STORE_BRANCHES[0]?.code || '',
+  pickupBatteryLevel: '92',
+  expectedReturnBatteryLevel: '74',
   notes: '',
   sendConfirmation: true
+})
+
+const opsForm = reactive({
+  staffName: '',
+  staffRole: 'DEPLOYMENT',
+  zoneLabel: '',
+  contactPhone: '',
+  tasksInQueue: '0',
+  assignedScooters: '0',
+  notes: ''
 })
 
 const analytics = computed(() => snapshot.analytics || createEmptySnapshot().analytics)
@@ -966,12 +1161,14 @@ const displayedIssues = computed(() => {
   if (!highPriorityOnly.value) return records
   return records.filter(item => ['HIGH', 'CRITICAL'].includes(String(item.priority || '').toUpperCase()))
 })
+const automationSummary = computed(() => snapshot.automation?.summary || {})
+const automationEvents = computed(() => snapshot.automation?.events || [])
+const opsTeamSummary = computed(() => snapshot.opsTeam?.summary || {})
+const opsAssignments = computed(() => snapshot.opsTeam?.records || [])
 const userSummary = computed(() => snapshot.users?.summary || {})
 const syncedUsers = computed(() => snapshot.users?.records || [])
 const discountSummary = computed(() => snapshot.discountRules?.summary || {})
 const discountRuleRows = computed(() => snapshot.discountRules?.rules || [])
-const releaseAuditSummary = computed(() => snapshot.releaseAudit?.summary || {})
-const releaseAuditItems = computed(() => snapshot.releaseAudit?.items || [])
 const customerTotalPages = computed(() => Math.max(1, Math.ceil(syncedUsers.value.length / CUSTOMER_PAGE_SIZE)))
 const fleetTotalPages = computed(() => Math.max(1, Math.ceil(fleetScooters.value.length / FLEET_PAGE_SIZE)))
 const issueTotalPages = computed(() => Math.max(1, Math.ceil(displayedIssues.value.length / ISSUE_PAGE_SIZE)))
@@ -1026,6 +1223,23 @@ const posScooterLabel = computed(() => {
   const match = posScooterOptions.value.find(item => String(item.value) === String(posForm.scooterId))
   return match?.label || 'Select scooter'
 })
+const posChannelOptions = STORE_BOOKING_CHANNELS
+const posStoreOptions = STORE_BRANCHES.map(branch => ({
+  value: branch.code,
+  label: buildStoreLabel(branch)
+}))
+const posChannelLabel = computed(() =>
+  getStoreBookingChannel(posForm.bookingChannel).label
+)
+const posPickupStoreLabel = computed(() =>
+  posStoreOptions.find(item => item.value === posForm.pickupStoreCode)?.label || 'Select pickup store'
+)
+const posReturnStoreLabel = computed(() =>
+  posStoreOptions.find(item => item.value === posForm.returnStoreCode)?.label || 'Select return store'
+)
+const posElectricityDelta = computed(() =>
+  estimateElectricityAdjustment(posForm.pickupBatteryLevel, posForm.expectedReturnBatteryLevel)
+)
 
 const adminAccessLabel = computed(() => {
   try {
@@ -1111,13 +1325,31 @@ const syncPreviewGallery = () => {
 }
 
 const resetPosForm = () => {
+  const defaultBattery = selectedScooter.value?.batteryLevel ? Number(selectedScooter.value.batteryLevel) : 92
   Object.assign(posForm, {
     guestName: '',
     guestEmail: '',
     scooterId: selectedScooterId.value || '',
     hirePeriod: '1_HOUR',
+    bookingChannel: 'WALK_IN_COUNTER',
+    pickupStoreCode: STORE_BRANCHES[0]?.code || '',
+    returnStoreCode: STORE_BRANCHES[0]?.code || '',
+    pickupBatteryLevel: String(defaultBattery),
+    expectedReturnBatteryLevel: String(Math.max(12, defaultBattery - 18)),
     notes: '',
     sendConfirmation: true
+  })
+}
+
+const resetOpsForm = () => {
+  Object.assign(opsForm, {
+    staffName: '',
+    staffRole: 'DEPLOYMENT',
+    zoneLabel: '',
+    contactPhone: '',
+    tasksInQueue: '0',
+    assignedScooters: '0',
+    notes: ''
   })
 }
 
@@ -1181,6 +1413,8 @@ const selectScooter = async (scooter) => {
   if (!posForm.scooterId) {
     posForm.scooterId = scooter.id
   }
+  posForm.pickupBatteryLevel = String(scooter.batteryLevel ?? posForm.pickupBatteryLevel)
+  posForm.expectedReturnBatteryLevel = String(Math.max(12, Number(scooter.batteryLevel ?? posForm.pickupBatteryLevel) - 18))
   await loadMaintenanceLogs(scooter.id)
 }
 
@@ -1321,10 +1555,34 @@ const goToIssuePage = (page) => {
 const handlePosScooterChange = (event) => {
   const option = posScooterOptions.value[Number(event?.detail?.value ?? 0)]
   posForm.scooterId = option?.value || ''
+  const scooter = fleetScooters.value.find(item => String(item.id) === String(posForm.scooterId))
+  if (scooter) {
+    posForm.pickupBatteryLevel = String(scooter.batteryLevel ?? posForm.pickupBatteryLevel)
+    posForm.expectedReturnBatteryLevel = String(Math.max(12, Number(scooter.batteryLevel ?? posForm.pickupBatteryLevel) - 18))
+  }
 }
 
 const handlePosHirePeriodChange = (event) => {
   posForm.hirePeriod = hirePeriodOptions[Number(event?.detail?.value ?? 0)] || '1_HOUR'
+}
+
+const handlePosChannelChange = (event) => {
+  const option = posChannelOptions[Number(event?.detail?.value ?? 0)]
+  posForm.bookingChannel = option?.code || 'WALK_IN_COUNTER'
+}
+
+const handlePosPickupStoreChange = (event) => {
+  const option = posStoreOptions[Number(event?.detail?.value ?? 0)]
+  posForm.pickupStoreCode = option?.value || STORE_BRANCHES[0]?.code || ''
+}
+
+const handlePosReturnStoreChange = (event) => {
+  const option = posStoreOptions[Number(event?.detail?.value ?? 0)]
+  posForm.returnStoreCode = option?.value || posForm.pickupStoreCode || STORE_BRANCHES[0]?.code || ''
+}
+
+const handleOpsRoleChange = (event) => {
+  opsForm.staffRole = opsRoleOptions[Number(event?.detail?.value ?? 0)] || 'DEPLOYMENT'
 }
 
 const toggleSendConfirmation = () => {
@@ -1339,6 +1597,13 @@ const submitPosBooking = async () => {
       guestEmail: posForm.guestEmail,
       scooterId: Number(posForm.scooterId || selectedScooterId.value),
       hirePeriod: posForm.hirePeriod,
+      bookingChannel: posForm.bookingChannel,
+      pickupStoreCode: posForm.pickupStoreCode,
+      pickupStoreName: STORE_BRANCHES.find(item => item.code === posForm.pickupStoreCode)?.name,
+      returnStoreCode: posForm.returnStoreCode,
+      returnStoreName: STORE_BRANCHES.find(item => item.code === posForm.returnStoreCode)?.name,
+      pickupBatteryLevel: Number(posForm.pickupBatteryLevel),
+      expectedReturnBatteryLevel: Number(posForm.expectedReturnBatteryLevel),
       notes: posForm.notes,
       sendConfirmation: posForm.sendConfirmation
     })
@@ -1359,6 +1624,50 @@ const sendConfirmation = async (booking) => {
     await loadDashboard()
   } catch (error) {
     console.error('Failed to send confirmation:', error)
+  }
+}
+
+const submitOpsAssignment = async () => {
+  submittingOps.value = true
+  try {
+    await createOpsAssignment({
+      staffName: opsForm.staffName,
+      staffRole: opsForm.staffRole,
+      zoneLabel: opsForm.zoneLabel,
+      contactPhone: opsForm.contactPhone,
+      tasksInQueue: Number(opsForm.tasksInQueue || 0),
+      assignedScooters: Number(opsForm.assignedScooters || 0),
+      notes: opsForm.notes
+    })
+    uni.showToast({ title: 'Assignment created', icon: 'success' })
+    resetOpsForm()
+    await loadDashboard()
+  } catch (error) {
+    console.error('Failed to create operations assignment:', error)
+  } finally {
+    submittingOps.value = false
+  }
+}
+
+const nextOpsShiftLabel = (status = 'READY') => {
+  const currentIndex = opsShiftOptions.indexOf(status)
+  const nextStatus = opsShiftOptions[(currentIndex + 1) % opsShiftOptions.length]
+  return `Set ${nextStatus}`
+}
+
+const cycleOpsShift = async (assignment) => {
+  const currentIndex = opsShiftOptions.indexOf(assignment.shiftStatus)
+  const nextStatus = opsShiftOptions[(currentIndex + 1) % opsShiftOptions.length]
+  try {
+    await updateOpsAssignmentStatus(assignment.assignmentId, {
+      shiftStatus: nextStatus,
+      tasksInQueue: assignment.tasksInQueue,
+      assignedScooters: assignment.assignedScooters
+    })
+    uni.showToast({ title: `Shift -> ${nextStatus}`, icon: 'success' })
+    await loadDashboard()
+  } catch (error) {
+    console.error('Failed to update operations shift:', error)
   }
 }
 
@@ -1456,6 +1765,7 @@ onShow(() => {
   if (!ensureAdminAccess()) return
   loadDashboard()
   resetPosForm()
+  resetOpsForm()
 })
 
 watch(
@@ -1541,9 +1851,11 @@ watch(
 .fleet-side-panel,
 .user-sync-card,
 .discount-card,
-.audit-card,
+.automation-card,
 .pos-form-card,
-.pos-list-card {
+.pos-list-card,
+.ops-form-card,
+.ops-list-card {
   background: #ffffff;
   border: 1px solid rgba(37, 99, 235, 0.09);
   box-shadow:
@@ -1927,7 +2239,8 @@ watch(
 .customer-grid,
 .customer-side-grid,
 .user-summary-grid,
-.pos-grid {
+.pos-grid,
+.ops-grid {
   display: grid;
   gap: 20rpx;
 }
@@ -1936,7 +2249,8 @@ watch(
 .analytics-bottom,
 .customer-grid,
 .fleet-main-grid,
-.pos-grid {
+.pos-grid,
+.ops-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
@@ -1961,18 +2275,22 @@ watch(
 .heatmap-card,
 .user-sync-card,
 .discount-card,
-.audit-card,
+.automation-card,
 .fleet-side-panel,
 .fleet-list-card,
 .fleet-form-card,
 .pos-form-card,
-.pos-list-card {
+.pos-list-card,
+.ops-form-card,
+.ops-list-card {
   border-radius: 32rpx;
   padding: 26rpx;
 }
 
 .fleet-list-card,
-.fleet-form-card {
+.fleet-form-card,
+.ops-form-card,
+.ops-list-card {
   height: 100%;
 }
 
@@ -2440,6 +2758,14 @@ watch(
   gap: 12rpx;
 }
 
+.automation-summary-grid {
+  margin-bottom: 18rpx;
+}
+
+.audit-copy-meta {
+  color: #94A3B8;
+}
+
 .discount-status {
   background: rgba(34, 197, 94, 0.08);
   color: #15803D;
@@ -2676,6 +3002,10 @@ watch(
   align-items: stretch;
 }
 
+.pos-summary-card {
+  margin-top: 18rpx;
+}
+
 .maintenance-log-title,
 .pos-row-title {
   font-size: 26rpx;
@@ -2707,7 +3037,8 @@ watch(
   .customer-grid,
   .fleet-top-grid,
   .fleet-main-grid,
-  .pos-grid {
+  .pos-grid,
+  .ops-grid {
     grid-template-columns: 1fr;
   }
 
@@ -2730,13 +3061,15 @@ watch(
   .chart-card,
   .user-sync-card,
   .discount-card,
-  .audit-card,
+  .automation-card,
   .fleet-list-card,
   .fleet-form-card,
   .heatmap-card,
   .fleet-side-panel,
   .pos-form-card,
-  .pos-list-card {
+  .pos-list-card,
+  .ops-form-card,
+  .ops-list-card {
     border-radius: 28rpx;
     padding: 22rpx 24rpx;
   }

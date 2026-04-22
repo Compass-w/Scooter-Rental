@@ -1,13 +1,18 @@
 package com.scooterrental.backend.service;
 
 import com.scooterrental.backend.entity.Booking;
+import com.scooterrental.backend.entity.AutomationEvent;
 import com.scooterrental.backend.entity.IssueReport;
 import com.scooterrental.backend.entity.MaintenanceLog;
+import com.scooterrental.backend.entity.OpsAssignment;
+import com.scooterrental.backend.entity.PaymentTransaction;
 import com.scooterrental.backend.entity.Scooter;
 import com.scooterrental.backend.entity.StaffBooking;
 import com.scooterrental.backend.entity.User;
+import com.scooterrental.backend.entity.VehicleUnlockSession;
 import com.scooterrental.backend.mapper.BookingMapper;
 import com.scooterrental.backend.mapper.MaintenanceLogMapper;
+import com.scooterrental.backend.mapper.OpsAssignmentMapper;
 import com.scooterrental.backend.mapper.StaffBookingMapper;
 import com.scooterrental.backend.mapper.UserMapper;
 import org.slf4j.Logger;
@@ -42,6 +47,11 @@ public class AdminService {
     private final MaintenanceLogMapper maintenanceLogMapper;
     private final StaffBookingMapper staffBookingMapper;
     private final UserMapper userMapper;
+    private final BookingService bookingService;
+    private final RideAutomationService rideAutomationService;
+    private final VehicleIntegrationService vehicleIntegrationService;
+    private final PaymentGatewayService paymentGatewayService;
+    private final OpsAssignmentMapper opsAssignmentMapper;
 
     public AdminService(
             BookingMapper bookingMapper,
@@ -49,13 +59,23 @@ public class AdminService {
             IssueReportService issueReportService,
             MaintenanceLogMapper maintenanceLogMapper,
             StaffBookingMapper staffBookingMapper,
-            UserMapper userMapper) {
+            UserMapper userMapper,
+            BookingService bookingService,
+            RideAutomationService rideAutomationService,
+            VehicleIntegrationService vehicleIntegrationService,
+            PaymentGatewayService paymentGatewayService,
+            OpsAssignmentMapper opsAssignmentMapper) {
         this.bookingMapper = bookingMapper;
         this.scooterService = scooterService;
         this.issueReportService = issueReportService;
         this.maintenanceLogMapper = maintenanceLogMapper;
         this.staffBookingMapper = staffBookingMapper;
         this.userMapper = userMapper;
+        this.bookingService = bookingService;
+        this.rideAutomationService = rideAutomationService;
+        this.vehicleIntegrationService = vehicleIntegrationService;
+        this.paymentGatewayService = paymentGatewayService;
+        this.opsAssignmentMapper = opsAssignmentMapper;
     }
 
     public Map<String, Object> getDashboardSnapshot() {
@@ -66,6 +86,10 @@ public class AdminService {
         List<IssueReport> issues = issueReportService.getIssueReports();
         List<MaintenanceLog> maintenanceLogs = maintenanceLogMapper.selectRecent();
         List<StaffBooking> staffBookings = staffBookingMapper.selectAll();
+        List<AutomationEvent> automationEvents = rideAutomationService.getRecentEvents(8);
+        List<PaymentTransaction> paymentTransactions = paymentGatewayService.getRecentTransactions(8);
+        List<VehicleUnlockSession> unlockSessions = vehicleIntegrationService.getRecentSessions(8);
+        List<OpsAssignment> opsAssignments = opsAssignmentMapper.selectAll();
         List<User> users = List.of();
 
         Map<String, Object> response = new LinkedHashMap<>();
@@ -74,6 +98,8 @@ public class AdminService {
         response.put("fleet", buildFleetSnapshot(scooters, bookings, maintenanceLogs));
         response.put("issues", buildIssueSnapshot(issues));
         response.put("pos", buildPosSnapshot(staffBookings));
+        response.put("automation", buildAutomationSnapshot(bookings, automationEvents, paymentTransactions, unlockSessions));
+        response.put("opsTeam", buildOpsTeamSnapshot(opsAssignments));
 
         try {
             users = defaultList(userMapper.selectAll());
@@ -200,11 +226,24 @@ public class AdminService {
         }
 
         String hirePeriod = normalizeHirePeriod(Objects.toString(payload == null ? null : payload.get("hirePeriod"), "1_HOUR"));
+        Integer pickupBatteryLevel = resolveBatteryLevel(parseInteger(payload == null ? null : payload.get("pickupBatteryLevel")), scooter.getBatteryLevel());
+        Integer expectedReturnBatteryLevel = resolveBatteryLevel(
+                parseInteger(payload == null ? null : payload.get("expectedReturnBatteryLevel")),
+                Math.max(0, pickupBatteryLevel - 18));
+
         StaffBooking booking = new StaffBooking();
         booking.setGuestName(guestName);
         booking.setGuestEmail(trimToNull(Objects.toString(payload == null ? null : payload.get("guestEmail"), null)));
         booking.setScooterId(scooterId);
         booking.setHirePeriod(hirePeriod);
+        booking.setBookingChannel(normalizeBookingChannel(Objects.toString(payload == null ? null : payload.get("bookingChannel"), "WALK_IN_COUNTER")));
+        booking.setPickupStoreCode(trimToNull(Objects.toString(payload == null ? null : payload.get("pickupStoreCode"), null)));
+        booking.setPickupStoreName(trimToDefault(payload == null ? null : payload.get("pickupStoreName"), "Downtown Flagship Store"));
+        booking.setReturnStoreCode(trimToNull(Objects.toString(payload == null ? null : payload.get("returnStoreCode"), null)));
+        booking.setReturnStoreName(trimToDefault(payload == null ? null : payload.get("returnStoreName"), booking.getPickupStoreName()));
+        booking.setPickupBatteryLevel(pickupBatteryLevel);
+        booking.setExpectedReturnBatteryLevel(expectedReturnBatteryLevel);
+        booking.setElectricityDelta(calculateElectricityDelta(pickupBatteryLevel, expectedReturnBatteryLevel));
         booking.setDesiredStartTime(parseDateTime(payload == null ? null : payload.get("desiredStartTime")));
         booking.setEstimatedCost(estimateHireCost(hirePeriod, scooter));
         booking.setBookingStatus(Boolean.TRUE.equals(payload == null ? null : payload.get("sendConfirmation"))
@@ -241,9 +280,60 @@ public class AdminService {
         return staffBookingMapper.selectAll();
     }
 
+    public OpsAssignment createOpsAssignment(Map<String, Object> payload) {
+        ensureAdminTables();
+
+        OpsAssignment assignment = new OpsAssignment();
+        assignment.setStaffName(trimToDefault(payload == null ? null : payload.get("staffName"), null));
+        if (assignment.getStaffName() == null) {
+            throw new IllegalArgumentException("Staff name is required");
+        }
+
+        assignment.setStaffRole(normalizeOpsRole(Objects.toString(payload == null ? null : payload.get("staffRole"), "DEPLOYMENT")));
+        assignment.setZoneLabel(trimToDefault(payload == null ? null : payload.get("zoneLabel"), "Central Operations"));
+        assignment.setShiftStatus(normalizeShiftStatus(Objects.toString(payload == null ? null : payload.get("shiftStatus"), "READY")));
+        assignment.setTasksInQueue(Math.max(0, parseInteger(payload == null ? null : payload.get("tasksInQueue")) == null ? 0 : parseInteger(payload.get("tasksInQueue"))));
+        assignment.setAssignedScooters(Math.max(0, parseInteger(payload == null ? null : payload.get("assignedScooters")) == null ? 0 : parseInteger(payload.get("assignedScooters"))));
+        assignment.setContactPhone(trimToNull(Objects.toString(payload == null ? null : payload.get("contactPhone"), null)));
+        assignment.setNotes(trimToNull(Objects.toString(payload == null ? null : payload.get("notes"), null)));
+        assignment.setLastSeenAt(LocalDateTime.now());
+        opsAssignmentMapper.insert(assignment);
+        return opsAssignmentMapper.selectById(assignment.getAssignmentId());
+    }
+
+    public OpsAssignment updateOpsAssignmentStatus(Integer assignmentId, Map<String, Object> payload) {
+        ensureAdminTables();
+
+        OpsAssignment existing = opsAssignmentMapper.selectById(assignmentId);
+        if (existing == null) {
+            throw new IllegalArgumentException("Operations assignment not found");
+        }
+
+        opsAssignmentMapper.updateStatus(
+                assignmentId,
+                normalizeShiftStatus(Objects.toString(payload == null ? null : payload.get("shiftStatus"), existing.getShiftStatus())),
+                parseInteger(payload == null ? null : payload.get("tasksInQueue")),
+                parseInteger(payload == null ? null : payload.get("assignedScooters")),
+                LocalDateTime.now(),
+                trimToNull(Objects.toString(payload == null ? null : payload.get("notes"), null)));
+        return opsAssignmentMapper.selectById(assignmentId);
+    }
+
     private void ensureAdminTables() {
+        bookingService.ensureOperationalTables();
+        rideAutomationService.ensureAutomationTables();
         maintenanceLogMapper.createTableIfNotExists();
         staffBookingMapper.createTableIfNotExists();
+        staffBookingMapper.addBookingChannelColumn();
+        staffBookingMapper.addPickupStoreCodeColumn();
+        staffBookingMapper.addPickupStoreNameColumn();
+        staffBookingMapper.addReturnStoreCodeColumn();
+        staffBookingMapper.addReturnStoreNameColumn();
+        staffBookingMapper.addPickupBatteryLevelColumn();
+        staffBookingMapper.addExpectedReturnBatteryLevelColumn();
+        staffBookingMapper.addElectricityDeltaColumn();
+        opsAssignmentMapper.createTableIfNotExists();
+        seedOpsAssignmentsIfEmpty();
     }
 
     private Map<String, Object> buildAnalytics(List<Booking> bookings) {
@@ -468,6 +558,13 @@ public class AdminService {
                         "scooterId", item.getScooterId(),
                         "scooterModel", item.getScooterModel() == null ? "Scooter" : item.getScooterModel(),
                         "hirePeriod", item.getHirePeriod(),
+                        "bookingChannel", item.getBookingChannel() == null ? "WALK_IN_COUNTER" : item.getBookingChannel(),
+                        "bookingChannelLabel", "REMOTE_RESERVATION".equalsIgnoreCase(item.getBookingChannel()) ? "Remote Reservation" : "Walk-in Counter",
+                        "pickupStoreName", item.getPickupStoreName() == null ? "" : item.getPickupStoreName(),
+                        "returnStoreName", item.getReturnStoreName() == null ? "" : item.getReturnStoreName(),
+                        "pickupBatteryLevel", item.getPickupBatteryLevel() == null ? 0 : item.getPickupBatteryLevel(),
+                        "expectedReturnBatteryLevel", item.getExpectedReturnBatteryLevel() == null ? 0 : item.getExpectedReturnBatteryLevel(),
+                        "electricityDelta", scale(item.getElectricityDelta()),
                         "estimatedCost", scale(item.getEstimatedCost()),
                         "bookingStatus", item.getBookingStatus(),
                         "confirmationSentAt", item.getConfirmationSentAt(),
@@ -662,6 +759,92 @@ public class AdminService {
                         "recentPosBookings", staffBookings.size()));
     }
 
+    private Map<String, Object> buildAutomationSnapshot(
+            List<Booking> bookings,
+            List<AutomationEvent> automationEvents,
+            List<PaymentTransaction> paymentTransactions,
+            List<VehicleUnlockSession> unlockSessions) {
+        BigDecimal overtimeCaptured = bookings.stream()
+                .map(Booking::getOvertimeChargeTotal)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(2, RoundingMode.HALF_UP);
+        BigDecimal damageCaptured = bookings.stream()
+                .map(Booking::getDamageChargeTotal)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(2, RoundingMode.HALF_UP);
+        long unlockedTrips = unlockSessions.stream()
+                .filter(item -> "UNLOCKED".equalsIgnoreCase(item.getLockState()) || "COMPLETED".equalsIgnoreCase(item.getCommandStatus()))
+                .count();
+        long liveSessions = unlockSessions.stream()
+                .filter(item -> "LIVE".equalsIgnoreCase(item.getTelemetryStatus()))
+                .count();
+
+        return mapOf(
+                "summary", mapOf(
+                        "automationEvents", automationEvents.size(),
+                        "unlockedTrips", unlockedTrips,
+                        "liveSessions", liveSessions,
+                        "capturedTransactions", paymentTransactions.stream().filter(item -> "CAPTURED".equalsIgnoreCase(item.getStatus())).count(),
+                        "overtimeCaptured", overtimeCaptured,
+                        "damageCaptured", damageCaptured),
+                "events", automationEvents.stream()
+                        .map(event -> mapOf(
+                                "eventId", event.getEventId(),
+                                "bookingId", event.getBookingId(),
+                                "issueId", event.getIssueId(),
+                                "eventType", event.getEventType(),
+                                "status", event.getStatus(),
+                                "amount", scale(event.getAmount()),
+                                "detail", defaultText(event.getDetail(), "Automation event processed."),
+                                "processedAt", event.getProcessedAt(),
+                                "dueAt", event.getDueAt()))
+                        .collect(Collectors.toList()),
+                "payments", paymentTransactions.stream()
+                        .map(item -> mapOf(
+                                "transactionId", item.getTransactionId(),
+                                "bookingId", item.getBookingId(),
+                                "chargeCategory", item.getChargeCategory(),
+                                "amount", scale(item.getAmount()),
+                                "status", item.getStatus(),
+                                "gatewayReference", item.getGatewayReference(),
+                                "processedAt", item.getProcessedAt()))
+                        .collect(Collectors.toList()),
+                "unlockSessions", unlockSessions.stream()
+                        .map(item -> mapOf(
+                                "commandId", item.getCommandId(),
+                                "bookingId", item.getBookingId(),
+                                "lockState", item.getLockState(),
+                                "telemetryStatus", item.getTelemetryStatus(),
+                                "communicationStatus", item.getCommunicationStatus(),
+                                "deviceMessage", defaultText(item.getDeviceMessage(), "No device message"),
+                                "lastHeartbeatAt", item.getLastHeartbeatAt()))
+                        .collect(Collectors.toList()));
+    }
+
+    private Map<String, Object> buildOpsTeamSnapshot(List<OpsAssignment> opsAssignments) {
+        return mapOf(
+                "summary", mapOf(
+                        "totalStaff", opsAssignments.size(),
+                        "deployments", opsAssignments.stream().filter(item -> "DEPLOYMENT".equalsIgnoreCase(item.getStaffRole())).count(),
+                        "collections", opsAssignments.stream().filter(item -> "COLLECTION".equalsIgnoreCase(item.getStaffRole())).count(),
+                        "activeShifts", opsAssignments.stream().filter(item -> !"OFF_SHIFT".equalsIgnoreCase(item.getShiftStatus())).count()),
+                "records", opsAssignments.stream()
+                        .map(item -> mapOf(
+                                "assignmentId", item.getAssignmentId(),
+                                "staffName", item.getStaffName(),
+                                "staffRole", item.getStaffRole(),
+                                "zoneLabel", item.getZoneLabel(),
+                                "shiftStatus", item.getShiftStatus(),
+                                "tasksInQueue", item.getTasksInQueue(),
+                                "assignedScooters", item.getAssignedScooters(),
+                                "contactPhone", item.getContactPhone(),
+                                "notes", defaultText(item.getNotes(), "No notes"),
+                                "lastSeenAt", item.getLastSeenAt()))
+                        .collect(Collectors.toList()));
+    }
+
     private Map<String, Object> buildDiscountRule(
             String code,
             String label,
@@ -777,6 +960,38 @@ public class AdminService {
                         "recentPosBookings", 0));
     }
 
+    private void seedOpsAssignmentsIfEmpty() {
+        if (opsAssignmentMapper.countAll() > 0) {
+            return;
+        }
+
+        insertOpsSeed("Chen Yu", "DEPLOYMENT", "Pidu Campus Core", "READY", 4, 12, "138-0000-1024", "Morning deployment round for class-change traffic.");
+        insertOpsSeed("Li Na", "COLLECTION", "Chengdu West Ring", "ON_ROUTE", 3, 8, "138-0000-2048", "Collect overdue walk-in returns and damaged vehicles.");
+        insertOpsSeed("Arjun Patel", "CHARGING", "Downtown Recharge Hub", "READY", 5, 15, "138-0000-4096", "Battery swap support and low-battery queue coverage.");
+    }
+
+    private void insertOpsSeed(
+            String staffName,
+            String staffRole,
+            String zoneLabel,
+            String shiftStatus,
+            int tasksInQueue,
+            int assignedScooters,
+            String contactPhone,
+            String notes) {
+        OpsAssignment assignment = new OpsAssignment();
+        assignment.setStaffName(staffName);
+        assignment.setStaffRole(staffRole);
+        assignment.setZoneLabel(zoneLabel);
+        assignment.setShiftStatus(shiftStatus);
+        assignment.setTasksInQueue(tasksInQueue);
+        assignment.setAssignedScooters(assignedScooters);
+        assignment.setContactPhone(contactPhone);
+        assignment.setNotes(notes);
+        assignment.setLastSeenAt(LocalDateTime.now());
+        opsAssignmentMapper.insert(assignment);
+    }
+
     private Map<String, Object> mapOf(Object... entries) {
         Map<String, Object> map = new LinkedHashMap<>();
         if (entries == null) {
@@ -862,6 +1077,30 @@ public class AdminService {
         };
     }
 
+    private String normalizeBookingChannel(String bookingChannel) {
+        String normalized = String.valueOf(bookingChannel == null ? "WALK_IN_COUNTER" : bookingChannel).trim().toUpperCase(Locale.ROOT);
+        return switch (normalized) {
+            case "WALK_IN_COUNTER", "REMOTE_RESERVATION" -> normalized;
+            default -> "WALK_IN_COUNTER";
+        };
+    }
+
+    private String normalizeOpsRole(String staffRole) {
+        String normalized = String.valueOf(staffRole == null ? "DEPLOYMENT" : staffRole).trim().toUpperCase(Locale.ROOT);
+        return switch (normalized) {
+            case "DEPLOYMENT", "COLLECTION", "CHARGING" -> normalized;
+            default -> "DEPLOYMENT";
+        };
+    }
+
+    private String normalizeShiftStatus(String shiftStatus) {
+        String normalized = String.valueOf(shiftStatus == null ? "READY" : shiftStatus).trim().toUpperCase(Locale.ROOT);
+        return switch (normalized) {
+            case "READY", "ON_ROUTE", "BREAK", "OFF_SHIFT" -> normalized;
+            default -> "READY";
+        };
+    }
+
     private String normalizeScooterStatus(String status) {
         return normalizeScooterStatus(status, "AVAILABLE");
     }
@@ -923,6 +1162,13 @@ public class AdminService {
             throw new IllegalArgumentException("Scooter " + label + " is required");
         }
         return resolved.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal calculateElectricityDelta(Integer pickupBatteryLevel, Integer expectedReturnBatteryLevel) {
+        int delta = Math.max(0, (pickupBatteryLevel == null ? 0 : pickupBatteryLevel) - (expectedReturnBatteryLevel == null ? 0 : expectedReturnBatteryLevel));
+        return BigDecimal.valueOf(delta)
+                .multiply(BigDecimal.valueOf(0.18))
+                .setScale(2, RoundingMode.HALF_UP);
     }
 
     private BigDecimal zeroMoney(BigDecimal value) {

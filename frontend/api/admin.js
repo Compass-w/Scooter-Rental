@@ -26,3 +26,9 @@ export const createStaffBooking = (data) =>
 
 export const sendStaffConfirmation = (bookingId, email) =>
   request.post(`/admin/pos/bookings/${bookingId}/confirmation`, { email })
+
+export const createOpsAssignment = (data) =>
+  request.post('/admin/ops/assignments', data)
+
+export const updateOpsAssignmentStatus = (assignmentId, data) =>
+  request.patch(`/admin/ops/assignments/${assignmentId}`, data)
