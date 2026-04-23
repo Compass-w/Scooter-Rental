@@ -1,0 +1,31 @@
+<svg width="1200" height="900" viewBox="0 0 1200 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="900" rx="48" fill="url(#bg)"/>
+  <circle cx="952" cy="182" r="192" fill="url(#glow)" fill-opacity="0.92"/>
+  <path d="M174 668C174 620.161 212.161 582 260 582H940C987.839 582 1026 620.161 1026 668C1026 715.839 987.839 754 940 754H260C212.161 754 174 715.839 174 668Z" fill="#F0FDF4" fill-opacity="0.84"/>
+  <circle cx="350" cy="648" r="112" fill="#0F172A"/>
+  <circle cx="350" cy="648" r="66" fill="#DCFCE7"/>
+  <circle cx="850" cy="648" r="112" fill="#0F172A"/>
+  <circle cx="850" cy="648" r="66" fill="#DCFCE7"/>
+  <path d="M722 194C762.869 194 796 227.131 796 268V356H750V284C750 262.461 732.539 245 711 245H698V194H722Z" fill="#0F172A"/>
+  <path d="M716 244L870 616H800L666 344L716 244Z" fill="#14532D"/>
+  <path d="M438 604L634 282H750L566 604H438Z" fill="#22C55E"/>
+  <path d="M352 602C352 584.327 366.327 570 384 570H682C699.673 570 714 584.327 714 602C714 619.673 699.673 634 682 634H384C366.327 634 352 619.673 352 602Z" fill="#4ADE80"/>
+  <path d="M538 272C538 243.281 561.281 220 590 220H652C680.719 220 704 243.281 704 272V304H538V272Z" fill="#0F172A"/>
+  <path d="M554 238H704V326H554V238Z" fill="#166534"/>
+  <path d="M610 180H662V238H610V180Z" fill="#0F172A"/>
+  <rect x="160" y="118" width="286" height="66" rx="33" fill="#FFFFFF" fill-opacity="0.8"/>
+  <text x="200" y="162" fill="#0F172A" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700">Electric Glide Pro</text>
+  <text x="160" y="792" fill="#0F172A" font-family="Arial, Helvetica, sans-serif" font-size="72" font-weight="800">Longer body and stronger presence for flagship display.</text>
+  <text x="160" y="846" fill="#166534" font-family="Arial, Helvetica, sans-serif" font-size="32" font-weight="500">Open the modal to rotate, zoom, and inspect the complete 3D scooter from every angle.</text>
+  <defs>
+    <linearGradient id="bg" x1="1200" y1="64" x2="54" y2="894" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#DCFCE7"/>
+      <stop offset="0.52" stop-color="#F8FAFC"/>
+      <stop offset="1" stop-color="#ECFCCB"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(952 182) rotate(90) scale(192)">
+      <stop stop-color="#4ADE80"/>
+      <stop offset="1" stop-color="#4ADE80" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+</svg>

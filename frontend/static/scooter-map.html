@@ -89,6 +89,13 @@
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
       overflow: hidden;
       padding: 0;
+      position: relative;
+      z-index: 99999;
+    }
+
+    .leaflet-popup-pane,
+    .leaflet-popup {
+      z-index: 99998 !important;
     }
 
     .leaflet-popup-content {
@@ -104,6 +111,8 @@
       background: var(--surface);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       padding: 20px;
+      position: relative;
+      z-index: 100000;
     }
 
     .popup-header {
@@ -262,6 +271,88 @@
       cursor: not-allowed;
     }
 
+    .store-marker {
+      align-items: center;
+      background: linear-gradient(135deg, var(--store-color), var(--store-color-dark));
+      border: 3px solid #fff;
+      border-radius: 14px 14px 14px 4px;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.28);
+      color: #fff;
+      display: flex;
+      height: 42px;
+      justify-content: center;
+      position: relative;
+      transform: rotate(-45deg);
+      width: 42px;
+    }
+
+    .store-marker::after {
+      background: rgba(255, 255, 255, 0.24);
+      border-radius: 50%;
+      content: "";
+      height: 18px;
+      position: absolute;
+      width: 18px;
+    }
+
+    .store-marker-inner {
+      align-items: center;
+      display: flex;
+      font-family: "Segoe UI", Arial, sans-serif;
+      font-size: 11px;
+      font-weight: 900;
+      height: 100%;
+      justify-content: center;
+      letter-spacing: 0.05em;
+      line-height: 1;
+      position: relative;
+      text-indent: 0.05em;
+      transform: rotate(45deg);
+      width: 100%;
+      z-index: 1;
+    }
+
+    .store-popup-card {
+      background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      padding: 18px;
+    }
+
+    .store-popup-eyebrow {
+      color: var(--store-color);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.14em;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+
+    .store-popup-name {
+      color: var(--text-strong);
+      font-size: 16px;
+      font-weight: 800;
+      line-height: 1.3;
+      margin-bottom: 8px;
+    }
+
+    .store-popup-meta {
+      align-items: center;
+      background: rgba(37, 99, 235, 0.08);
+      border-radius: 999px;
+      color: var(--map-blue);
+      display: inline-flex;
+      font-size: 12px;
+      font-weight: 800;
+      margin-bottom: 12px;
+      padding: 6px 10px;
+    }
+
+    .store-popup-address {
+      color: var(--text-muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
     .user-location-marker {
       position: relative;
     }
@@ -344,6 +435,42 @@
       packageLine: `Day ${formatCny(PACKAGE_PRICING.oneDay)} | Week ${formatCny(PACKAGE_PRICING.oneWeek)} | Month ${formatCny(PACKAGE_PRICING.oneMonth)}`
     })
 
+    const DEFAULT_STORES = Object.freeze([
+      {
+        id: "chengdu-taikoo",
+        city: "Chengdu",
+        name: "Taikoo Li Mobility Store",
+        type: "Pickup + Walk-in Rental",
+        address: "88 Zhongshamao Street, Jinjiang District",
+        lat: 30.6552,
+        lng: 104.0806,
+        symbol: "CD",
+        color: "#2563EB"
+      },
+      {
+        id: "london-kings-cross",
+        city: "London",
+        name: "King's Cross Mobility Hub",
+        type: "Reservation + Return Counter",
+        address: "42 York Way, King's Cross Central",
+        lat: 51.5362,
+        lng: -0.1255,
+        symbol: "KC",
+        color: "#F59E0B"
+      },
+      {
+        id: "singapore-bugis",
+        city: "Singapore",
+        name: "Bugis Urban Ride Lab",
+        type: "Demo + Premium Fleet",
+        address: "200 Victoria Street, Bugis Junction",
+        lat: 1.299,
+        lng: 103.8558,
+        symbol: "BG",
+        color: "#10B981"
+      }
+    ])
+
     const map = L.map("map", {
       attributionControl: false,
       center: MAP_DEFAULT_VIEW.center,
@@ -356,6 +483,7 @@
     }).addTo(map)
 
     const markers = {}
+    const storeMarkers = {}
     let currentFilter = "ALL"
     let userMarker = null
 
@@ -388,6 +516,31 @@
       return [lat, lng]
     }
 
+    function getStoreCoordinates(store) {
+      const lat = Number(store?.lat)
+      const lng = Number(store?.lng)
+
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        return null
+      }
+
+      return [lat, lng]
+    }
+
+    function normalizeHexColor(value, fallback = "#2563EB") {
+      const color = String(value || "").trim()
+      return /^#[0-9A-Fa-f]{6}$/.test(color) ? color : fallback
+    }
+
+    function darkenHexColor(hexColor) {
+      const color = normalizeHexColor(hexColor).slice(1)
+      const channels = [0, 2, 4].map((index) => {
+        const value = Math.max(0, Math.round(parseInt(color.slice(index, index + 2), 16) * 0.78))
+        return value.toString(16).padStart(2, "0")
+      })
+      return `#${channels.join("")}`
+    }
+
     function buildMarkerHtml(status) {
       const statusMeta = getStatusMeta(status)
       return `
@@ -405,6 +558,44 @@
         iconSize: [32, 32],
         popupAnchor: [0, -36]
       })
+    }
+
+    function buildStoreMarkerHtml(store) {
+      const color = normalizeHexColor(store?.color)
+      const colorDark = darkenHexColor(color)
+      const symbol = escapeHtml(store?.symbol || "ST")
+      return `
+        <div class="store-marker" style="--store-color:${color};--store-color-dark:${colorDark};">
+          <div class="store-marker-inner">${symbol}</div>
+        </div>
+      `
+    }
+
+    function makeStoreIcon(store) {
+      return L.divIcon({
+        className: "",
+        html: buildStoreMarkerHtml(store),
+        iconAnchor: [21, 42],
+        iconSize: [42, 42],
+        popupAnchor: [0, -44]
+      })
+    }
+
+    function buildStorePopup(store) {
+      const color = normalizeHexColor(store?.color)
+      const city = escapeHtml(store?.city || "Store")
+      const name = escapeHtml(store?.name || "ScooterGo Store")
+      const type = escapeHtml(store?.type || "Store")
+      const address = escapeHtml(store?.address || "")
+
+      return `
+        <div class="store-popup-card" style="--store-color:${color};">
+          <div class="store-popup-eyebrow">${city} Store</div>
+          <div class="store-popup-name">${name}</div>
+          <div class="store-popup-meta">${type}</div>
+          <div class="store-popup-address">${address}</div>
+        </div>
+      `
     }
 
     function buildPopup(scooter) {
@@ -487,6 +678,9 @@
           marker.setPopupContent(buildPopup(marker._scooterData))
           postToUniApp("markerTap", marker._scooterData)
         })
+        marker.on("popupclose", () => {
+          postToUniApp("popupClose", marker._scooterData)
+        })
 
         if (shouldShow) {
           marker.addTo(map)
@@ -494,6 +688,86 @@
 
         markers[scooter.id] = marker
       })
+    }
+
+    function renderStores(stores) {
+      const nextIds = new Set((Array.isArray(stores) ? stores : []).map(store => String(store?.id || "")))
+
+      Object.keys(storeMarkers).forEach((storeId) => {
+        if (!nextIds.has(storeId)) {
+          map.removeLayer(storeMarkers[storeId])
+          delete storeMarkers[storeId]
+        }
+      })
+
+      ;(Array.isArray(stores) ? stores : []).forEach((store) => {
+        const storeId = String(store?.id || "")
+        const coordinates = getStoreCoordinates(store)
+        if (!storeId || !coordinates) return
+
+        const existingMarker = storeMarkers[storeId]
+
+        if (existingMarker) {
+          existingMarker.setLatLng(coordinates)
+          existingMarker.setIcon(makeStoreIcon(store))
+          existingMarker.setPopupContent(buildStorePopup(store))
+          existingMarker._storeData = store
+          if (!map.hasLayer(existingMarker)) {
+            existingMarker.addTo(map)
+          }
+          return
+        }
+
+        const marker = L.marker(coordinates, {
+          icon: makeStoreIcon(store),
+          zIndexOffset: 900
+        })
+        marker._storeData = store
+        marker.bindPopup(buildStorePopup(store), { maxWidth: 280 })
+        marker.addTo(map)
+        storeMarkers[storeId] = marker
+      })
+    }
+
+    function focusStore(payload) {
+      const storeId = String(payload?.id || "")
+      const marker = storeMarkers[storeId]
+      const coordinates = marker
+        ? marker.getLatLng()
+        : getStoreCoordinates({ lat: payload?.lat, lng: payload?.lng })
+
+      if (!coordinates) return
+
+      const center = Array.isArray(coordinates)
+        ? coordinates
+        : [coordinates.lat, coordinates.lng]
+      const zoom = Number(payload?.zoom) || 15
+
+      map.flyTo(center, zoom, { duration: 0.85 })
+
+      if (marker) {
+        window.setTimeout(() => {
+          marker.openPopup()
+        }, 550)
+      }
+    }
+
+    function focusStoreFromUrl() {
+      const params = new URLSearchParams(window.location.search)
+      const storeId = params.get("focusStore")
+      if (!storeId) return
+
+      const store = DEFAULT_STORES.find(item => item.id === storeId)
+      if (!store) return
+
+      window.setTimeout(() => {
+        focusStore({
+          id: store.id,
+          lat: store.lat,
+          lng: store.lng,
+          zoom: 15
+        })
+      }, 250)
     }
 
     function showUserLocation(lat, lng) {
@@ -564,12 +838,19 @@
       const { cmd, data } = payload || {}
 
       if (cmd === "updateScooters") renderScooters(data)
+      if (cmd === "updateStores") renderStores(data)
+      if (cmd === "focusStore" && data) focusStore(data)
       if (cmd === "locate" && data) showUserLocation(data.lat, data.lng)
       if (cmd === "filter" && data) applyFilter(data.filter)
       if (cmd === "flyTo" && data) map.setView([data.lat, data.lng], data.zoom || 16)
+      if (cmd === "closePopup") map.closePopup()
     })
 
-    window.onload = () => postToUniApp("mapReady", {})
+    window.onload = () => {
+      renderStores(DEFAULT_STORES)
+      focusStoreFromUrl()
+      postToUniApp("mapReady", {})
+    }
   </script>
 </body>
 </html>

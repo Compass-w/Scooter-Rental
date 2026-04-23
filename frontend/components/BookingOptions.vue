@@ -6,7 +6,7 @@
       <view class="sheet-header">
         <view>
           <text class="sheet-title">Booking Options</text>
-          <text class="sheet-subtitle">Choose your scooter, plan, and payment method. Extra details stay hidden until you open them.</text>
+          <text class="sheet-subtitle">Choose your plan and payment method. Extra details stay hidden until you open them.</text>
         </view>
         <view class="sheet-close" @tap="handleClose">
           <uni-icons type="closeempty" size="22" color="#64748B"></uni-icons>
@@ -76,25 +76,6 @@
             <text class="toggle-desc">{{ market.registrationLabel }}</text>
           </view>
         </view>
-      </view>
-
-      <view class="section-block">
-        <text class="section-title">Change Scooter Model</text>
-        <scroll-view class="vehicle-scroll" scroll-x :show-scrollbar="false">
-          <view class="vehicle-row">
-            <view
-              v-for="vehicle in vehicleOptions"
-              :key="vehicle.profileSlug"
-              :class="['vehicle-card', selectedVehicleSlug === vehicle.profileSlug ? 'vehicle-card-active' : '']"
-              @tap="selectedVehicleSlug = vehicle.profileSlug"
-            >
-              <image class="vehicle-image" :src="vehicle.imageUrl" mode="aspectFill" />
-              <text class="vehicle-name">{{ vehicle.displayName }}</text>
-              <text class="vehicle-meta">{{ vehicle.specs.topSpeedKph }} km/h · {{ vehicle.specs.rangeKm }} km</text>
-              <text class="vehicle-price-note">From {{ formatCny(modelPricingFor(vehicle).oneHour) }}/hour</text>
-            </view>
-          </view>
-        </scroll-view>
       </view>
 
       <view class="section-block">
@@ -454,7 +435,6 @@ import {
   enrichScooter,
   estimateBatteryDrop,
   estimateElectricityAdjustment,
-  getAlternativeScooterProfiles,
   getMarketProfile,
   getServiceModeProfile
 } from '@/utils/scooterCatalog.js'
@@ -497,7 +477,6 @@ const selectedServiceMode = ref('SHARING')
 const selectedStoreChannel = ref('WALK_IN_COUNTER')
 const pickupStoreCode = ref(STORE_BRANCHES[0]?.code || '')
 const returnStoreCode = ref(STORE_BRANCHES[0]?.code || '')
-const selectedVehicleSlug = ref('')
 const previewVisible = ref(false)
 const paymentProcessing = ref(false)
 const liabilityAccepted = ref(false)
@@ -529,16 +508,7 @@ const formErrors = ref({
 })
 
 const baseVehicle = computed(() => enrichScooter(props.scooter || {}))
-const vehicleOptions = computed(() =>
-  getAlternativeScooterProfiles(baseVehicle.value.model).map(profile => enrichScooter({
-    ...(props.scooter || {}),
-    model: profile.displayName
-  }))
-)
-
-const selectedVehicle = computed(() =>
-  vehicleOptions.value.find(vehicle => vehicle.profileSlug === selectedVehicleSlug.value) || vehicleOptions.value[0] || baseVehicle.value
-)
+const selectedVehicle = computed(() => baseVehicle.value)
 
 const selectedMarketProfile = computed(() => getMarketProfile(selectedMarketCode.value))
 const selectedServiceProfile = computed(() => getServiceModeProfile(selectedServiceMode.value))
@@ -561,7 +531,6 @@ const validationSummary = computed(() =>
 )
 
 const modelPricing = computed(() => createPlanPricingForProfile(selectedVehicle.value, RENTAL_PACKAGE_PRICING))
-const modelPricingFor = (vehicle) => createPlanPricingForProfile(vehicle, RENTAL_PACKAGE_PRICING)
 
 const planOptions = computed(() => [
   {
@@ -656,7 +625,6 @@ watch(
     selectedPlan.value = planOptions.value.some(option => option.value === props.preferredPlan)
       ? props.preferredPlan
       : '1_HOUR'
-    selectedVehicleSlug.value = baseVehicle.value.profileSlug
     selectedMarketCode.value = 'CN'
     selectedServiceMode.value = 'SHARING'
     selectedStoreChannel.value = 'WALK_IN_COUNTER'
@@ -873,10 +841,10 @@ const handleConfirm = async () => {
   inset: 0;
   background: rgba(15, 23, 42, 0.56);
   display: flex;
-  align-items: flex-start;
+  align-items: flex-end;
   justify-content: center;
   z-index: 1600;
-  padding: calc(env(safe-area-inset-top) + 120rpx) 24rpx calc(env(safe-area-inset-bottom) + 24rpx);
+  padding: calc(env(safe-area-inset-top) + 24rpx) 24rpx calc(env(safe-area-inset-bottom) + 24rpx);
   box-sizing: border-box;
 }
 
@@ -884,10 +852,11 @@ const handleConfirm = async () => {
   width: 100%;
   max-width: 920rpx;
   background: linear-gradient(180deg, #F8FBFF 0%, #FFFFFF 34%);
-  border-radius: 36rpx;
+  border-radius: 36rpx 36rpx 24rpx 24rpx;
   padding: 24rpx 28rpx 36rpx;
   box-shadow: 0 24rpx 60rpx rgba(15, 23, 42, 0.18);
-  max-height: calc(100vh - env(safe-area-inset-top) - 150rpx);
+  height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 48rpx);
+  max-height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 48rpx);
   overflow-y: auto;
 }
 
@@ -1159,58 +1128,6 @@ const handleConfirm = async () => {
   font-size: 22rpx;
   line-height: 1.6;
   color: #475569;
-}
-
-.vehicle-scroll {
-  width: 100%;
-}
-
-.vehicle-row {
-  display: inline-flex;
-  gap: 16rpx;
-  padding-bottom: 8rpx;
-}
-
-.vehicle-card {
-  width: 260rpx;
-  padding: 16rpx;
-  border-radius: 24rpx;
-  background: #FFFFFF;
-  border: 2rpx solid #E2E8F0;
-  box-shadow: 0 10rpx 24rpx rgba(15, 23, 42, 0.05);
-}
-
-.vehicle-card-active {
-  border-color: #2563EB;
-  background: linear-gradient(180deg, #EFF6FF 0%, #F8FBFF 100%);
-}
-
-.vehicle-image {
-  width: 100%;
-  height: 172rpx;
-  border-radius: 18rpx;
-  margin-bottom: 12rpx;
-}
-
-.vehicle-name {
-  display: block;
-  font-size: 26rpx;
-  font-weight: 700;
-  color: #0F172A;
-}
-
-.vehicle-meta,
-.vehicle-price-note {
-  display: block;
-  margin-top: 6rpx;
-  font-size: 22rpx;
-  color: #64748B;
-  line-height: 1.5;
-}
-
-.vehicle-price-note {
-  color: #1D4ED8;
-  font-weight: 700;
 }
 
 .plan-grid {
@@ -1640,7 +1557,7 @@ const handleConfirm = async () => {
 
 @media (max-width: 720px) {
   .booking-overlay {
-    padding-top: calc(env(safe-area-inset-top) + 90rpx);
+    padding-top: calc(env(safe-area-inset-top) + 20rpx);
   }
 
   .scooter-hero,
@@ -1648,10 +1565,6 @@ const handleConfirm = async () => {
   .plan-grid,
   .detail-grid {
     grid-template-columns: 1fr;
-  }
-
-  .vehicle-card {
-    width: 240rpx;
   }
 
   .payment-row {

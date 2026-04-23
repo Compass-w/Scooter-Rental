@@ -25,13 +25,17 @@
 
         <!-- Leaflet Map (web-view) -->
         <web-view
-          :class="['map-webview', mapInteractionLocked ? 'map-webview-blocked' : '']"
+          :class="[
+            'map-webview',
+            mapInteractionLocked ? 'map-webview-blocked' : '',
+            mapPopupActive ? 'map-webview-priority' : ''
+          ]"
           :src="mapSrc"
           @message="onWebViewMessage"
         />
 
         <!-- Search Bar -->
-        <view class="search-bar-wrapper">
+        <view v-show="!mapPopupActive" class="search-bar-wrapper">
           <view class="search-bar">
             <view class="search-icon" @tap="onSearch">
               <uni-icons type="search" size="20" color="#2563EB"></uni-icons>
@@ -50,13 +54,13 @@
         </view>
 
         <!-- Stats Badge -->
-        <view class="stats-badge">
+        <view v-show="!mapPopupActive" class="stats-badge">
           <view class="stats-dot"></view>
           <text class="stats-text">{{ availableCount }} available nearby</text>
         </view>
 
         <!-- Map Controls -->
-        <view class="map-controls">
+        <view v-show="!mapPopupActive" class="map-controls">
           <view class="control-btn refresh-btn" :class="refreshing ? 'control-btn-loading' : ''" @tap="handleManualRefresh">
             <uni-icons :type="refreshing ? 'spinner-cycle' : 'refreshempty'" size="18" color="#0F172A"></uni-icons>
             <text class="control-btn-text">{{ refreshing ? 'Refreshing' : 'Refresh' }}</text>
@@ -65,10 +69,16 @@
             <uni-icons type="location-filled" size="20" color="#2563EB"></uni-icons>
             <text class="control-btn-text">{{ locating ? 'Locating' : 'Locate Me' }}</text>
           </view>
+          <view class="control-btn store-btn" @tap="focusNextStore">
+            <view class="store-control-pin">
+              <text class="store-control-symbol">{{ nextStoreSymbol }}</text>
+            </view>
+            <text class="control-btn-text">Find Store</text>
+          </view>
         </view>
 
         <!-- Scooter Popup -->
-        <view v-if="selectedScooter" class="scooter-popup" @tap.stop>
+        <view v-if="showScooterPopup" class="scooter-popup" @tap.stop>
           <image class="popup-photo" :src="selectedScooter.imageUrl" mode="aspectFill" />
           <view class="popup-drag" @tap="closePopup">
             <view class="popup-drag-bar"></view>
@@ -278,6 +288,7 @@ const searchQuery     = ref('')
 const filterAvailable = ref(false)
 const drawerOpen      = ref(false)
 const selectedScooter = ref(null)
+const selectedScooterSource = ref('')
 const riding          = ref(false)
 const mapReady        = ref(false)
 const locating        = ref(false)
@@ -287,6 +298,8 @@ const bookingScooter  = ref(null)
 const preferredBookingPlan = ref('1_HOUR')
 const currentUserLocation = ref(null)
 const hasAttemptedInitialLocate = ref(false)
+const storeFocusIndex = ref(0)
+const pendingStoreFocusId = ref('')
 const scooterPage = ref(1)
 const scootersPerPage = 8
 const ACTIVE_RIDE_LOCATION_LABEL = 'Following your live position'
@@ -317,8 +330,51 @@ const locationAliases = [
   { label: 'London', names: ['london', '\u4f26\u6566'], lat: 51.5072, lng: -0.1276, zoom: 12, radiusKm: 20 },
 ]
 
+const featuredStoreLocations = [
+  {
+    id: 'chengdu-taikoo',
+    city: 'Chengdu',
+    name: 'Taikoo Li Mobility Store',
+    type: 'Pickup + Walk-in Rental',
+    address: '88 Zhongshamao Street, Jinjiang District',
+    lat: 30.6552,
+    lng: 104.0806,
+    symbol: 'CD',
+    color: '#2563EB'
+  },
+  {
+    id: 'london-kings-cross',
+    city: 'London',
+    name: 'King\'s Cross Mobility Hub',
+    type: 'Reservation + Return Counter',
+    address: '42 York Way, King\'s Cross Central',
+    lat: 51.5362,
+    lng: -0.1255,
+    symbol: 'KC',
+    color: '#F59E0B'
+  },
+  {
+    id: 'singapore-bugis',
+    city: 'Singapore',
+    name: 'Bugis Urban Ride Lab',
+    type: 'Demo + Premium Fleet',
+    address: '200 Victoria Street, Bugis Junction',
+    lat: 1.299,
+    lng: 103.8558,
+    symbol: 'BG',
+    color: '#10B981'
+  }
+]
+
 // Leaflet map HTML path — place scooter-map.html inside /static/
-const mapSrc = ref('/static/scooter-map.html')
+const buildMapSrc = (focusStoreId = '') => {
+  const basePath = '/static/scooter-map.html'
+  if (!focusStoreId) return basePath
+
+  return `${basePath}?focusStore=${encodeURIComponent(focusStoreId)}&focusNonce=${Date.now()}`
+}
+
+const mapSrc = ref(buildMapSrc())
 
 // Auto-refresh timer reference
 let refreshTimer = null
@@ -338,8 +394,20 @@ const availableCount = computed(() =>
   scooters.value.filter(s => s.status === 'AVAILABLE').length
 )
 
+const mapPopupActive = computed(() =>
+  Boolean(selectedScooter.value) && selectedScooterSource.value === 'map'
+)
+
+const showScooterPopup = computed(() =>
+  Boolean(selectedScooter.value) && selectedScooterSource.value !== 'map'
+)
+
+const nextStoreSymbol = computed(() =>
+  featuredStoreLocations[storeFocusIndex.value % featuredStoreLocations.length]?.symbol || 'ST'
+)
+
 const mapInteractionLocked = computed(() =>
-  drawerOpen.value || Boolean(selectedScooter.value) || bookingOptionsVisible.value
+  drawerOpen.value || showScooterPopup.value || bookingOptionsVisible.value
 )
 
 const RATE_CARD = HOME_PRICING.payAsYouGo
@@ -559,6 +627,7 @@ const focusScooter = (scooter, zoom = 17) => {
   if (!scooter) return false
 
   selectedScooter.value = scooter
+  selectedScooterSource.value = 'panel'
   drawerOpen.value = false
 
   const coordinates = getScooterCoordinates(scooter)
@@ -656,6 +725,7 @@ const sendToMap = (cmd, data) => {
   // Use cached window; fall back to DOM query before first message arrives
   if (!_mapWindow) {
     const frame =
+      document.querySelector('iframe[src*="scooter-map"]') ||
       document.querySelector('.map-webview iframe') ||
       document.querySelector('uni-web-view iframe') ||
       document.querySelector('iframe')
@@ -708,14 +778,26 @@ const _onWindowMessage = (e) => {
 const _handleMapPayload = ({ type, data } = {}) => {
   if (type === 'mapReady') {
     mapReady.value = true
+    sendToMap('updateStores', featuredStoreLocations)
     // Push current scooter data once map is ready
     if (scooters.value.length) sendToMap('updateScooters', scooters.value)
     // Flush any commands that were queued before the map was ready
-    while (_pendingMessages.length) {
+    while (_pendingMessages.length && _mapWindow) {
       const { cmd, data: d } = _pendingMessages.shift()
       sendToMap(cmd, d)
     }
-    if (currentUserLocation.value) {
+    if (pendingStoreFocusId.value) {
+      const store = featuredStoreLocations.find(item => item.id === pendingStoreFocusId.value)
+      if (store) {
+        sendToMap('focusStore', {
+          id: store.id,
+          lat: store.lat,
+          lng: store.lng,
+          zoom: 15
+        })
+      }
+      pendingStoreFocusId.value = ''
+    } else if (currentUserLocation.value) {
       sendToMap('locate', currentUserLocation.value)
     } else if (!hasAttemptedInitialLocate.value) {
       requestUserLocation({ showErrorToast: false }).catch(() => {})
@@ -724,13 +806,19 @@ const _handleMapPayload = ({ type, data } = {}) => {
 
   if (type === 'markerTap') {
     selectedScooter.value = normalizeScooterEntry(data)
+    selectedScooterSource.value = 'map'
     drawerOpen.value = false
   }
 
   if (type === 'rideTap') {
     const normalizedScooter = normalizeScooterEntry(data)
     selectedScooter.value = normalizedScooter
+    selectedScooterSource.value = 'map'
     openBookingOptions(normalizedScooter)
+  }
+
+  if (type === 'popupClose' && selectedScooterSource.value === 'map') {
+    selectedScooter.value = null
   }
 }
 
@@ -808,6 +896,38 @@ const handleLocateTap = async () => {
   } catch {
     // Toast is handled in requestUserLocation
   }
+}
+
+const focusNextStore = () => {
+  if (!featuredStoreLocations.length) return
+
+  if (!mapReady.value) {
+    uni.showToast({
+      title: 'Map is still loading',
+      icon: 'none'
+    })
+    return
+  }
+
+  const store = featuredStoreLocations[storeFocusIndex.value % featuredStoreLocations.length]
+  storeFocusIndex.value = (storeFocusIndex.value + 1) % featuredStoreLocations.length
+  selectedScooter.value = null
+  drawerOpen.value = false
+  pendingStoreFocusId.value = store.id
+  mapReady.value = false
+  _mapWindow = null
+  mapSrc.value = buildMapSrc(store.id)
+  sendToMap('updateStores', featuredStoreLocations)
+  sendToMap('focusStore', {
+    id: store.id,
+    lat: store.lat,
+    lng: store.lng,
+    zoom: 15
+  })
+  uni.showToast({
+    title: `Showing ${store.city} store`,
+    icon: 'none'
+  })
 }
 
 const handleManualRefresh = async () => {
@@ -1207,6 +1327,12 @@ const closePopup = () => {
   selectedScooter.value = null
 }
 
+watch(selectedScooter, (value) => {
+  if (!value) {
+    selectedScooterSource.value = ''
+  }
+})
+
 /**
  * Component mounted lifecycle hook
  * Load scooter data and start auto-refresh timer
@@ -1342,12 +1468,17 @@ onUnmounted(() => {
 }
 
 .map-webview {
+  position: relative;
   width: 100%;
   height: 100%;
 }
 
 .map-webview-blocked {
   pointer-events: none;
+}
+
+.map-webview-priority {
+  z-index: 1200;
 }
 
 /* ========== Search Bar ========== */
@@ -1471,10 +1602,38 @@ onUnmounted(() => {
   color: #2563EB;
 }
 
+.store-btn {
+  border: 1.5rpx solid rgba(16, 185, 129, 0.22);
+}
+
+.store-btn .control-btn-text {
+  color: #047857;
+}
+
+.store-control-pin {
+  width: 36rpx;
+  height: 36rpx;
+  border-radius: 12rpx 12rpx 12rpx 4rpx;
+  background: linear-gradient(135deg, #10B981, #047857);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: rotate(-45deg);
+}
+
+.store-control-symbol {
+  color: #FFFFFF;
+  font-size: 16rpx;
+  font-weight: 900;
+  line-height: 1;
+  text-indent: 0.04em;
+  transform: rotate(45deg);
+}
+
 /* ========== Scooter Popup ========== */
 .scooter-popup {
   position: absolute;
-  top: calc(env(safe-area-inset-top) + 152rpx);
+  top: auto;
   bottom: 180rpx;
   left: 24rpx;
   right: 24rpx;
@@ -1484,6 +1643,8 @@ onUnmounted(() => {
   box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.15);
   z-index: 980;
   animation: slideUp 0.3s ease;
+  height: 30vh;
+  max-height: 34vh;
   overflow-y: auto;
 }
 
@@ -2117,8 +2278,10 @@ onUnmounted(() => {
 
 @media (max-width: 750px) {
   .scooter-popup {
-    top: calc(env(safe-area-inset-top) + 156rpx);
+    top: auto;
     bottom: calc(env(safe-area-inset-bottom) + 152rpx);
+    height: 32vh;
+    max-height: 36vh;
   }
 
   .drawer-handle-area {

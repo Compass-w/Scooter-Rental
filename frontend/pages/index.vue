@@ -63,12 +63,37 @@
             <text class="float-card-sub">Ready to ride</text>
           </view>
         </view>
-        <view class="hero-scooter-graphic">
+        <view class="hero-scooter-graphic" aria-label="ScooterGo illustration">
           <view class="scooter-glow"></view>
-          <image class="hero-scooter-photo" :src="heroVehicle.imageUrl" mode="aspectFill" />
-          <view class="hero-photo-caption">
-            <text class="hero-photo-title">{{ heroVehicle.displayName }}</text>
-            <text class="hero-photo-copy">{{ heroVehicle.performanceSummary }}</text>
+          <view class="hero-illustration-card">
+            <view class="hero-illustration-sun"></view>
+            <view class="hero-illustration-road"></view>
+            <svg class="hero-scooter-illustration" viewBox="0 0 520 360" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <ellipse cx="162" cy="292" rx="54" ry="18" fill="#0F172A" fill-opacity="0.08"/>
+              <ellipse cx="380" cy="292" rx="54" ry="18" fill="#0F172A" fill-opacity="0.08"/>
+              <path d="M159 247H275C287 247 298 239 302 227C315 187 346 158 388 150" stroke="#2563EB" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M329 75H390C407 75 421 87 424 104L448 249" stroke="#111827" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M386 76H456" stroke="#111827" stroke-width="28" stroke-linecap="round"/>
+              <path d="M140 247H275" stroke="#38BDF8" stroke-width="22" stroke-linecap="round"/>
+              <circle cx="132" cy="261" r="58" fill="#111827"/>
+              <circle cx="132" cy="261" r="31" fill="#FFFFFF"/>
+              <circle cx="132" cy="261" r="15" fill="#38BDF8"/>
+              <circle cx="410" cy="261" r="58" fill="#111827"/>
+              <circle cx="410" cy="261" r="31" fill="#FFFFFF"/>
+              <circle cx="410" cy="261" r="15" fill="#38BDF8"/>
+              <path d="M209 223H280C294 223 306 213 309 199L316 168H219C202 168 188 180 185 196C182 211 193 223 209 223Z" fill="#DBEAFE"/>
+              <path d="M225 168H316L329 120" stroke="#111827" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M103 228C122 212 150 212 168 228" stroke="#2563EB" stroke-width="12" stroke-linecap="round"/>
+              <path d="M382 149C405 146 429 154 446 172" stroke="#38BDF8" stroke-width="12" stroke-linecap="round"/>
+              <rect x="244" y="133" width="73" height="28" rx="14" fill="#22C55E"/>
+              <path d="M95 111C129 83 174 71 218 79" stroke="#BFDBFE" stroke-width="16" stroke-linecap="round"/>
+              <path d="M74 154H154" stroke="#93C5FD" stroke-width="12" stroke-linecap="round"/>
+              <path d="M365 116H414" stroke="#93C5FD" stroke-width="12" stroke-linecap="round"/>
+            </svg>
+            <view class="hero-illustration-badge">
+              <text class="hero-illustration-badge-title">ScooterGo</text>
+              <text class="hero-illustration-badge-copy">Flat brand illustration</text>
+            </view>
           </view>
         </view>
         <view class="hero-card-float hero-card-2">
@@ -105,15 +130,21 @@
         <view class="section-badge">
           <text class="section-badge-text">Real Fleet</text>
         </view>
-        <text class="section-title">Real scooters, not placeholders</text>
-        <text class="section-subtitle">The homepage, booking sheet, and ride pages now use real scooter photography together with model-specific range, battery, and pricing details.</text>
+        <text class="section-title">Three hero scooters, now backed by your 3D models</text>
+        <text class="section-subtitle">The homepage keeps fast flat posters for browsing, then opens each scooter as a full GLB preview with rotation and zoom controls when a rider wants to inspect the design in detail.</text>
         <view class="fleet-grid">
-          <view v-for="vehicle in fleetShowcase" :key="vehicle.slug" class="fleet-card">
+          <view v-for="vehicle in fleetShowcase" :key="vehicle.slug" class="fleet-card" @tap="openFleetViewer(vehicle)">
             <image class="fleet-image" :src="vehicle.imageUrl" mode="aspectFill" />
             <view class="fleet-copy">
               <text class="fleet-name">{{ vehicle.displayName }}</text>
               <text class="fleet-meta">{{ vehicle.specs.topSpeedKph }} km/h · {{ vehicle.specs.rangeKm }} km range · {{ vehicle.specs.motorPowerW }} W</text>
               <text class="fleet-desc">{{ vehicle.performanceSummary }}</text>
+              <view class="fleet-card-footer">
+                <text class="fleet-flat-note">Flat poster on the page, full 3D model in the popup.</text>
+                <button class="fleet-preview-btn" @tap.stop="openFleetViewer(vehicle)">
+                  <text>Open 3D Preview</text>
+                </button>
+              </view>
             </view>
           </view>
         </view>
@@ -411,6 +442,27 @@
         </view>
         <text class="section-title white">{{ locationSectionTitle }}</text>
         <text class="section-subtitle white-muted">{{ locationSectionSubtitle }}</text>
+        <view class="stores-grid">
+          <view class="store-card" v-for="store in featuredStores" :key="store.name">
+            <view class="store-card-header">
+              <view class="store-card-title-wrap">
+                <text class="store-city">{{ store.city }}</text>
+                <text class="store-name">{{ store.name }}</text>
+              </view>
+              <text class="store-type">{{ store.type }}</text>
+            </view>
+            <text class="store-address">{{ store.address }}</text>
+            <text class="store-hours">Open {{ store.hours }}</text>
+            <text class="store-summary">{{ store.summary }}</text>
+            <view class="store-tags">
+              <text class="store-tag" v-for="highlight in store.highlights" :key="highlight">{{ highlight }}</text>
+            </view>
+          </view>
+        </view>
+        <view class="locations-rollout-copy">
+          <text class="locations-rollout-title">Wider rollout</text>
+          <text class="locations-rollout-text">These flagship stores handle pickup, return, battery checks, and walk-in support, while the city list below shows where the broader shared fleet is already live or launching next.</text>
+        </view>
         <view v-if="isMobileLayout" class="locations-toolbar">
           <text class="locations-summary">{{ cities.length }} cities are currently live or launching soon.</text>
           <view class="locations-toggle-btn" @tap="toggleLocationsExpanded">
@@ -465,7 +517,9 @@
             </view>
             <text class="review-text">"{{ review.text }}"</text>
             <view class="reviewer">
-              <view class="reviewer-avatar">{{ review.avatar }}</view>
+              <view class="reviewer-avatar">
+                <image class="reviewer-avatar-image" :src="review.avatarUrl" mode="aspectFill" />
+              </view>
               <view class="reviewer-info">
                 <text class="reviewer-name">{{ review.name }}</text>
                 <text class="reviewer-city">{{ review.city }}</text>
@@ -475,6 +529,12 @@
         </view>
       </view>
     </view>
+
+    <ScooterModelViewer
+      :visible="viewerVisible"
+      :scooter="selectedFleet"
+      @close="closeFleetViewer"
+    />
 
     <!-- ===== CTA BANNER ===== -->
     <view class="cta-section">
@@ -499,18 +559,63 @@
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import BaseLayout from '@/pages/BaseLayout.vue'
+import ScooterModelViewer from '@/components/ScooterModelViewer.vue'
 import { HOME_PRICING } from '@/utils/pricing.js'
-import { enrichScooter, getAlternativeScooterProfiles } from '@/utils/scooterCatalog.js'
 
 const pendingSection = ref('')
 const isMobileLayout = ref(false)
 const locationsExpanded = ref(false)
-const fleetShowcase = ref(
-  getAlternativeScooterProfiles('Ninebot Max G2')
-    .slice(0, 3)
-    .map(profile => enrichScooter({ model: profile.displayName, batteryLevel: 88 }))
-)
-const heroVehicle = computed(() => fleetShowcase.value[0] || enrichScooter({ model: 'Ninebot Max G2', batteryLevel: 92 }))
+const viewerVisible = ref(false)
+const selectedFleet = ref(null)
+
+const fleetShowcase = ref([
+  {
+    slug: 'sf-scooter-2',
+    displayName: 'SF City Edition',
+    imageUrl: '/static/scooters/homepage/sf-scooter-poster.svg',
+    posterUrl: '/static/scooters/homepage/sf-scooter-poster.svg',
+    modelUrl: '/static/models/homepage/sf_scooter_2.glb',
+    accentColor: '#38BDF8',
+    useCase: 'Fast downtown errands',
+    performanceSummary: 'Stable geometry and a clean street-ready stance for short urban hops, campus routes, and repeated city-center handoffs.',
+    specs: {
+      topSpeedKph: 32,
+      rangeKm: 52,
+      motorPowerW: 700
+    }
+  },
+  {
+    slug: 'tier-scooter-1',
+    displayName: 'Tier Urban Flex',
+    imageUrl: '/static/scooters/homepage/tier-scooter-poster.svg',
+    posterUrl: '/static/scooters/homepage/tier-scooter-poster.svg',
+    modelUrl: '/static/models/homepage/tier-scooter_1.glb',
+    accentColor: '#A855F7',
+    useCase: 'Compact city weaving',
+    performanceSummary: 'A tighter, more agile profile with a compact deck feel that suits dense station areas and short commuter transfers.',
+    specs: {
+      topSpeedKph: 28,
+      rangeKm: 45,
+      motorPowerW: 650
+    }
+  },
+  {
+    slug: 'electric-scooter-3',
+    displayName: 'Electric Glide Pro',
+    imageUrl: '/static/scooters/homepage/electric-scooter-poster.svg',
+    posterUrl: '/static/scooters/homepage/electric-scooter-poster.svg',
+    modelUrl: '/static/models/homepage/sf_scooter_2.glb',
+    accentColor: '#22C55E',
+    useCase: 'Flagship showcase rides',
+    performanceSummary: 'Longer body lines and a stronger visual presence make this the premium showcase scooter for extended bookings and hero merchandising.',
+    specs: {
+      topSpeedKph: 36,
+      rangeKm: 68,
+      motorPowerW: 900
+    }
+  }
+])
+
 const businessModels = ref([
   {
     title: 'Sharing Scooters',
@@ -569,23 +674,53 @@ const cities = ref([
   { name: 'Dubai',      mobileName: 'Dubai', live: false },
 ])
 
+const featuredStores = ref([
+  {
+    city: 'Chengdu',
+    name: 'Taikoo Li Mobility Store',
+    type: 'Pickup + Walk-in Rental',
+    address: '88 Zhongshamao Street, Jinjiang District, beside the Taikoo Li cycling entrance.',
+    hours: '10:00 - 22:00',
+    summary: 'Best for first-time riders who want staff onboarding, ID checks, and same-day pickup before riding Chunxi Road, Taikoo Li, and nearby greenway routes.',
+    highlights: ['Helmet fitting', 'Battery check', 'Walk-in signup', 'Greenway tips']
+  },
+  {
+    city: 'London',
+    name: 'King\'s Cross Mobility Hub',
+    type: 'Reservation + Return Counter',
+    address: '42 York Way, King\'s Cross Central, two minutes from the station concourse.',
+    hours: '08:00 - 21:30',
+    summary: 'Designed for office commuters and rail transfers, with remote reservation handover, quick returns, and staff-managed charging turnaround.',
+    highlights: ['Reserved pickup', 'Commuter plans', 'Fast return lane', 'Maintenance triage']
+  },
+  {
+    city: 'Singapore',
+    name: 'Bugis Urban Ride Lab',
+    type: 'Demo + Premium Fleet',
+    address: '200 Victoria Street, Bugis Junction mobility deck, street-level entrance B.',
+    hours: '10:30 - 22:30',
+    summary: 'Our flagship Southeast Asia store for premium model demos, longer range consultation, and guided pickups for visitors exploring the core city districts.',
+    highlights: ['Model demos', 'Tourist onboarding', 'Premium fleet', 'Battery advice']
+  }
+])
+
 const reviews = ref([
   {
     name: 'Priya S.',
     city: 'London',
-    avatar: '',
+    avatarUrl: '/static/avatars/reviewer-priya.svg',
     text: 'Best commute app I\'ve used. Saved me so much time and money compared to the Tube. The scooters are always nearby and fully charged.'
   },
   {
     name: 'James K.',
     city: 'Manchester',
-    avatar: '',
+    avatarUrl: '/static/avatars/reviewer-james.svg',
     text: 'Really smooth experience from sign-up to first ride. Love the eco stats - seeing how much CO I save keeps me motivated to ride more.'
   },
   {
     name: 'Mei L.',
     city: 'Edinburgh',
-    avatar: '',
+    avatarUrl: '/static/avatars/reviewer-mei.svg',
     text: 'The 4-hour flex pass is perfect for errands, meetings, and campus days. I stop thinking about topping up every single hour.'
   },
 ])
@@ -643,6 +778,16 @@ const startFlexPass = () => {
     icon: 'none'
   })
   uni.navigateTo({ url: '/pages/find-scooter?plan=4_HOURS' })
+}
+
+const openFleetViewer = (vehicle) => {
+  if (!vehicle) return
+  selectedFleet.value = vehicle
+  viewerVisible.value = true
+}
+
+const closeFleetViewer = () => {
+  viewerVisible.value = false
 }
 
 const scrollToHowItWorks = () => {
@@ -1029,8 +1174,8 @@ onUnmounted(() => {
 
 .hero-scooter-graphic {
   position: relative;
-  width: 500rpx;
-  height: 500rpx;
+  width: 560rpx;
+  height: 560rpx;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1038,48 +1183,115 @@ onUnmounted(() => {
 
 .scooter-glow {
   position: absolute;
-  width: 360rpx;
-  height: 360rpx;
-  background: radial-gradient(circle, rgba(37, 99, 235, 0.18) 0%, transparent 70%);
+  width: 460rpx;
+  height: 460rpx;
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.20) 0%, transparent 70%);
   border-radius: 50%;
 }
 
-.hero-scooter-photo {
-  width: 420rpx;
-  height: 420rpx;
-  border-radius: 48rpx;
-  object-fit: cover;
+.hero-illustration-card {
   position: relative;
+  width: 500rpx;
+  height: 500rpx;
   z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 56rpx;
+  background:
+    radial-gradient(circle at 24% 22%, rgba(255, 255, 255, 0.96) 0 12%, transparent 13%),
+    linear-gradient(145deg, rgba(239, 246, 255, 0.96) 0%, rgba(219, 234, 254, 0.95) 48%, rgba(240, 253, 250, 0.96) 100%);
+  border: 1rpx solid rgba(147, 197, 253, 0.56);
+  box-shadow: 0 30rpx 76rpx rgba(37, 99, 235, 0.18);
   animation: scooter-float 3.5s ease-in-out infinite;
-  box-shadow: 0 28rpx 60rpx rgba(37, 99, 235, 0.18);
 }
 
-.hero-photo-caption {
+.hero-illustration-card::before,
+.hero-illustration-card::after {
+  content: '';
   position: absolute;
-  left: 30rpx;
-  right: 30rpx;
-  bottom: 28rpx;
+  border-radius: 999rpx;
+  pointer-events: none;
+}
+
+.hero-illustration-card::before {
+  width: 220rpx;
+  height: 220rpx;
+  right: -64rpx;
+  top: -54rpx;
+  background: rgba(56, 189, 248, 0.20);
+}
+
+.hero-illustration-card::after {
+  width: 340rpx;
+  height: 72rpx;
+  left: 78rpx;
+  bottom: 82rpx;
+  background: rgba(15, 23, 42, 0.08);
+  filter: blur(12rpx);
+}
+
+.hero-illustration-sun {
+  position: absolute;
+  top: 54rpx;
+  left: 62rpx;
+  width: 82rpx;
+  height: 82rpx;
+  border-radius: 50%;
+  background: #FFFFFF;
+  box-shadow: 0 12rpx 30rpx rgba(37, 99, 235, 0.12);
+}
+
+.hero-illustration-road {
+  position: absolute;
+  left: 54rpx;
+  right: 54rpx;
+  bottom: 104rpx;
+  height: 18rpx;
+  border-radius: 999rpx;
+  background: linear-gradient(90deg, rgba(37, 99, 235, 0.08), rgba(34, 197, 94, 0.18), rgba(37, 99, 235, 0.08));
+}
+
+.hero-scooter-illustration {
+  position: relative;
   z-index: 2;
+  width: 470rpx;
+  height: 326rpx;
+  margin-top: 6rpx;
+  filter: drop-shadow(0 18rpx 18rpx rgba(15, 23, 42, 0.12));
+}
+
+.hero-illustration-badge {
+  position: absolute;
+  left: 34rpx;
+  right: 34rpx;
+  bottom: 30rpx;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20rpx;
   padding: 18rpx 22rpx;
-  border-radius: 24rpx;
-  background: rgba(15, 23, 42, 0.74);
-  backdrop-filter: blur(14px);
+  border-radius: 26rpx;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1rpx solid rgba(191, 219, 254, 0.72);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 14rpx 30rpx rgba(15, 23, 42, 0.08);
 }
 
-.hero-photo-title {
+.hero-illustration-badge-title {
   display: block;
-  font-size: 28rpx;
-  font-weight: 700;
-  color: #FFFFFF;
+  font-size: 30rpx;
+  font-weight: 800;
+  color: #111827;
 }
 
-.hero-photo-copy {
+.hero-illustration-badge-copy {
   display: block;
-  margin-top: 8rpx;
   font-size: 22rpx;
-  line-height: 1.55;
-  color: rgba(255, 255, 255, 0.76);
+  font-weight: 700;
+  color: #2563EB;
 }
 
 @keyframes scooter-float {
@@ -1577,6 +1789,7 @@ onUnmounted(() => {
 
 .fleet-card {
   overflow: hidden;
+  cursor: pointer;
 }
 
 .fleet-image {
@@ -1613,6 +1826,40 @@ onUnmounted(() => {
   font-size: 24rpx;
   line-height: 1.7;
   color: #64748B;
+}
+
+.fleet-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18rpx;
+  margin-top: 24rpx;
+}
+
+.fleet-flat-note {
+  flex: 1;
+  min-width: 0;
+  font-size: 21rpx;
+  line-height: 1.55;
+  color: #64748B;
+}
+
+.fleet-preview-btn {
+  flex-shrink: 0;
+  height: 72rpx;
+  line-height: 72rpx;
+  padding: 0 24rpx;
+  border-radius: 999rpx;
+  border: none;
+  background: linear-gradient(135deg, #2563EB, #1D4ED8);
+  color: #FFFFFF;
+  font-size: 22rpx;
+  font-weight: 700;
+  box-shadow: 0 14rpx 26rpx rgba(37, 99, 235, 0.16);
+}
+
+.fleet-preview-btn::after {
+  border: none;
 }
 
 .business-grid {
@@ -1664,6 +1911,124 @@ onUnmounted(() => {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(340rpx, 1fr));
   gap: 24rpx;
+}
+
+.stores-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 28rpx;
+  margin-bottom: 34rpx;
+}
+
+.store-card {
+  border-radius: 30rpx;
+  padding: 34rpx;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1rpx solid rgba(191, 219, 254, 0.16);
+  box-shadow: 0 18rpx 36rpx rgba(2, 6, 23, 0.16);
+}
+
+.store-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18rpx;
+}
+
+.store-card-title-wrap {
+  min-width: 0;
+}
+
+.store-city {
+  display: block;
+  font-size: 22rpx;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #93C5FD;
+}
+
+.store-name {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 34rpx;
+  font-weight: 800;
+  line-height: 1.28;
+  color: #FFFFFF;
+}
+
+.store-type {
+  flex-shrink: 0;
+  padding: 10rpx 18rpx;
+  border-radius: 999rpx;
+  background: rgba(219, 234, 254, 0.12);
+  color: #BFDBFE;
+  font-size: 20rpx;
+  font-weight: 700;
+}
+
+.store-address,
+.store-hours,
+.store-summary,
+.locations-rollout-text {
+  display: block;
+  line-height: 1.65;
+}
+
+.store-address {
+  margin-top: 18rpx;
+  font-size: 24rpx;
+  color: #E2E8F0;
+}
+
+.store-hours {
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  font-weight: 700;
+  color: #86EFAC;
+}
+
+.store-summary {
+  margin-top: 18rpx;
+  font-size: 22rpx;
+  color: #CBD5E1;
+}
+
+.store-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-top: 20rpx;
+}
+
+.store-tag {
+  padding: 10rpx 18rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.08);
+  color: #E2E8F0;
+  font-size: 20rpx;
+  font-weight: 700;
+}
+
+.locations-rollout-copy {
+  margin-bottom: 34rpx;
+  padding: 26rpx 28rpx;
+  border-radius: 28rpx;
+  background: rgba(148, 163, 184, 0.12);
+  border: 1rpx solid rgba(191, 219, 254, 0.14);
+}
+
+.locations-rollout-title {
+  display: block;
+  font-size: 24rpx;
+  font-weight: 800;
+  color: #FFFFFF;
+}
+
+.locations-rollout-text {
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  color: #CBD5E1;
 }
 
 .locations-toolbar {
@@ -1802,13 +2167,15 @@ onUnmounted(() => {
 .reviewer-avatar {
   width: 80rpx;
   height: 80rpx;
-  background: rgba(37, 99, 235, 0.08);
   border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 38rpx;
+  overflow: hidden;
   flex-shrink: 0;
+  box-shadow: 0 12rpx 24rpx rgba(37, 99, 235, 0.16);
+}
+
+.reviewer-avatar-image {
+  width: 100%;
+  height: 100%;
 }
 
 .reviewer-name {
@@ -1996,6 +2363,7 @@ onUnmounted(() => {
     transform: none;
   }
   .fleet-grid,
+  .stores-grid,
   .safety-grid {
     grid-template-columns: 1fr;
   }
@@ -2045,6 +2413,12 @@ onUnmounted(() => {
 
   .city-card {
     grid-template-columns: 1fr;
+    align-items: flex-start;
+  }
+
+  .fleet-card-footer,
+  .store-card-header {
+    flex-direction: column;
     align-items: flex-start;
   }
 
@@ -2141,6 +2515,10 @@ onUnmounted(() => {
     border-radius: 22rpx;
   }
 
+  .store-card {
+    padding: 28rpx;
+  }
+
   .city-main {
     gap: 14rpx;
   }
@@ -2158,6 +2536,10 @@ onUnmounted(() => {
 
   .city-status-text {
     font-size: 18rpx;
+  }
+
+  .fleet-preview-btn {
+    width: 100%;
   }
 }
 

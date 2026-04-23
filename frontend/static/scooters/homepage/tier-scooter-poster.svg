@@ -1,0 +1,31 @@
+<svg width="1200" height="900" viewBox="0 0 1200 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="900" rx="48" fill="url(#bg)"/>
+  <circle cx="212" cy="160" r="194" fill="url(#glow)" fill-opacity="0.94"/>
+  <path d="M182 666C182 620.713 218.713 584 264 584H936C981.287 584 1018 620.713 1018 666C1018 711.287 981.287 748 936 748H264C218.713 748 182 711.287 182 666Z" fill="#FAF5FF" fill-opacity="0.86"/>
+  <circle cx="340" cy="650" r="106" fill="#111827"/>
+  <circle cx="340" cy="650" r="62" fill="#E9D5FF"/>
+  <circle cx="828" cy="650" r="106" fill="#111827"/>
+  <circle cx="828" cy="650" r="62" fill="#E9D5FF"/>
+  <path d="M706 216C744.108 216 775 246.892 775 285V344H733V297C733 275.461 715.539 258 694 258H688V216H706Z" fill="#111827"/>
+  <path d="M693 260L836 616H769L648 356L693 260Z" fill="#111827"/>
+  <path d="M444 606L618 302H722L556 606H444Z" fill="#6D28D9"/>
+  <path d="M366 604C366 587.431 379.431 574 396 574H657C673.569 574 687 587.431 687 604C687 620.569 673.569 634 657 634H396C379.431 634 366 620.569 366 604Z" fill="#A855F7"/>
+  <path d="M544 280C544 253.49 565.49 232 592 232H644C670.51 232 692 253.49 692 280V310H544V280Z" fill="#111827"/>
+  <path d="M558 248H690V330H558V248Z" fill="#312E81"/>
+  <path d="M606 196H654V248H606V196Z" fill="#111827"/>
+  <rect x="776" y="118" width="256" height="66" rx="33" fill="#FFFFFF" fill-opacity="0.78"/>
+  <text x="816" y="162" fill="#111827" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700">Tier Urban Flex</text>
+  <text x="168" y="792" fill="#111827" font-family="Arial, Helvetica, sans-serif" font-size="72" font-weight="800">Compact handling with a sharper city profile.</text>
+  <text x="168" y="846" fill="#4C1D95" font-family="Arial, Helvetica, sans-serif" font-size="32" font-weight="500">Keep the homepage clean with a flat poster, then open the full model on demand.</text>
+  <defs>
+    <linearGradient id="bg" x1="1184" y1="80" x2="52" y2="892" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#EDE9FE"/>
+      <stop offset="0.52" stop-color="#FCFAFF"/>
+      <stop offset="1" stop-color="#F3E8FF"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(212 160) rotate(90) scale(194)">
+      <stop stop-color="#A855F7"/>
+      <stop offset="1" stop-color="#A855F7" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+</svg>
