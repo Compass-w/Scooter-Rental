@@ -604,7 +604,7 @@ const fleetShowcase = ref([
     displayName: 'Electric Glide Pro',
     imageUrl: '/static/scooters/homepage/electric-scooter-poster.svg',
     posterUrl: '/static/scooters/homepage/electric-scooter-poster.svg',
-    modelUrl: '/static/models/homepage/sf_scooter_2.glb',
+    modelUrl: '/static/models/homepage/electric_scooter_3.glb',
     accentColor: '#22C55E',
     useCase: 'Flagship showcase rides',
     performanceSummary: 'Longer body lines and a stronger visual presence make this the premium showcase scooter for extended bookings and hero merchandising.',
