@@ -31,6 +31,21 @@
               <text class="ops-badge-label">Hot Zone</text>
               <text class="ops-badge-value">{{ hottestZone }}</text>
             </view>
+            <!-- Currency selector — switches all monetary displays in the dashboard -->
+            <view class="ops-badge ops-badge-currency">
+              <text class="ops-badge-label">Display Currency</text>
+              <view class="currency-toggle-row">
+                <view
+                  v-for="(cfg, code) in CURRENCIES"
+                  :key="code"
+                  :class="['currency-toggle-chip', adminCurrencyCode === code ? 'currency-toggle-chip-active' : '']"
+                  @tap="adminCurrencyCode = code"
+                >
+                  <text class="currency-toggle-symbol">{{ cfg.symbol }}</text>
+                  <text class="currency-toggle-code">{{ code }}</text>
+                </view>
+              </view>
+            </view>
           </view>
         </view>
 
@@ -949,10 +964,14 @@ import {
   buildLineChartGeometry,
   exportCsv,
   formatCompactNumber,
-  formatCurrency,
   formatDateTime,
   printReport
 } from '@/utils/adminDashboard.js'
+import {
+  CURRENCIES,
+  detectCurrencyCode,
+  formatCurrency as formatCurrencyUtil
+} from '@/utils/currency.js'
 
 const createEmptySnapshot = () => ({
   generatedAt: '',
@@ -1052,6 +1071,16 @@ const createEmptySnapshot = () => ({
 
 const snapshot = reactive(createEmptySnapshot())
 const loading = ref(false)
+// Currency the admin panel uses to display all monetary values.
+// Defaults to the device locale; the operator can switch it via the toolbar.
+const adminCurrencyCode = ref(detectCurrencyCode())
+
+/**
+ * Formats a monetary value using the currently selected admin currency.
+ * Replaces the adminDashboard.js formatCurrency so all existing single-arg
+ * template and script calls continue to work without modification.
+ */
+const formatCurrency = (amount) => formatCurrencyUtil(amount, adminCurrencyCode.value)
 const highPriorityOnly = ref(false)
 const selectedScooterId = ref(null)
 const selectedPreviewImage = ref('')
@@ -2035,6 +2064,48 @@ watch(
   font-weight: 700;
   color: #1E3A8A;
 }
+
+/* ─── Currency toggle (admin hero aside) ─── */
+.ops-badge-currency { padding-bottom: 20rpx; }
+
+.currency-toggle-row {
+  display: flex;
+  gap: 12rpx;
+  flex-wrap: wrap;
+  margin-top: 4rpx;
+}
+
+.currency-toggle-chip {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  padding: 10rpx 20rpx;
+  border-radius: 20rpx;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1.5px solid rgba(37, 99, 235, 0.18);
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+
+.currency-toggle-chip-active {
+  background: #2563EB;
+  border-color: #2563EB;
+}
+
+.currency-toggle-symbol {
+  font-size: 26rpx;
+  font-weight: 800;
+  color: #1E3A8A;
+}
+.currency-toggle-chip-active .currency-toggle-symbol { color: #FFFFFF; }
+
+.currency-toggle-code {
+  font-size: 20rpx;
+  font-weight: 700;
+  color: #4B5563;
+  letter-spacing: 0.08em;
+}
+.currency-toggle-chip-active .currency-toggle-code { color: rgba(255,255,255,0.9); }
 
 /* ─── KPI Grid ─── */
 .kpi-grid {

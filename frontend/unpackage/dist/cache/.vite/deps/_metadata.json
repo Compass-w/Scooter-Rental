@@ -1,8 +1,15 @@
 {
-  "hash": "64bc0c0d",
-  "configHash": "1eb244d1",
-  "lockfileHash": "ae731b1c",
-  "browserHash": "79622834",
-  "optimized": {},
+  "hash": "3d184119",
+  "configHash": "94ddfbb4",
+  "lockfileHash": "317342a8",
+  "browserHash": "a9ea5e0d",
+  "optimized": {
+    "@google/model-viewer": {
+      "src": "../../../../../node_modules/@google/model-viewer/lib/model-viewer.js",
+      "file": "@google_model-viewer.js",
+      "fileHash": "3c36b754",
+      "needsInterop": false
+    }
+  },
   "chunks": {}
 }

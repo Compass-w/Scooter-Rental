@@ -32,7 +32,7 @@
           </view>
           <view class="stat-divider"></view>
           <view class="stat-item">
-            <text class="stat-number">18</text>
+            <text class="stat-number">100+</text>
             <text class="stat-label">Cities</text>
           </view>
           <view class="stat-divider"></view>
@@ -92,7 +92,7 @@
             </svg>
             <view class="hero-illustration-badge">
               <text class="hero-illustration-badge-title">ScooterGo</text>
-              <text class="hero-illustration-badge-copy">Flat brand illustration</text>
+              <text class="hero-illustration-badge-copy">Eco-friendly city rides</text>
             </view>
           </view>
         </view>
@@ -118,7 +118,7 @@
             </svg>
           </view>
           <view class="float-card-info">
-            <text class="float-card-title">CO Saved</text>
+            <text class="float-card-title">CO₂ Saved</text>
             <text class="float-card-sub">3.2 kg this week</text>
           </view>
         </view>
@@ -134,7 +134,97 @@
         <text class="section-subtitle">The homepage keeps fast flat posters for browsing, then opens each scooter as a full GLB preview with rotation and zoom controls when a rider wants to inspect the design in detail.</text>
         <view class="fleet-grid">
           <view v-for="vehicle in fleetShowcase" :key="vehicle.slug" class="fleet-card" @tap="openFleetViewer(vehicle)">
-            <image class="fleet-image" :src="vehicle.imageUrl" mode="aspectFill" />
+            <!-- ===== Inline SVG scooter poster ===== -->
+            <view class="fleet-poster" :style="`background: radial-gradient(ellipse at 68% 42%, ${vehicle.accentColor}2a 0%, ${vehicle.accentColor}08 62%)`">
+              <svg class="fleet-svg" viewBox="0 0 460 260" fill="none" xmlns="http://www.w3.org/2000/svg">
+
+                <!-- Ground shadow -->
+                <ellipse cx="224" cy="250" rx="145" ry="8" fill="#0F172A" fill-opacity="0.09"/>
+
+                <!-- ══ REAR WHEEL (left) ══ -->
+                <circle cx="84" cy="210" r="43" fill="#111827"/>
+                <circle cx="84" cy="210" r="33" fill="#1E293B"/>
+                <circle cx="84" cy="210" r="22" fill="#2D3A4A"/>
+                <line x1="84" y1="188" x2="84" y2="232" stroke="#475569" stroke-width="2.5"/>
+                <line x1="62" y1="210" x2="106" y2="210" stroke="#475569" stroke-width="2.5"/>
+                <line x1="68.4" y1="194.4" x2="99.6" y2="225.6" stroke="#475569" stroke-width="2.5"/>
+                <line x1="99.6" y1="194.4" x2="68.4" y2="225.6" stroke="#475569" stroke-width="2.5"/>
+                <circle cx="84" cy="210" r="8" fill="#0F172A"/>
+                <circle cx="84" cy="210" r="3.5" fill="#64748B"/>
+
+                <!-- ══ FRONT WHEEL (right) ══ -->
+                <circle cx="368" cy="210" r="43" fill="#111827"/>
+                <circle cx="368" cy="210" r="33" fill="#1E293B"/>
+                <circle cx="368" cy="210" r="22" fill="#2D3A4A"/>
+                <line x1="368" y1="188" x2="368" y2="232" stroke="#475569" stroke-width="2.5"/>
+                <line x1="346" y1="210" x2="390" y2="210" stroke="#475569" stroke-width="2.5"/>
+                <line x1="352.4" y1="194.4" x2="383.6" y2="225.6" stroke="#475569" stroke-width="2.5"/>
+                <line x1="383.6" y1="194.4" x2="352.4" y2="225.6" stroke="#475569" stroke-width="2.5"/>
+                <circle cx="368" cy="210" r="8" fill="#0F172A"/>
+                <circle cx="368" cy="210" r="3.5" fill="#64748B"/>
+
+                <!-- ══ REAR FENDER ══ -->
+                <path d="M 42 218 Q 30 190 50 167 Q 70 148 96 156 L 120 200" stroke="#111827" stroke-width="14" stroke-linecap="round"/>
+                <path d="M 44 216 Q 33 191 52 169 Q 71 152 96 160 L 118 200" stroke="#2D3A4A" stroke-width="5" stroke-linecap="round" opacity="0.65"/>
+
+                <!-- ══ DECK / FOOTBOARD (accent colour) ══ -->
+                <rect x="62" y="199" width="308" height="18" rx="9" :fill="vehicle.accentColor"/>
+                <!-- Highlight shimmer on deck -->
+                <rect x="72" y="199" width="200" height="7" rx="3.5" fill="white" fill-opacity="0.22"/>
+
+                <!-- ══ BATTERY / MOTOR BLOCK ══ -->
+                <rect x="94" y="212" width="224" height="24" rx="7" fill="#111827"/>
+                <line x1="134" y1="213" x2="134" y2="235" stroke="#1E293B" stroke-width="1.5"/>
+                <line x1="174" y1="213" x2="174" y2="235" stroke="#1E293B" stroke-width="1.5"/>
+                <line x1="214" y1="213" x2="214" y2="235" stroke="#1E293B" stroke-width="1.5"/>
+                <line x1="254" y1="213" x2="254" y2="235" stroke="#1E293B" stroke-width="1.5"/>
+                <line x1="294" y1="213" x2="294" y2="235" stroke="#1E293B" stroke-width="1.5"/>
+
+                <!-- ══ STEERING COLUMN / STEM ══ -->
+                <path d="M 352 200 L 310 52" stroke="#111827" stroke-width="19" stroke-linecap="round"/>
+                <!-- Inner highlight on stem -->
+                <path d="M 350 200 L 308 52" stroke="#2D3A4A" stroke-width="7" stroke-linecap="round" opacity="0.55"/>
+
+                <!-- ══ FRONT FORK ══ -->
+                <path d="M 352 200 Q 360 207 368 210" stroke="#111827" stroke-width="15" stroke-linecap="round"/>
+
+                <!-- Head tube clamp -->
+                <rect x="341" y="190" width="20" height="24" rx="7" fill="#0F172A"/>
+                <rect x="344" y="193" width="14" height="18" rx="4" fill="#1E293B"/>
+
+                <!-- ══ HANDLEBAR RISER ══ -->
+                <path d="M 310 52 L 310 35" stroke="#111827" stroke-width="15" stroke-linecap="round"/>
+
+                <!-- ══ T-BAR HANDLEBAR ══ -->
+                <path d="M 264 35 L 356 35" stroke="#111827" stroke-width="13" stroke-linecap="round"/>
+
+                <!-- Grip left -->
+                <rect x="252" y="28" width="25" height="14" rx="7" :fill="vehicle.accentColor"/>
+                <rect x="254" y="29" width="16" height="6" rx="3" fill="white" fill-opacity="0.25"/>
+                <!-- Grip right -->
+                <rect x="347" y="28" width="25" height="14" rx="7" :fill="vehicle.accentColor"/>
+                <rect x="349" y="29" width="16" height="6" rx="3" fill="white" fill-opacity="0.25"/>
+
+                <!-- Brake lever left -->
+                <path d="M 267 35 L 259 51" stroke="#111827" stroke-width="5" stroke-linecap="round"/>
+                <!-- Brake lever right -->
+                <path d="M 350 35 L 358 51" stroke="#111827" stroke-width="5" stroke-linecap="round"/>
+
+                <!-- ══ DISPLAY / DASHBOARD ══ -->
+                <rect x="294" y="66" width="32" height="22" rx="5" fill="#1E293B"/>
+                <rect x="296" y="68" width="28" height="18" rx="4" :fill="vehicle.accentColor" fill-opacity="0.9"/>
+                <text x="310" y="81" text-anchor="middle" font-family="monospace" font-size="9" fill="white" font-weight="bold">{{ vehicle.specs.topSpeedKph }}</text>
+
+                <!-- ══ FRONT HEADLIGHT ══ -->
+                <ellipse cx="361" cy="171" rx="9" ry="7" :fill="vehicle.accentColor" fill-opacity="0.9"/>
+                <ellipse cx="361" cy="171" rx="4.5" ry="3.5" fill="white" fill-opacity="0.8"/>
+
+                <!-- ══ REAR TAIL LIGHT ══ -->
+                <ellipse cx="62" cy="206" rx="7" ry="5" fill="#F87171" fill-opacity="0.8"/>
+                <ellipse cx="62" cy="206" rx="3" ry="2.5" fill="#FCA5A5" fill-opacity="0.9"/>
+
+              </svg>
+            </view>
             <view class="fleet-copy">
               <text class="fleet-name">{{ vehicle.displayName }}</text>
               <text class="fleet-meta">{{ vehicle.specs.topSpeedKph }} km/h · {{ vehicle.specs.rangeKm }} km range · {{ vehicle.specs.motorPowerW }} W</text>
@@ -220,7 +310,7 @@
       </view>
     </view>
 
-    <view class="section section-gradient" id="business-plan">
+    <view class="section section-light" id="business-plan">
       <view class="section-inner">
         <view class="section-badge">
           <text class="section-badge-text">Business Model</text>
@@ -228,7 +318,15 @@
         <text class="section-title">Two rental models, one operating platform</text>
         <text class="section-subtitle">ScooterGo now presents both the sharing-scooter model and the walk-in / remote reservation model, including backend operations, battery rules, and return checks.</text>
         <view class="business-grid">
-          <view v-for="model in businessModels" :key="model.title" class="business-card">
+          <view v-for="(model, idx) in businessModels" :key="model.title" class="business-card">
+            <view class="business-card-top">
+              <view class="business-card-icon-wrap">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path :d="model.iconPath"/>
+                </svg>
+              </view>
+              <view class="business-card-index">0{{ idx + 1 }}</view>
+            </view>
             <text class="business-card-title">{{ model.title }}</text>
             <text class="business-card-desc">{{ model.description }}</text>
             <view class="business-points">
@@ -316,7 +414,7 @@
             <view class="feature-eco-stats">
               <view class="eco-stat">
                 <text class="eco-stat-num">180t</text>
-                <text class="eco-stat-label">CO saved this month</text>
+                <text class="eco-stat-label">CO₂ saved this month</text>
               </view>
               <view class="eco-stat">
                 <text class="eco-stat-num">95k</text>
@@ -472,6 +570,7 @@
         <view v-if="!isMobileLayout || locationsExpanded" class="cities-grid">
           <view class="city-card" v-for="city in cities" :key="city.name">
             <view class="city-main">
+              <text class="city-region-tag">{{ city.region }}</text>
               <text class="city-name">{{ isMobileLayout && city.mobileName ? city.mobileName : city.name }}</text>
             </view>
             <view class="city-status" :class="city.live ? 'live' : 'soon'">
@@ -495,7 +594,12 @@
         <text class="section-title">Insurance and rider responsibility are explicit</text>
         <text class="section-subtitle">Traffic insurance prompts, parking liability, and damage responsibility are now surfaced directly in the signup, booking, and ride-ending flows.</text>
         <view class="safety-grid">
-          <view v-for="item in safetyResponsibilities" :key="item.title" class="safety-card">
+          <view v-for="item in safetyResponsibilities" :key="item.title" class="safety-card" :class="'safety-accent-' + (item.accent === '#F59E0B' ? 'amber' : item.accent === '#10B981' ? 'green' : 'blue')">
+            <view class="safety-icon-circle" :style="'background:' + (item.accent || '#2563EB')">
+              <svg v-if="item.accent === '#2563EB'" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+              <svg v-else-if="item.accent === '#F59E0B'" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <svg v-else width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+            </view>
             <text class="safety-title">{{ item.title }}</text>
             <text class="safety-copy">{{ item.copy }}</text>
           </view>
@@ -619,59 +723,66 @@ const fleetShowcase = ref([
 const businessModels = ref([
   {
     title: 'Sharing Scooters',
-    description: 'For dockless or semi-dockless city sharing operations.',
+    description: 'Dockless & semi-dockless city fleet operations.',
+    iconPath: 'M12 2a9 9 0 100 18A9 9 0 0012 2zm0 4v5l3 3',
+    iconStroke: '#2563EB',
     points: [
-      'Scooter hardware includes GPS real-time positioning, live mileage, real-time battery telemetry, QR unlock, and an assumed communication module that uploads trip data to the backend.',
-      'China app flow requires real-name verification before unlock; UK app flow requires a saved credit card before unlock.',
-      'Users unlock by scanning QR codes and return through the app, with permitted parking-zone checks before ride closure.',
-      'Backend handles automatic billing, charging management, vehicle deployment and collection, staff scheduling, and fault scooter management.'
+      'GPS positioning, live battery telemetry & QR unlock',
+      'Real-name verification (CN) or saved card (UK) before unlock',
+      'App-based parking-zone check on ride closure',
+      'Auto billing, fleet deployment & fault management'
     ]
   },
   {
     title: 'Walk-in and Rent',
-    description: 'For store pickup, store return, or remote reservation with in-store handover.',
+    description: 'Store pickup, return or remote reservation.',
+    iconPath: 'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z M9 22V12h6v10',
+    iconStroke: '#2563EB',
     points: [
-      'Real-time GPS and battery telemetry are optional, but the booking flow still displays pickup battery, return battery, and the electricity-fee difference.',
-      'In-store rental can skip full app registration because the clerk can create the rental record and bind a credit card for the customer.',
-      'Remote rental supports web or app booking, store pickup, store return, overdue reminders, and automatic extra charging if the scooter is not returned on time.',
-      'The order interface now includes scooter images, performance descriptions, model switching, and automatic pricing updates when a different scooter type is chosen.'
+      'Battery & electricity-fee shown even without GPS telemetry',
+      'Clerk registers customer on-site — no app needed',
+      'Web or app booking with auto overdue charges',
+      'Scooter specs & pricing update on model switch'
     ]
   }
 ])
 const safetyResponsibilities = ref([
   {
     title: 'Traffic Insurance',
-    copy: 'Riders now see insurance reminders and local coverage notes before unlocking, so the service makes accident coverage and exclusions visible instead of hidden in a footer.'
+    copy: 'Coverage details and exclusions are shown before every unlock — no fine print buried in footers.',
+    accent: '#2563EB'
   },
   {
     title: 'Liability Disclaimer',
-    copy: 'The booking flow requires the rider to acknowledge that traffic-law compliance, unsafe parking fines, and uncovered damage can still become the rider’s responsibility.'
+    copy: 'Riders confirm responsibility for traffic fines, unsafe parking, and uncovered damage before booking.',
+    accent: '#F59E0B'
   },
   {
     title: 'Damage & Fault Closure',
-    copy: 'Return handling now explicitly includes damage checks, issue reporting, and backend escalation for scooters that should be held for maintenance instead of being released back into inventory.'
+    copy: 'Damaged scooters are flagged at return and held for maintenance, not re-released into the fleet.',
+    accent: '#10B981'
   }
 ])
 
 const cities = ref([
-  { name: 'Shanghai',   mobileName: 'Shanghai', live: true  },
-  { name: 'Beijing',    mobileName: 'Beijing', live: true  },
-  { name: 'Shenzhen',   mobileName: 'Shenzhen', live: true  },
-  { name: 'Guangzhou',  mobileName: 'Guangzhou', live: true  },
-  { name: 'Hangzhou',   mobileName: 'Hangzhou', live: true  },
-  { name: 'Chengdu',    mobileName: 'Chengdu', live: true  },
-  { name: 'Nanjing',    mobileName: 'Nanjing', live: true  },
-  { name: 'Suzhou',     mobileName: 'Suzhou', live: true  },
-  { name: 'HongKong',   mobileName: 'HK', live: true  },
-  { name: 'Singapore',  mobileName: 'SG', live: true  },
-  { name: 'Tokyo',      mobileName: 'Tokyo', live: true  },
-  { name: 'London',     mobileName: 'London', live: true  },
-  { name: 'Chongqing',  mobileName: 'CQ', live: false },
-  { name: 'Wuhan',      mobileName: 'Wuhan', live: false },
-  { name: "Xi'an",      mobileName: "Xi'an", live: false },
-  { name: 'Seoul',      mobileName: 'Seoul', live: false },
-  { name: 'Bangkok',    mobileName: 'Bangkok', live: false },
-  { name: 'Dubai',      mobileName: 'Dubai', live: false },
+  { name: 'Shanghai',   mobileName: 'Shanghai', region: 'CN', live: true  },
+  { name: 'Beijing',    mobileName: 'Beijing',  region: 'CN', live: true  },
+  { name: 'Shenzhen',   mobileName: 'Shenzhen', region: 'CN', live: true  },
+  { name: 'Guangzhou',  mobileName: 'Guangzhou',region: 'CN', live: true  },
+  { name: 'Hangzhou',   mobileName: 'Hangzhou', region: 'CN', live: true  },
+  { name: 'Chengdu',    mobileName: 'Chengdu',  region: 'CN', live: true  },
+  { name: 'Nanjing',    mobileName: 'Nanjing',  region: 'CN', live: true  },
+  { name: 'Suzhou',     mobileName: 'Suzhou',   region: 'CN', live: true  },
+  { name: 'Chongqing',  mobileName: 'CQ',       region: 'CN', live: true  },
+  { name: 'Wuhan',      mobileName: 'Wuhan',    region: 'CN', live: true  },
+  { name: "Xi'an",      mobileName: "Xi'an",    region: 'CN', live: true  },
+  { name: 'London',     mobileName: 'London',   region: 'GB', live: true  },
+  { name: 'HongKong',   mobileName: 'HK',       region: 'CN', live: false },
+  { name: 'Singapore',  mobileName: 'SG',       region: 'SG', live: false },
+  { name: 'Tokyo',      mobileName: 'Tokyo',    region: 'JP', live: false },
+  { name: 'Seoul',      mobileName: 'Seoul',    region: 'KR', live: false },
+  { name: 'Bangkok',    mobileName: 'Bangkok',  region: 'TH', live: false },
+  { name: 'Dubai',      mobileName: 'Dubai',    region: 'AE', live: false },
 ])
 
 const featuredStores = ref([
@@ -806,10 +917,6 @@ const scrollToSection = (section, attempt = 0) => {
       }, 120)
     }
   })
-}
-
-const contactSales = () => {
-  uni.showToast({ title: 'Coming soon!', icon: 'none' })
 }
 
 const updateLayoutMode = () => {
@@ -1778,13 +1885,19 @@ onUnmounted(() => {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.fleet-card,
-.business-card,
-.safety-card {
+.fleet-card {
   background: #FFFFFF;
   border-radius: 30rpx;
   border: 1rpx solid #E5E7EB;
   box-shadow: 0 8rpx 26rpx rgba(15, 23, 42, 0.05);
+}
+
+.business-card,
+.safety-card {
+  background: #FFFFFF;
+  border-radius: 32rpx;
+  border: 1rpx solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 4rpx 6rpx rgba(15,23,42,0.03), 0 20rpx 60rpx rgba(15,23,42,0.07);
 }
 
 .fleet-card {
@@ -1792,18 +1905,27 @@ onUnmounted(() => {
   cursor: pointer;
 }
 
-.fleet-image {
+.fleet-poster {
   width: 100%;
-  height: 280rpx;
+  height: 300rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+
+.fleet-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .fleet-copy {
   padding: 28rpx;
 }
 
-.fleet-name,
-.business-card-title,
-.safety-title {
+.fleet-name {
   display: block;
   font-size: 32rpx;
   font-weight: 800;
@@ -1818,12 +1940,26 @@ onUnmounted(() => {
   font-weight: 700;
 }
 
-.fleet-desc,
-.business-card-desc,
-.safety-copy {
+.fleet-desc {
   display: block;
   margin-top: 12rpx;
   font-size: 24rpx;
+  line-height: 1.7;
+  color: #64748B;
+}
+
+.business-card-desc {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 26rpx;
+  line-height: 1.6;
+  color: #64748B;
+}
+
+.safety-copy {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 28rpx;
   line-height: 1.7;
   color: #64748B;
 }
@@ -1868,26 +2004,78 @@ onUnmounted(() => {
 
 .business-card,
 .safety-card {
-  padding: 34rpx;
+  padding: 48rpx 44rpx;
+}
+
+.business-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.business-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1rpx;
+  background: linear-gradient(90deg, transparent, rgba(37,99,235,0.15), transparent);
+}
+
+.business-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24rpx;
+}
+
+.business-card-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 24rpx;
+  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+  flex-shrink: 0;
+  box-shadow: 0 10rpx 28rpx rgba(37, 99, 235, 0.28);
+}
+
+.business-card-index {
+  font-size: 60rpx;
+  font-weight: 900;
+  color: rgba(37, 99, 235, 0.08);
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.fleet-name,
+.business-card-title,
+.safety-title {
+  display: block;
+  font-size: 40rpx;
+  font-weight: 800;
+  color: #0F172A;
+  line-height: 1.2;
 }
 
 .business-points {
-  margin-top: 20rpx;
+  margin-top: 28rpx;
   display: flex;
   flex-direction: column;
-  gap: 16rpx;
+  gap: 20rpx;
 }
 
 .business-point {
   display: flex;
   align-items: flex-start;
-  gap: 12rpx;
+  gap: 16rpx;
 }
 
 .business-point-dot {
-  width: 12rpx;
-  height: 12rpx;
-  margin-top: 12rpx;
+  width: 6rpx;
+  height: 6rpx;
+  margin-top: 16rpx;
   border-radius: 50%;
   background: #2563EB;
   flex-shrink: 0;
@@ -1895,13 +2083,49 @@ onUnmounted(() => {
 
 .business-point-text {
   flex: 1;
-  font-size: 23rpx;
+  font-size: 28rpx;
   line-height: 1.65;
   color: #475569;
 }
 
+
 .safety-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.safety-card {
+  position: relative;
+}
+
+/* Tinted card backgrounds per accent */
+.safety-accent-blue  { background: linear-gradient(155deg, #EFF6FF 0%, #FFFFFF 55%) !important; }
+.safety-accent-amber { background: linear-gradient(155deg, #FFFBEB 0%, #FFFFFF 55%) !important; }
+.safety-accent-green { background: linear-gradient(155deg, #ECFDF5 0%, #FFFFFF 55%) !important; }
+
+.safety-icon-circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 50%;
+  margin-bottom: 28rpx;
+  flex-shrink: 0;
+  box-shadow: 0 12rpx 32rpx rgba(0,0,0,0.14);
+}
+
+.safety-card-icon-row {
+  display: flex;
+  align-items: center;
+  gap: 18rpx;
+  margin-bottom: 20rpx;
+}
+
+.safety-icon-dot {
+  width: 14rpx;
+  height: 14rpx;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 
@@ -1909,8 +2133,8 @@ onUnmounted(() => {
 
 .cities-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(340rpx, 1fr));
-  gap: 24rpx;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20rpx;
 }
 
 .stores-grid {
@@ -2043,38 +2267,43 @@ onUnmounted(() => {
   background: rgba(255, 255, 255, 0.05);
   border: 1rpx solid rgba(255, 255, 255, 0.1);
   border-radius: 24rpx;
-  padding: 36rpx 40rpx;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 32rpx 36rpx;
+  display: flex;
   align-items: center;
-  gap: 20rpx;
+  justify-content: space-between;
+  gap: 16rpx;
   min-width: 0;
   transition: transform 0.22s ease, box-shadow 0.22s ease, background 0.22s ease, border-color 0.22s ease;
 }
 
 .city-main {
   display: flex;
-  align-items: flex-start;
-  gap: 20rpx;
+  align-items: center;
+  gap: 16rpx;
   min-width: 0;
   flex: 1;
+  overflow: hidden;
 }
 
-.city-flag {
-  font-size: 36rpx;
+.city-region-tag {
   flex-shrink: 0;
+  font-size: 18rpx;
+  font-weight: 700;
+  color: #64748B;
+  letter-spacing: 0.06em;
+  min-width: 48rpx;
 }
 
 .city-name {
   flex: 1;
   min-width: 0;
-  font-size: 32rpx;
+  font-size: 30rpx;
   font-weight: 600;
   color: white;
   line-height: 1.3;
-  white-space: normal;
-  overflow: visible;
-  text-overflow: clip;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .city-status {
@@ -2082,9 +2311,9 @@ onUnmounted(() => {
   align-items: center;
   gap: 10rpx;
   border-radius: 30rpx;
-  padding: 8rpx 20rpx;
+  padding: 8rpx 22rpx;
   flex-shrink: 0;
-  justify-self: end;
+  white-space: nowrap;
 }
 
 .city-status.live {
@@ -2330,10 +2559,17 @@ onUnmounted(() => {
   .feature-card:hover,
   .pricing-card:hover,
   .fleet-card:hover,
-  .business-card:hover,
-  .safety-card:hover,
   .review-card:hover {
     border-color: rgba(37, 99, 235, 0.16);
+  }
+
+  .business-card:hover {
+    box-shadow: 0 24rpx 60rpx rgba(37, 99, 235, 0.12);
+    border-color: rgba(37, 99, 235, 0.14);
+  }
+
+  .safety-card:hover {
+    box-shadow: 0 24rpx 60rpx rgba(15, 23, 42, 0.1);
   }
 
   .city-card:hover {
