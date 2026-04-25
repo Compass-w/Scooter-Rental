@@ -108,7 +108,7 @@
             </view>
             <view class="meta-chip">
               <uni-icons type="wallet" size="16" class="meta-chip-icon-svg"></uni-icons>
-              <text class="meta-chip-val">From {{ formatCny(RATE_CARD.hourlyPrice) }}/hour</text>
+              <text class="meta-chip-val">From {{ formatCurrency(RATE_CARD.hourlyPrice, localeCurrencyCode) }}/hour</text>
             </view>
             <view class="meta-chip">
               <uni-icons type="paperplane" size="16" class="meta-chip-icon-svg"></uni-icons>
@@ -206,7 +206,7 @@
                   </view>
                   <view class="card-meta">
                     <uni-icons type="wallet" size="14" class="card-meta-icon"></uni-icons>
-                    <text class="card-meta-text">{{ formatCny(RATE_CARD.hourlyPrice) }}/hour standard</text>
+                    <text class="card-meta-text">{{ formatCurrency(RATE_CARD.hourlyPrice, localeCurrencyCode) }}/hour standard</text>
                   </view>
                 </view>
                 <text class="card-spec">{{ scooter.specs.topSpeedKph }} km/h · {{ scooter.specs.rangeKm }} km range · {{ scooter.specs.mileageTodayKm }} km today</text>
@@ -275,7 +275,12 @@ import BookingOptions from '@/components/BookingOptions.vue'
 import { getAllScooters, startRide as startRideApi } from '@/api/scooter.js'
 import { getUserBookings, sendRideTelemetry } from '@/api/booking.js'
 import { findActiveRide, getStoredActiveRide, getStoredUserId, setStoredActiveRide } from '@/utils/activeRide.js'
-import { applyRidePricing, formatCny, HOME_PRICING } from '@/utils/pricing.js'
+import { applyRidePricing, HOME_PRICING } from '@/utils/pricing.js'
+import {
+  detectCurrencyCode,
+  formatCurrency,
+  getCurrencyCodeForMarket
+} from '@/utils/currency.js'
 import { enrichScooter } from '@/utils/scooterCatalog.js'
 
 /**
@@ -411,6 +416,10 @@ const mapInteractionLocked = computed(() =>
 )
 
 const RATE_CARD = HOME_PRICING.payAsYouGo
+// Currency for scooter listing cards — derived from device locale before any
+// market is selected. Once the user opens BookingOptions and picks a market,
+// the booking sheet uses that market's currency instead.
+const localeCurrencyCode = detectCurrencyCode()
 const normalizeScooterEntry = (scooter = {}) => enrichScooter(applyRidePricing(scooter))
 
 const getActiveRideSnapshot = () => {
@@ -1217,7 +1226,7 @@ const confirmRideStart = async (paymentData) => {
     const bookingLabel = booking?.bookingId ? `Booking #${booking.bookingId}` : 'Your booking'
     uni.showModal({
       title: 'Ride started',
-      content: `${bookingLabel} is now active. Reserved total: ${formatCny(estimatedCost)}.`,
+      content: `${bookingLabel} is now active. Reserved total: ${formatCurrency(estimatedCost, getCurrencyCodeForMarket(paymentData.marketCode))}.`,
       showCancel: false
     })
 

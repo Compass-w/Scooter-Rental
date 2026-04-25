@@ -496,7 +496,7 @@ import { endRide, extendRide, getUserBookings } from '@/api/booking.js'
 import { reportIssue } from '@/api/issue.js'
 import { getScooterById } from '@/api/scooter.js'
 import { clearStoredActiveRide, findActiveRide, getRideEndTime, getStoredActiveRide, getStoredUserId, normalizeActiveRide, setStoredActiveRide } from '@/utils/activeRide.js'
-import { formatCny } from '@/utils/pricing.js'
+import { formatCurrency, getCurrencyCodeForMarket } from '@/utils/currency.js'
 import { enrichScooter, evaluateReturnCompliance } from '@/utils/scooterCatalog.js'
 
 const extensionOptions = [15, 30, 60]
@@ -856,7 +856,8 @@ const formatDateTime = (value) => {
   return date.toLocaleString('en-GB', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
-const formatMoney = (value) => formatCny(value)
+const formatMoney = (value) =>
+  formatCurrency(value, getCurrencyCodeForMarket(activeRide.value?.marketCode))
 
 const countdownParts = computed(() => {
   const endTime = getRideEndTime(activeRide.value)

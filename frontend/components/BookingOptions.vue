@@ -90,7 +90,7 @@
             <text class="plan-label">{{ option.label }}</text>
             <text class="plan-meta">{{ option.subtitle }}</text>
             <text v-if="option.discountNote" class="plan-discount">{{ option.discountNote }}</text>
-            <text class="plan-price">{{ formatCny(option.fixedPrice) }}</text>
+            <text class="plan-price">{{ formatCurrency(option.fixedPrice, activeCurrencyCode) }}</text>
           </view>
         </view>
       </view>
@@ -104,7 +104,7 @@
           </view>
           <view class="detail-card">
             <text class="detail-label">Overtime fee</text>
-            <text class="detail-value">{{ formatCny(overtimeFeePer15Minutes) }}/15 min</text>
+            <text class="detail-value">{{ formatCurrency(overtimeFeePer15Minutes, activeCurrencyCode) }}/15 min</text>
           </view>
         </view>
       </view>
@@ -327,7 +327,7 @@
               </view>
               <view class="detail-card">
                 <text class="detail-label">Electricity delta</text>
-                <text class="detail-value">{{ formatCny(electricityFeeEstimate) }}</text>
+                <text class="detail-value">{{ formatCurrency(electricityFeeEstimate, activeCurrencyCode) }}</text>
                 <text class="detail-sub">Applied mainly to store pickup or walk-in rental scenarios.</text>
               </view>
             </view>
@@ -381,15 +381,15 @@
         </view>
         <view class="pricing-row">
           <text class="pricing-label">Base package</text>
-          <text class="pricing-value">{{ formatCny(selectedOption.fixedPrice) }}</text>
+          <text class="pricing-value">{{ formatCurrency(selectedOption.fixedPrice, activeCurrencyCode) }}</text>
         </view>
         <view class="pricing-row">
           <text class="pricing-label">Electricity delta</text>
-          <text class="pricing-value">{{ formatCny(electricityFeeEstimate) }}</text>
+          <text class="pricing-value">{{ formatCurrency(electricityFeeEstimate, activeCurrencyCode) }}</text>
         </view>
         <view class="pricing-row pricing-row-total">
           <text class="pricing-total-label">Total today</text>
-          <text class="pricing-total-value">{{ formatCny(totalPrice) }}</text>
+          <text class="pricing-total-value">{{ formatCurrency(totalPrice, activeCurrencyCode) }}</text>
         </view>
       </view>
 
@@ -404,7 +404,7 @@
       >
         <text v-if="paymentProcessing">Authorising trip...</text>
         <text v-else-if="submitting">Starting ride...</text>
-        <text v-else>Confirm {{ formatCny(totalPrice) }} and unlock</text>
+        <text v-else>Confirm {{ formatCurrency(totalPrice, activeCurrencyCode) }} and unlock</text>
       </button>
     </view>
 
@@ -427,7 +427,12 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { formatCny, RENTAL_PACKAGE_PRICING } from '@/utils/pricing.js'
+import { RENTAL_PACKAGE_PRICING } from '@/utils/pricing.js'
+import {
+  detectMarketCode,
+  formatCurrency,
+  getCurrencyCodeForMarket
+} from '@/utils/currency.js'
 import {
   MARKET_PROFILES,
   SERVICE_MODE_PROFILES,
@@ -472,7 +477,7 @@ const marketProfiles = MARKET_PROFILES
 const serviceModes = SERVICE_MODE_PROFILES
 const storeRentalChannels = STORE_BOOKING_CHANNELS
 const selectedPlan = ref('1_HOUR')
-const selectedMarketCode = ref('CN')
+const selectedMarketCode = ref(detectMarketCode())
 const selectedServiceMode = ref('SHARING')
 const selectedStoreChannel = ref('WALK_IN_COUNTER')
 const pickupStoreCode = ref(STORE_BRANCHES[0]?.code || '')
@@ -511,6 +516,7 @@ const baseVehicle = computed(() => enrichScooter(props.scooter || {}))
 const selectedVehicle = computed(() => baseVehicle.value)
 
 const selectedMarketProfile = computed(() => getMarketProfile(selectedMarketCode.value))
+const activeCurrencyCode = computed(() => getCurrencyCodeForMarket(selectedMarketCode.value))
 const selectedServiceProfile = computed(() => getServiceModeProfile(selectedServiceMode.value))
 const selectedStoreChannelProfile = computed(() => getStoreBookingChannel(selectedStoreChannel.value))
 const pickupStore = computed(() => getStoreBranch(pickupStoreCode.value))
@@ -547,7 +553,7 @@ const planOptions = computed(() => [
     subtitle: '240 minutes included',
     minutes: 240,
     fixedPrice: modelPricing.value.fourHours,
-    discountNote: `Save ${formatCny(Math.max(0, modelPricing.value.oneHour * 4 - modelPricing.value.fourHours))} vs hourly`
+    discountNote: `Save ${formatCurrency(Math.max(0, modelPricing.value.oneHour * 4 - modelPricing.value.fourHours), activeCurrencyCode.value)} vs hourly`
   },
   {
     value: '1_DAY',
@@ -625,7 +631,7 @@ watch(
     selectedPlan.value = planOptions.value.some(option => option.value === props.preferredPlan)
       ? props.preferredPlan
       : '1_HOUR'
-    selectedMarketCode.value = 'CN'
+    selectedMarketCode.value = detectMarketCode()
     selectedServiceMode.value = 'SHARING'
     selectedStoreChannel.value = 'WALK_IN_COUNTER'
     pickupStoreCode.value = STORE_BRANCHES[0]?.code || ''
