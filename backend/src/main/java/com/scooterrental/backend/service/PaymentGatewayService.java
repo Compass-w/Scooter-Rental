@@ -18,13 +18,23 @@ public class PaymentGatewayService {
     private static final String CURRENCY = "CNY";
 
     private final PaymentTransactionMapper paymentTransactionMapper;
+    private volatile boolean gatewayTablesReady = false;
 
     public PaymentGatewayService(PaymentTransactionMapper paymentTransactionMapper) {
         this.paymentTransactionMapper = paymentTransactionMapper;
     }
 
     public void ensureGatewayTables() {
-        paymentTransactionMapper.createTableIfNotExists();
+        if (gatewayTablesReady) {
+            return;
+        }
+        synchronized (this) {
+            if (gatewayTablesReady) {
+                return;
+            }
+            paymentTransactionMapper.createTableIfNotExists();
+            gatewayTablesReady = true;
+        }
     }
 
     public PaymentTransaction authorizeStartRide(Booking booking, BigDecimal amount, String detail) {

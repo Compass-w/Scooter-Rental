@@ -21,6 +21,10 @@ public class StaffBooking {
     private Integer pickupBatteryLevel;
     private Integer expectedReturnBatteryLevel;
     private BigDecimal electricityDelta;
+    private String cardHolderName;
+    private String cardNumberMasked;
+    private String cardExpiry;
+    private String paymentStatus;
     private LocalDateTime desiredStartTime;
     private BigDecimal estimatedCost;
     private String bookingStatus;

@@ -749,6 +749,18 @@
                     <input v-model="posForm.guestEmail" class="field-input" placeholder="visitor@example.com" />
                   </view>
                   <view class="field">
+                    <text class="field-label">Cardholder</text>
+                    <input v-model="posForm.cardHolderName" class="field-input" placeholder="Visitor name" />
+                  </view>
+                  <view class="field">
+                    <text class="field-label">Card Number</text>
+                    <input v-model="posForm.cardNumber" class="field-input" type="number" maxlength="16" placeholder="4242424242424242" />
+                  </view>
+                  <view class="field">
+                    <text class="field-label">Card Expiry</text>
+                    <input v-model="posForm.cardExpiry" class="field-input" maxlength="5" placeholder="12/28" />
+                  </view>
+                  <view class="field">
                     <text class="field-label">Scooter</text>
                     <picker :range="posScooterOptions" range-key="label" @change="handlePosScooterChange">
                       <view class="field-picker">{{ posScooterLabel }}</view>
@@ -795,6 +807,7 @@
                   <text class="mini-title">Store Rental Summary</text>
                   <text class="mini-copy">{{ posChannelLabel }} · {{ posPickupStoreLabel }} → {{ posReturnStoreLabel }}</text>
                   <text class="mini-copy">Battery {{ posForm.pickupBatteryLevel || 0 }}% → {{ posForm.expectedReturnBatteryLevel || 0 }}% · Electricity delta {{ formatCurrency(posElectricityDelta) }}</text>
+                  <text class="mini-copy">Card {{ maskedPosCardLabel }} · stored as masked payment method</text>
                 </view>
                 <view class="checkbox-row" @tap="toggleSendConfirmation">
                   <view :class="['checkbox-faux', posForm.sendConfirmation ? 'checkbox-faux-active' : '']"></view>
@@ -831,6 +844,9 @@
                       </text>
                       <text class="pos-row-meta">
                         Battery {{ booking.pickupBatteryLevel || 0 }}% → {{ booking.expectedReturnBatteryLevel || 0 }}% · Electricity {{ formatCurrency(booking.electricityDelta) }}
+                      </text>
+                      <text class="pos-row-meta">
+                        {{ booking.paymentStatus || 'CARD_REQUIRED' }} · {{ booking.cardNumberMasked || 'No card bound' }}
                       </text>
                     </view>
                     <button class="hero-btn hero-btn-ghost hero-btn-small" @tap="sendConfirmation(booking)">
@@ -1134,6 +1150,9 @@ const posForm = reactive({
   returnStoreCode: STORE_BRANCHES[0]?.code || '',
   pickupBatteryLevel: '92',
   expectedReturnBatteryLevel: '74',
+  cardHolderName: '',
+  cardNumber: '',
+  cardExpiry: '',
   notes: '',
   sendConfirmation: true
 })
@@ -1269,6 +1288,10 @@ const posReturnStoreLabel = computed(() =>
 const posElectricityDelta = computed(() =>
   estimateElectricityAdjustment(posForm.pickupBatteryLevel, posForm.expectedReturnBatteryLevel)
 )
+const maskedPosCardLabel = computed(() => {
+  const digits = String(posForm.cardNumber || '').replace(/\D/g, '')
+  return digits.length >= 4 ? `**** ${digits.slice(-4)}` : 'required'
+})
 
 const adminAccessLabel = computed(() => {
   try {
@@ -1365,6 +1388,9 @@ const resetPosForm = () => {
     returnStoreCode: STORE_BRANCHES[0]?.code || '',
     pickupBatteryLevel: String(defaultBattery),
     expectedReturnBatteryLevel: String(Math.max(12, defaultBattery - 18)),
+    cardHolderName: '',
+    cardNumber: '',
+    cardExpiry: '',
     notes: '',
     sendConfirmation: true
   })
@@ -1633,6 +1659,9 @@ const submitPosBooking = async () => {
       returnStoreName: STORE_BRANCHES.find(item => item.code === posForm.returnStoreCode)?.name,
       pickupBatteryLevel: Number(posForm.pickupBatteryLevel),
       expectedReturnBatteryLevel: Number(posForm.expectedReturnBatteryLevel),
+      cardHolderName: posForm.cardHolderName || posForm.guestName,
+      cardNumber: posForm.cardNumber,
+      cardExpiry: posForm.cardExpiry,
       notes: posForm.notes,
       sendConfirmation: posForm.sendConfirmation
     })

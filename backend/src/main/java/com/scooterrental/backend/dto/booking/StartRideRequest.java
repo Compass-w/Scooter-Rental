@@ -6,6 +6,15 @@ public class StartRideRequest {
     private String scanToken;
     private String marketCode;
     private String serviceMode;
+    private String bookingChannel;
+    private String pickupStoreCode;
+    private String pickupStoreName;
+    private String returnStoreCode;
+    private String returnStoreName;
+    private Integer startBatteryLevel;
+    private Integer estimatedReturnBattery;
+    private java.math.BigDecimal electricityFeeEstimate;
+    private Boolean liabilityAccepted;
     private java.math.BigDecimal overtimeFeePer15Minutes;
 
     public Integer getUserId() {
@@ -54,6 +63,78 @@ public class StartRideRequest {
 
     public void setServiceMode(String serviceMode) {
         this.serviceMode = serviceMode;
+    }
+
+    public String getBookingChannel() {
+        return bookingChannel;
+    }
+
+    public void setBookingChannel(String bookingChannel) {
+        this.bookingChannel = bookingChannel;
+    }
+
+    public String getPickupStoreCode() {
+        return pickupStoreCode;
+    }
+
+    public void setPickupStoreCode(String pickupStoreCode) {
+        this.pickupStoreCode = pickupStoreCode;
+    }
+
+    public String getPickupStoreName() {
+        return pickupStoreName;
+    }
+
+    public void setPickupStoreName(String pickupStoreName) {
+        this.pickupStoreName = pickupStoreName;
+    }
+
+    public String getReturnStoreCode() {
+        return returnStoreCode;
+    }
+
+    public void setReturnStoreCode(String returnStoreCode) {
+        this.returnStoreCode = returnStoreCode;
+    }
+
+    public String getReturnStoreName() {
+        return returnStoreName;
+    }
+
+    public void setReturnStoreName(String returnStoreName) {
+        this.returnStoreName = returnStoreName;
+    }
+
+    public Integer getStartBatteryLevel() {
+        return startBatteryLevel;
+    }
+
+    public void setStartBatteryLevel(Integer startBatteryLevel) {
+        this.startBatteryLevel = startBatteryLevel;
+    }
+
+    public Integer getEstimatedReturnBattery() {
+        return estimatedReturnBattery;
+    }
+
+    public void setEstimatedReturnBattery(Integer estimatedReturnBattery) {
+        this.estimatedReturnBattery = estimatedReturnBattery;
+    }
+
+    public java.math.BigDecimal getElectricityFeeEstimate() {
+        return electricityFeeEstimate;
+    }
+
+    public void setElectricityFeeEstimate(java.math.BigDecimal electricityFeeEstimate) {
+        this.electricityFeeEstimate = electricityFeeEstimate;
+    }
+
+    public Boolean getLiabilityAccepted() {
+        return liabilityAccepted;
+    }
+
+    public void setLiabilityAccepted(Boolean liabilityAccepted) {
+        this.liabilityAccepted = liabilityAccepted;
     }
 
     public java.math.BigDecimal getOvertimeFeePer15Minutes() {

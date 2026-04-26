@@ -302,7 +302,7 @@ const bookingOptionsVisible = ref(false)
 const bookingScooter  = ref(null)
 const preferredBookingPlan = ref('1_HOUR')
 const currentUserLocation = ref(null)
-const hasAttemptedInitialLocate = ref(false)
+const realLocationUnavailable = ref(false)
 const storeFocusIndex = ref(0)
 const pendingStoreFocusId = ref('')
 const scooterPage = ref(1)
@@ -312,6 +312,11 @@ const HIGH_ACCURACY_LOCATION_OPTIONS = {
   type: 'wgs84',
   isHighAccuracy: true,
   highAccuracyExpireTime: 4000
+}
+const BROWSER_GEOLOCATION_OPTIONS = {
+  enableHighAccuracy: true,
+  timeout: 12000,
+  maximumAge: 15000
 }
 
 const locationAliases = [
@@ -370,6 +375,11 @@ const featuredStoreLocations = [
     color: '#10B981'
   }
 ]
+const DEMO_FALLBACK_LOCATION = {
+  lat: featuredStoreLocations[0].lat,
+  lng: featuredStoreLocations[0].lng,
+  label: featuredStoreLocations[0].name
+}
 
 // Leaflet map HTML path — place scooter-map.html inside /static/
 const buildMapSrc = (focusStoreId = '') => {
@@ -558,6 +568,135 @@ const syncRideScooterToLocation = (location) => {
   }
 
   return true
+}
+
+const isLocalHostname = (hostname = '') =>
+  ['localhost', '127.0.0.1', '::1'].includes(hostname) || hostname.endsWith('.localhost')
+
+const normalizeLocationResult = (result = {}) => {
+  const lat = Number(result.latitude ?? result.coords?.latitude)
+  const lng = Number(result.longitude ?? result.coords?.longitude)
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    throw new Error('Invalid location coordinates')
+  }
+
+  return { lat, lng }
+}
+
+const getBrowserGeolocation = () => new Promise((resolve, reject) => {
+  if (typeof window !== 'undefined' && window.isSecureContext === false && !isLocalHostname(window.location?.hostname || '')) {
+    reject(new Error('INSECURE_GEOLOCATION_CONTEXT'))
+    return
+  }
+
+  if (typeof navigator === 'undefined' || !navigator.geolocation) {
+    reject(new Error('BROWSER_GEOLOCATION_UNAVAILABLE'))
+    return
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    position => {
+      try {
+        resolve(normalizeLocationResult(position))
+      } catch (error) {
+        reject(error)
+      }
+    },
+    reject,
+    BROWSER_GEOLOCATION_OPTIONS
+  )
+})
+
+const getUniLocation = () => new Promise((resolve, reject) => {
+  if (typeof uni === 'undefined' || typeof uni.getLocation !== 'function') {
+    reject(new Error('UNI_GEOLOCATION_UNAVAILABLE'))
+    return
+  }
+
+  uni.getLocation({
+    ...HIGH_ACCURACY_LOCATION_OPTIONS,
+    success: (res) => {
+      try {
+        resolve(normalizeLocationResult(res))
+      } catch (error) {
+        reject(error)
+      }
+    },
+    fail: reject
+  })
+})
+
+const getDeviceLocation = async ({ allowFallback = false } = {}) => {
+  const errors = []
+
+  if (allowFallback && realLocationUnavailable.value) {
+    return {
+      ...DEMO_FALLBACK_LOCATION,
+      fallback: true
+    }
+  }
+
+  if (typeof navigator !== 'undefined' && navigator.geolocation) {
+    try {
+      const location = await getBrowserGeolocation()
+      realLocationUnavailable.value = false
+      return location
+    } catch (error) {
+      if (isLocationUnavailableError(error)) {
+        realLocationUnavailable.value = true
+      }
+      errors.push(error)
+    }
+  }
+
+  try {
+    const location = await getUniLocation()
+    realLocationUnavailable.value = false
+    return location
+  } catch (error) {
+    if (isLocationUnavailableError(error)) {
+      realLocationUnavailable.value = true
+    }
+    errors.push(error)
+  }
+
+  if (allowFallback) {
+    return {
+      ...DEMO_FALLBACK_LOCATION,
+      fallback: true,
+      sourceError: errors.find(Boolean)
+    }
+  }
+
+  throw errors.find(Boolean) || new Error('LOCATION_UNAVAILABLE')
+}
+
+const getLocationFailureTitle = (error = {}) => {
+  const message = String(error.errMsg || error.message || '').toLowerCase()
+
+  if (message.includes('insecure_geolocation_context')) {
+    return 'Use HTTPS or localhost for location'
+  }
+
+  if (error.code === 1 || message.includes('denied') || message.includes('permission') || message.includes('auth')) {
+    return 'Please allow location access'
+  }
+
+  if (error.code === 3 || message.includes('timeout')) {
+    return 'Location request timed out'
+  }
+
+  if (message.includes('unavailable')) {
+    return 'Location service unavailable'
+  }
+
+  return 'Unable to get your location'
+}
+
+const isLocationUnavailableError = (error = {}) => {
+  const message = String(error.errMsg || error.message || '').toLowerCase()
+  return error.code === 2 || message.includes('unavailable') || message.includes('kclerrorlocationunknown')
 }
 
 const stopRideLocationTracking = () => {
@@ -808,8 +947,6 @@ const _handleMapPayload = ({ type, data } = {}) => {
       pendingStoreFocusId.value = ''
     } else if (currentUserLocation.value) {
       sendToMap('locate', currentUserLocation.value)
-    } else if (!hasAttemptedInitialLocate.value) {
-      requestUserLocation({ showErrorToast: false }).catch(() => {})
     }
   }
 
@@ -834,38 +971,37 @@ const _handleMapPayload = ({ type, data } = {}) => {
 /**
  * Get user's current location and fly the map to it
  */
-const locateMe = () => {
-  uni.getLocation({
-    ...HIGH_ACCURACY_LOCATION_OPTIONS,
-    success: (res) => {
-      sendToMap('locate', { lat: res.latitude, lng: res.longitude })
-    },
-    fail: () => {
-      // Silent fail — map stays at default center (Leeds)
-    }
-  })
+const locateMe = async () => {
+  try {
+    const location = await getDeviceLocation({ allowFallback: true })
+    sendToMap('locate', location)
+  } catch {
+    // Silent fail — map stays at default center.
+  }
 }
 
-const requestUserLocation = ({ showErrorToast = true, toastOnSuccess = false } = {}) => {
+const requestUserLocation = ({ showErrorToast = true, toastOnSuccess = false, allowFallback = false } = {}) => {
   if (locateRequest) {
     return locateRequest
   }
 
-  hasAttemptedInitialLocate.value = true
   locating.value = true
 
   locateRequest = new Promise((resolve, reject) => {
-    uni.getLocation({
-      ...HIGH_ACCURACY_LOCATION_OPTIONS,
-      success: (res) => {
-        const location = {
-          lat: res.latitude,
-          lng: res.longitude
-        }
-
+    getDeviceLocation({ allowFallback })
+      .then((location) => {
         currentUserLocation.value = location
         sendToMap('locate', location)
         syncRideScooterToLocation(location)
+
+        if (location.fallback) {
+          uni.showToast({
+            title: `Using demo location: ${location.label}`,
+            icon: 'none'
+          })
+          resolve(location)
+          return
+        }
 
         if (toastOnSuccess) {
           uni.showToast({
@@ -875,22 +1011,21 @@ const requestUserLocation = ({ showErrorToast = true, toastOnSuccess = false } =
         }
 
         resolve(location)
-      },
-      fail: (error) => {
+      })
+      .catch((error) => {
         if (showErrorToast) {
           uni.showToast({
-            title: 'Unable to get your location',
+            title: getLocationFailureTitle(error),
             icon: 'none'
           })
         }
 
         reject(error)
-      },
-      complete: () => {
+      })
+      .finally(() => {
         locating.value = false
         locateRequest = null
-      }
-    })
+      })
   })
 
   return locateRequest
@@ -900,7 +1035,8 @@ const handleLocateTap = async () => {
   try {
     await requestUserLocation({
       showErrorToast: true,
-      toastOnSuccess: true
+      toastOnSuccess: true,
+      allowFallback: true
     })
   } catch {
     // Toast is handled in requestUserLocation
@@ -947,7 +1083,7 @@ const handleManualRefresh = async () => {
   try {
     const [scootersResult, locationResult] = await Promise.allSettled([
       loadScooters({ showLoadingOverlay: false }),
-      requestUserLocation({ showErrorToast: true })
+      requestUserLocation({ showErrorToast: true, allowFallback: true })
     ])
 
     if (scootersResult.status === 'fulfilled' && locationResult.status === 'fulfilled') {
@@ -1151,6 +1287,15 @@ const confirmRideStart = async (paymentData) => {
       overtimeFeePer15Minutes: paymentData.overtimeFeePer15Minutes,
       marketCode: paymentData.marketCode,
       serviceMode: paymentData.serviceMode,
+      bookingChannel: paymentData.bookingChannel,
+      pickupStoreCode: paymentData.pickupStoreCode,
+      pickupStoreName: paymentData.pickupStoreName,
+      returnStoreCode: paymentData.returnStoreCode,
+      returnStoreName: paymentData.returnStoreName,
+      startBatteryLevel: paymentData.startBatteryLevel ?? rideScooter.batteryLevel,
+      estimatedReturnBattery: paymentData.estimatedReturnBattery,
+      electricityFeeEstimate: paymentData.electricityFeeEstimate,
+      liabilityAccepted: paymentData.liabilityAccepted,
       scanToken: `QR-${rideScooter.id}-${Date.now()}`
     })
 
@@ -1352,7 +1497,6 @@ onMounted(() => {
     window.addEventListener('message', _onWindowMessage)
   }
   loadScooters().catch(() => {})
-  requestUserLocation({ showErrorToast: false }).catch(() => {})
   startRideLocationTracking()
   refreshTimer = setInterval(() => {
     loadScooters({ showLoadingOverlay: false }).catch(() => {})

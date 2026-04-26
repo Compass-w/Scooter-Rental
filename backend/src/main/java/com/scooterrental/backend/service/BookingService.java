@@ -48,6 +48,7 @@ public class BookingService {
     private final ScooterMapper scooterMapper;
     private final VehicleIntegrationService vehicleIntegrationService;
     private final PaymentGatewayService paymentGatewayService;
+    private volatile boolean operationalTablesReady = false;
 
     public BookingService(
             BookingMapper bookingMapper,
@@ -61,17 +62,38 @@ public class BookingService {
     }
 
     public void ensureOperationalTables() {
-        bookingMapper.addPlannedEndTimeColumn();
-        bookingMapper.addPlanTypeColumn();
-        bookingMapper.addPaymentStatusColumn();
-        bookingMapper.addUnlockStatusColumn();
-        bookingMapper.addUnlockReferenceColumn();
-        bookingMapper.addOvertimeFeeColumn();
-        bookingMapper.addOvertimeChargeTotalColumn();
-        bookingMapper.addDamageChargeTotalColumn();
-        bookingMapper.addLastReminderAtColumn();
-        vehicleIntegrationService.ensureVehicleTables();
-        paymentGatewayService.ensureGatewayTables();
+        if (operationalTablesReady) {
+            return;
+        }
+        synchronized (this) {
+            if (operationalTablesReady) {
+                return;
+            }
+            bookingMapper.addPlannedEndTimeColumn();
+            bookingMapper.addPlanTypeColumn();
+            bookingMapper.addPaymentStatusColumn();
+            bookingMapper.addUnlockStatusColumn();
+            bookingMapper.addUnlockReferenceColumn();
+            bookingMapper.addOvertimeFeeColumn();
+            bookingMapper.addOvertimeChargeTotalColumn();
+            bookingMapper.addDamageChargeTotalColumn();
+            bookingMapper.addElectricityChargeTotalColumn();
+            bookingMapper.addMarketCodeColumn();
+            bookingMapper.addServiceModeColumn();
+            bookingMapper.addBookingChannelColumn();
+            bookingMapper.addPickupStoreCodeColumn();
+            bookingMapper.addPickupStoreNameColumn();
+            bookingMapper.addReturnStoreCodeColumn();
+            bookingMapper.addReturnStoreNameColumn();
+            bookingMapper.addStartBatteryLevelColumn();
+            bookingMapper.addEstimatedReturnBatteryColumn();
+            bookingMapper.addReturnBatteryLevelColumn();
+            bookingMapper.addLiabilityAcceptedColumn();
+            bookingMapper.addLastReminderAtColumn();
+            vehicleIntegrationService.ensureVehicleTables();
+            paymentGatewayService.ensureGatewayTables();
+            operationalTablesReady = true;
+        }
     }
 
     public List<Booking> getHistory(Integer userId) {
@@ -111,6 +133,8 @@ public class BookingService {
         String normalizedPlanType = normalizePlanType(request.getPlanType());
         Integer durationMinutes = resolveDurationMinutes(normalizedPlanType);
         BigDecimal estimatedCost = calculateCost(scooter, normalizedPlanType, durationMinutes);
+        BigDecimal electricityEstimate = normalizeMoney(request.getElectricityFeeEstimate());
+        BigDecimal estimatedTotal = estimatedCost.add(electricityEstimate).setScale(2, RoundingMode.HALF_UP);
         LocalDateTime startTime = LocalDateTime.now();
 
         Booking booking = new Booking();
@@ -120,7 +144,7 @@ public class BookingService {
         booking.setDurationMinutes(durationMinutes);
         booking.setPlanType(normalizedPlanType);
         booking.setPlannedEndTime(durationMinutes == null ? null : startTime.plusMinutes(durationMinutes));
-        booking.setTotalCost(estimatedCost);
+        booking.setTotalCost(estimatedTotal);
         booking.setStatus(BOOKING_ACTIVE);
         booking.setPaymentStatus("PENDING");
         booking.setUnlockStatus("PENDING");
@@ -128,13 +152,25 @@ public class BookingService {
         booking.setOvertimeFeePer15Minutes(resolveOvertimeFee(request.getOvertimeFeePer15Minutes(), estimatedCost));
         booking.setOvertimeChargeTotal(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
         booking.setDamageChargeTotal(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
+        booking.setElectricityChargeTotal(electricityEstimate);
+        booking.setMarketCode(normalizeMarketCode(request.getMarketCode()));
+        booking.setServiceMode(normalizeServiceMode(request.getServiceMode()));
+        booking.setBookingChannel(normalizeOptionalText(request.getBookingChannel()));
+        booking.setPickupStoreCode(normalizeOptionalText(request.getPickupStoreCode()));
+        booking.setPickupStoreName(normalizeOptionalText(request.getPickupStoreName()));
+        booking.setReturnStoreCode(normalizeOptionalText(request.getReturnStoreCode()));
+        booking.setReturnStoreName(normalizeOptionalText(request.getReturnStoreName()));
+        booking.setStartBatteryLevel(resolveBatteryLevel(request.getStartBatteryLevel(), scooter.getBatteryLevel()));
+        booking.setEstimatedReturnBattery(resolveBatteryLevel(request.getEstimatedReturnBattery(), booking.getStartBatteryLevel()));
+        booking.setReturnBatteryLevel(null);
+        booking.setLiabilityAccepted(Boolean.TRUE.equals(request.getLiabilityAccepted()));
         booking.setLastReminderAt(null);
 
         bookingMapper.insertBooking(booking);
 
         paymentGatewayService.authorizeStartRide(
                 booking,
-                estimatedCost,
+                estimatedTotal,
                 "Trip deposit authorised before unlock for " + normalizedPlanType + ".");
         booking.setPaymentStatus("AUTHORIZED");
 
@@ -152,7 +188,7 @@ public class BookingService {
                 booking.getScooterId(),
                 normalizedPlanType,
                 durationMinutes,
-                estimatedCost,
+                booking.getTotalCost(),
                 booking.getStatus(),
                 booking.getPaymentStatus(),
                 booking.getUnlockStatus(),
@@ -164,6 +200,11 @@ public class BookingService {
 
     @Transactional
     public EndRideResponse endRide(Integer bookingId) {
+        return endRide(bookingId, null);
+    }
+
+    @Transactional
+    public EndRideResponse endRide(Integer bookingId, Map<String, Object> payload) {
         ensureOperationalTables();
 
         Booking booking = bookingMapper.selectByBookingId(bookingId);
@@ -187,16 +228,30 @@ public class BookingService {
         BigDecimal baseCost = calculateCost(scooter, booking.getPlanType(), billableMinutes);
         BigDecimal overtimeCharge = normalizeMoney(booking.getOvertimeChargeTotal());
         BigDecimal damageCharge = normalizeMoney(booking.getDamageChargeTotal());
-        BigDecimal finalCost = baseCost.add(overtimeCharge).add(damageCharge).setScale(2, RoundingMode.HALF_UP);
+        Integer returnBatteryLevel = resolveBatteryLevel(
+                parseInteger(payload == null ? null : payload.get("returnBatteryLevel")),
+                booking.getEstimatedReturnBattery() != null ? booking.getEstimatedReturnBattery() : scooter.getBatteryLevel());
+        BigDecimal electricityCharge = calculateElectricityCharge(booking.getStartBatteryLevel(), returnBatteryLevel, booking.getElectricityChargeTotal());
+        BigDecimal finalCost = baseCost.add(overtimeCharge).add(damageCharge).add(electricityCharge).setScale(2, RoundingMode.HALF_UP);
 
         paymentGatewayService.captureBaseCharge(
                 booking,
                 baseCost,
                 "Base ride charge captured when the scooter was returned.");
 
+        if (electricityCharge.compareTo(BigDecimal.ZERO) > 0) {
+            paymentGatewayService.captureAdjustment(
+                    booking,
+                    electricityCharge,
+                    "ELECTRICITY_DELTA",
+                    "Electricity delta captured from pickup battery to return battery.");
+        }
+
         booking.setEndTime(endTime);
         booking.setDurationMinutes(billableMinutes);
         booking.setTotalCost(finalCost);
+        booking.setReturnBatteryLevel(returnBatteryLevel);
+        booking.setElectricityChargeTotal(electricityCharge);
         booking.setStatus(BOOKING_COMPLETED);
         booking.setPaymentStatus("CAPTURED");
         booking.setUnlockStatus("LOCKED");
@@ -204,6 +259,7 @@ public class BookingService {
 
         vehicleIntegrationService.completeRideSession(bookingId);
 
+        scooter.setBatteryLevel(returnBatteryLevel);
         scooter.setStatus(SCOOTER_AVAILABLE);
         scooterMapper.updateById(scooter);
 
@@ -214,7 +270,10 @@ public class BookingService {
                 baseCost,
                 overtimeCharge,
                 damageCharge,
+                electricityCharge,
                 booking.getTotalCost(),
+                booking.getStartBatteryLevel(),
+                booking.getReturnBatteryLevel(),
                 booking.getStartTime(),
                 booking.getEndTime(),
                 booking.getStatus(),
@@ -249,6 +308,7 @@ public class BookingService {
         BigDecimal updatedCost = updatedBaseCost
                 .add(normalizeMoney(booking.getOvertimeChargeTotal()))
                 .add(normalizeMoney(booking.getDamageChargeTotal()))
+                .add(normalizeMoney(booking.getElectricityChargeTotal()))
                 .setScale(2, RoundingMode.HALF_UP);
 
         booking.setDurationMinutes(nextDuration);
@@ -444,6 +504,42 @@ public class BookingService {
                 ? incomingFee
                 : estimatedCost.multiply(BigDecimal.valueOf(0.12));
         return resolved.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private Integer resolveBatteryLevel(Integer value, Integer fallback) {
+        Integer resolved = value != null ? value : fallback;
+        if (resolved == null) {
+            return null;
+        }
+        return Math.max(0, Math.min(100, resolved));
+    }
+
+    private BigDecimal calculateElectricityCharge(Integer startBatteryLevel, Integer returnBatteryLevel, BigDecimal fallbackCharge) {
+        if (startBatteryLevel == null || returnBatteryLevel == null) {
+            return normalizeMoney(fallbackCharge);
+        }
+        int batteryDelta = Math.max(0, startBatteryLevel - returnBatteryLevel);
+        return BigDecimal.valueOf(batteryDelta)
+                .multiply(BigDecimal.valueOf(0.18))
+                .setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private String normalizeMarketCode(String marketCode) {
+        String normalized = String.valueOf(marketCode == null ? "CN" : marketCode).trim().toUpperCase(Locale.ROOT);
+        return "UK".equals(normalized) ? "UK" : "CN";
+    }
+
+    private String normalizeServiceMode(String serviceMode) {
+        String normalized = String.valueOf(serviceMode == null ? "SHARING" : serviceMode).trim().toUpperCase(Locale.ROOT);
+        return "WALK_IN".equals(normalized) ? "WALK_IN" : "SHARING";
+    }
+
+    private String normalizeOptionalText(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     private BigDecimal normalizeMoney(BigDecimal value) {

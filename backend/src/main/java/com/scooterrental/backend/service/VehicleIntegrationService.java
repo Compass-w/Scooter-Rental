@@ -12,13 +12,23 @@ import java.time.LocalDateTime;
 public class VehicleIntegrationService {
 
     private final VehicleUnlockSessionMapper vehicleUnlockSessionMapper;
+    private volatile boolean vehicleTablesReady = false;
 
     public VehicleIntegrationService(VehicleUnlockSessionMapper vehicleUnlockSessionMapper) {
         this.vehicleUnlockSessionMapper = vehicleUnlockSessionMapper;
     }
 
     public void ensureVehicleTables() {
-        vehicleUnlockSessionMapper.createTableIfNotExists();
+        if (vehicleTablesReady) {
+            return;
+        }
+        synchronized (this) {
+            if (vehicleTablesReady) {
+                return;
+            }
+            vehicleUnlockSessionMapper.createTableIfNotExists();
+            vehicleTablesReady = true;
+        }
     }
 
     public VehicleUnlockSession dispatchUnlockCommand(Booking booking, Scooter scooter, String scanToken) {

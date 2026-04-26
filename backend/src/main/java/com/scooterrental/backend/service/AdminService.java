@@ -52,6 +52,7 @@ public class AdminService {
     private final VehicleIntegrationService vehicleIntegrationService;
     private final PaymentGatewayService paymentGatewayService;
     private final OpsAssignmentMapper opsAssignmentMapper;
+    private volatile boolean adminTablesReady = false;
 
     public AdminService(
             BookingMapper bookingMapper,
@@ -244,6 +245,14 @@ public class AdminService {
         booking.setPickupBatteryLevel(pickupBatteryLevel);
         booking.setExpectedReturnBatteryLevel(expectedReturnBatteryLevel);
         booking.setElectricityDelta(calculateElectricityDelta(pickupBatteryLevel, expectedReturnBatteryLevel));
+        String cardNumberMasked = maskCardNumber(Objects.toString(payload == null ? null : payload.get("cardNumber"), null));
+        if (cardNumberMasked == null) {
+            throw new IllegalArgumentException("A credit card is required for staff-side walk-in bookings");
+        }
+        booking.setCardHolderName(trimToDefault(payload == null ? null : payload.get("cardHolderName"), guestName));
+        booking.setCardNumberMasked(cardNumberMasked);
+        booking.setCardExpiry(trimToNull(Objects.toString(payload == null ? null : payload.get("cardExpiry"), null)));
+        booking.setPaymentStatus("CARD_BOUND");
         booking.setDesiredStartTime(parseDateTime(payload == null ? null : payload.get("desiredStartTime")));
         booking.setEstimatedCost(estimateHireCost(hirePeriod, scooter));
         booking.setBookingStatus(Boolean.TRUE.equals(payload == null ? null : payload.get("sendConfirmation"))
@@ -320,20 +329,33 @@ public class AdminService {
     }
 
     private void ensureAdminTables() {
-        bookingService.ensureOperationalTables();
-        rideAutomationService.ensureAutomationTables();
-        maintenanceLogMapper.createTableIfNotExists();
-        staffBookingMapper.createTableIfNotExists();
-        staffBookingMapper.addBookingChannelColumn();
-        staffBookingMapper.addPickupStoreCodeColumn();
-        staffBookingMapper.addPickupStoreNameColumn();
-        staffBookingMapper.addReturnStoreCodeColumn();
-        staffBookingMapper.addReturnStoreNameColumn();
-        staffBookingMapper.addPickupBatteryLevelColumn();
-        staffBookingMapper.addExpectedReturnBatteryLevelColumn();
-        staffBookingMapper.addElectricityDeltaColumn();
-        opsAssignmentMapper.createTableIfNotExists();
-        seedOpsAssignmentsIfEmpty();
+        if (adminTablesReady) {
+            return;
+        }
+        synchronized (this) {
+            if (adminTablesReady) {
+                return;
+            }
+            bookingService.ensureOperationalTables();
+            rideAutomationService.ensureAutomationTables();
+            maintenanceLogMapper.createTableIfNotExists();
+            staffBookingMapper.createTableIfNotExists();
+            staffBookingMapper.addBookingChannelColumn();
+            staffBookingMapper.addPickupStoreCodeColumn();
+            staffBookingMapper.addPickupStoreNameColumn();
+            staffBookingMapper.addReturnStoreCodeColumn();
+            staffBookingMapper.addReturnStoreNameColumn();
+            staffBookingMapper.addPickupBatteryLevelColumn();
+            staffBookingMapper.addExpectedReturnBatteryLevelColumn();
+            staffBookingMapper.addElectricityDeltaColumn();
+            staffBookingMapper.addCardHolderNameColumn();
+            staffBookingMapper.addCardNumberMaskedColumn();
+            staffBookingMapper.addCardExpiryColumn();
+            staffBookingMapper.addPaymentStatusColumn();
+            opsAssignmentMapper.createTableIfNotExists();
+            seedOpsAssignmentsIfEmpty();
+            adminTablesReady = true;
+        }
     }
 
     private Map<String, Object> buildAnalytics(List<Booking> bookings) {
@@ -565,6 +587,10 @@ public class AdminService {
                         "pickupBatteryLevel", item.getPickupBatteryLevel() == null ? 0 : item.getPickupBatteryLevel(),
                         "expectedReturnBatteryLevel", item.getExpectedReturnBatteryLevel() == null ? 0 : item.getExpectedReturnBatteryLevel(),
                         "electricityDelta", scale(item.getElectricityDelta()),
+                        "cardHolderName", item.getCardHolderName() == null ? "" : item.getCardHolderName(),
+                        "cardNumberMasked", item.getCardNumberMasked() == null ? "" : item.getCardNumberMasked(),
+                        "cardExpiry", item.getCardExpiry() == null ? "" : item.getCardExpiry(),
+                        "paymentStatus", item.getPaymentStatus() == null ? "CARD_REQUIRED" : item.getPaymentStatus(),
                         "estimatedCost", scale(item.getEstimatedCost()),
                         "bookingStatus", item.getBookingStatus(),
                         "confirmationSentAt", item.getConfirmationSentAt(),
@@ -1083,6 +1109,14 @@ public class AdminService {
             case "WALK_IN_COUNTER", "REMOTE_RESERVATION" -> normalized;
             default -> "WALK_IN_COUNTER";
         };
+    }
+
+    private String maskCardNumber(String cardNumber) {
+        String digits = String.valueOf(cardNumber == null ? "" : cardNumber).replaceAll("\\D", "");
+        if (digits.length() < 4) {
+            return null;
+        }
+        return "**** " + digits.substring(digits.length() - 4);
     }
 
     private String normalizeOpsRole(String staffRole) {

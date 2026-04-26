@@ -1007,7 +1007,12 @@ const handleEndRide = () => {
       busyAction.value = 'end'
       const endingBookingId = activeRide.value?.bookingId
       try {
-        const result = await endRide(endingBookingId)
+        const result = await endRide(endingBookingId, {
+          useLegacy: false,
+          returnBatteryLevel: activeRide.value?.estimatedReturnBattery || activeRide.value?.startBatteryLevel || null,
+          electricityFeeEstimate: activeRide.value?.electricityFeeEstimate || 0,
+          liabilityAccepted: activeRide.value?.liabilityAccepted || false
+        })
         updateActiveRideState(null)
         const nextActiveRide = await syncActiveRide()
         const followUpMessage = nextActiveRide?.bookingId && String(nextActiveRide.bookingId) !== String(endingBookingId)

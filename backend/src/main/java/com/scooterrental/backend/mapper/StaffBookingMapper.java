@@ -29,6 +29,10 @@ public interface StaffBookingMapper {
                 pickup_battery_level INTEGER,
                 expected_return_battery_level INTEGER,
                 electricity_delta DECIMAL(10, 2) NOT NULL DEFAULT 0,
+                card_holder_name VARCHAR(120),
+                card_number_masked VARCHAR(20),
+                card_expiry VARCHAR(8),
+                payment_status VARCHAR(24) NOT NULL DEFAULT 'CARD_BOUND',
                 desired_start_time TIMESTAMP NOT NULL,
                 estimated_cost DECIMAL(10, 2) NOT NULL,
                 booking_status VARCHAR(24) NOT NULL DEFAULT 'BOOKED',
@@ -64,6 +68,18 @@ public interface StaffBookingMapper {
     @Update("ALTER TABLE staff_bookings ADD COLUMN IF NOT EXISTS electricity_delta DECIMAL(10, 2) NOT NULL DEFAULT 0")
     void addElectricityDeltaColumn();
 
+    @Update("ALTER TABLE staff_bookings ADD COLUMN IF NOT EXISTS card_holder_name VARCHAR(120)")
+    void addCardHolderNameColumn();
+
+    @Update("ALTER TABLE staff_bookings ADD COLUMN IF NOT EXISTS card_number_masked VARCHAR(20)")
+    void addCardNumberMaskedColumn();
+
+    @Update("ALTER TABLE staff_bookings ADD COLUMN IF NOT EXISTS card_expiry VARCHAR(8)")
+    void addCardExpiryColumn();
+
+    @Update("ALTER TABLE staff_bookings ADD COLUMN IF NOT EXISTS payment_status VARCHAR(24) NOT NULL DEFAULT 'CARD_BOUND'")
+    void addPaymentStatusColumn();
+
     @Insert("""
             INSERT INTO staff_bookings (
                 guest_name,
@@ -78,6 +94,10 @@ public interface StaffBookingMapper {
                 pickup_battery_level,
                 expected_return_battery_level,
                 electricity_delta,
+                card_holder_name,
+                card_number_masked,
+                card_expiry,
+                payment_status,
                 desired_start_time,
                 estimated_cost,
                 booking_status,
@@ -98,6 +118,10 @@ public interface StaffBookingMapper {
                 #{pickupBatteryLevel},
                 #{expectedReturnBatteryLevel},
                 #{electricityDelta},
+                #{cardHolderName},
+                #{cardNumberMasked},
+                #{cardExpiry},
+                #{paymentStatus},
                 #{desiredStartTime},
                 #{estimatedCost},
                 #{bookingStatus},
@@ -124,6 +148,10 @@ public interface StaffBookingMapper {
                    sb.pickup_battery_level AS pickupBatteryLevel,
                    sb.expected_return_battery_level AS expectedReturnBatteryLevel,
                    sb.electricity_delta AS electricityDelta,
+                   sb.card_holder_name AS cardHolderName,
+                   sb.card_number_masked AS cardNumberMasked,
+                   sb.card_expiry AS cardExpiry,
+                   sb.payment_status AS paymentStatus,
                    sb.desired_start_time AS desiredStartTime,
                    sb.estimated_cost AS estimatedCost,
                    sb.booking_status AS bookingStatus,
@@ -152,6 +180,10 @@ public interface StaffBookingMapper {
                    sb.pickup_battery_level AS pickupBatteryLevel,
                    sb.expected_return_battery_level AS expectedReturnBatteryLevel,
                    sb.electricity_delta AS electricityDelta,
+                   sb.card_holder_name AS cardHolderName,
+                   sb.card_number_masked AS cardNumberMasked,
+                   sb.card_expiry AS cardExpiry,
+                   sb.payment_status AS paymentStatus,
                    sb.desired_start_time AS desiredStartTime,
                    sb.estimated_cost AS estimatedCost,
                    sb.booking_status AS bookingStatus,

@@ -38,6 +38,8 @@ const toIsoString = (value, fallback = '') => {
 }
 
 const normalizeStatus = (status) => String(status || '').trim().toUpperCase()
+const marketLabelForCode = (code) => String(code || '').toUpperCase() === 'UK' ? 'United Kingdom' : 'China Mainland'
+const serviceLabelForMode = (mode) => String(mode || '').toUpperCase() === 'WALK_IN' ? 'Walk-in & Rent' : 'Sharing Scooters'
 
 export const getStoredUserId = () => {
   try {
@@ -67,9 +69,9 @@ export const normalizeActiveRide = (ride = {}, fallback = {}) => {
     imageUrl: String(ride.imageUrl ?? fallback.imageUrl ?? '').trim(),
     photoCredit: String(ride.photoCredit ?? fallback.photoCredit ?? '').trim(),
     marketCode: String(ride.marketCode ?? fallback.marketCode ?? '').trim(),
-    marketLabel: String(ride.marketLabel ?? fallback.marketLabel ?? '').trim(),
+    marketLabel: String(ride.marketLabel ?? fallback.marketLabel ?? marketLabelForCode(ride.marketCode ?? fallback.marketCode)).trim(),
     serviceMode: String(ride.serviceMode ?? fallback.serviceMode ?? '').trim(),
-    serviceLabel: String(ride.serviceLabel ?? fallback.serviceLabel ?? '').trim(),
+    serviceLabel: String(ride.serviceLabel ?? fallback.serviceLabel ?? serviceLabelForMode(ride.serviceMode ?? fallback.serviceMode)).trim(),
     bookingChannel: String(ride.bookingChannel ?? fallback.bookingChannel ?? '').trim(),
     bookingChannelLabel: String(ride.bookingChannelLabel ?? fallback.bookingChannelLabel ?? '').trim(),
     pickupStoreCode: String(ride.pickupStoreCode ?? fallback.pickupStoreCode ?? '').trim(),
@@ -81,7 +83,9 @@ export const normalizeActiveRide = (ride = {}, fallback = {}) => {
     performanceSummary: String(ride.performanceSummary ?? fallback.performanceSummary ?? '').trim(),
     startBatteryLevel: toNumber(ride.startBatteryLevel ?? fallback.startBatteryLevel, 0),
     estimatedReturnBattery: toNumber(ride.estimatedReturnBattery ?? fallback.estimatedReturnBattery, 0),
-    electricityFeeEstimate: toNumber(ride.electricityFeeEstimate ?? fallback.electricityFeeEstimate, 0),
+    returnBatteryLevel: toNumber(ride.returnBatteryLevel ?? fallback.returnBatteryLevel, 0),
+    electricityFeeEstimate: toNumber(ride.electricityFeeEstimate ?? ride.electricityChargeTotal ?? fallback.electricityFeeEstimate ?? fallback.electricityChargeTotal, 0),
+    electricityChargeTotal: toNumber(ride.electricityChargeTotal ?? fallback.electricityChargeTotal, 0),
     overtimeFeePer15Minutes: toNumber(ride.overtimeFeePer15Minutes ?? fallback.overtimeFeePer15Minutes, 0),
     parkingRule: String(ride.parkingRule ?? fallback.parkingRule ?? '').trim(),
     damagePolicy: String(ride.damagePolicy ?? fallback.damagePolicy ?? '').trim(),

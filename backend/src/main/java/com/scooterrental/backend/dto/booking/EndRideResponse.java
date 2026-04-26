@@ -10,7 +10,10 @@ public class EndRideResponse {
     private BigDecimal baseCost;
     private BigDecimal overtimeChargeTotal;
     private BigDecimal damageChargeTotal;
+    private BigDecimal electricityChargeTotal;
     private BigDecimal totalCost;
+    private Integer startBatteryLevel;
+    private Integer returnBatteryLevel;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private String bookingStatus;
@@ -24,7 +27,10 @@ public class EndRideResponse {
             BigDecimal baseCost,
             BigDecimal overtimeChargeTotal,
             BigDecimal damageChargeTotal,
+            BigDecimal electricityChargeTotal,
             BigDecimal totalCost,
+            Integer startBatteryLevel,
+            Integer returnBatteryLevel,
             LocalDateTime startTime,
             LocalDateTime endTime,
             String bookingStatus,
@@ -36,7 +42,10 @@ public class EndRideResponse {
         this.baseCost = baseCost;
         this.overtimeChargeTotal = overtimeChargeTotal;
         this.damageChargeTotal = damageChargeTotal;
+        this.electricityChargeTotal = electricityChargeTotal;
         this.totalCost = totalCost;
+        this.startBatteryLevel = startBatteryLevel;
+        this.returnBatteryLevel = returnBatteryLevel;
         this.startTime = startTime;
         this.endTime = endTime;
         this.bookingStatus = bookingStatus;
@@ -92,12 +101,36 @@ public class EndRideResponse {
         this.damageChargeTotal = damageChargeTotal;
     }
 
+    public BigDecimal getElectricityChargeTotal() {
+        return electricityChargeTotal;
+    }
+
+    public void setElectricityChargeTotal(BigDecimal electricityChargeTotal) {
+        this.electricityChargeTotal = electricityChargeTotal;
+    }
+
     public BigDecimal getTotalCost() {
         return totalCost;
     }
 
     public void setTotalCost(BigDecimal totalCost) {
         this.totalCost = totalCost;
+    }
+
+    public Integer getStartBatteryLevel() {
+        return startBatteryLevel;
+    }
+
+    public void setStartBatteryLevel(Integer startBatteryLevel) {
+        this.startBatteryLevel = startBatteryLevel;
+    }
+
+    public Integer getReturnBatteryLevel() {
+        return returnBatteryLevel;
+    }
+
+    public void setReturnBatteryLevel(Integer returnBatteryLevel) {
+        this.returnBatteryLevel = returnBatteryLevel;
     }
 
     public LocalDateTime getStartTime() {

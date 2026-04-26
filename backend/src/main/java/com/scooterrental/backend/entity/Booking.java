@@ -22,6 +22,18 @@ public class Booking {
     private BigDecimal overtimeFeePer15Minutes;
     private BigDecimal overtimeChargeTotal;
     private BigDecimal damageChargeTotal;
+    private BigDecimal electricityChargeTotal;
+    private String marketCode;
+    private String serviceMode;
+    private String bookingChannel;
+    private String pickupStoreCode;
+    private String pickupStoreName;
+    private String returnStoreCode;
+    private String returnStoreName;
+    private Integer startBatteryLevel;
+    private Integer estimatedReturnBattery;
+    private Integer returnBatteryLevel;
+    private Boolean liabilityAccepted;
     private LocalDateTime lastReminderAt;
     private String scooterModel; // To be displayed on electronic receipt
     private LocalDateTime createdAt;

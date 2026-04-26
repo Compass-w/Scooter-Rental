@@ -8,6 +8,15 @@ const trimTrailingSlash = (value = '') => String(value || '').replace(/\/+$/, ''
 const isLocalHostname = (hostname = '') =>
   ['localhost', '127.0.0.1', '::1'].includes(String(hostname || '').toLowerCase())
 
+const isPrivateNetworkHostname = (hostname = '') => {
+  const value = String(hostname || '').toLowerCase()
+  return (
+    /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(value) ||
+    /^192\.168\.\d{1,3}\.\d{1,3}$/.test(value) ||
+    /^172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}$/.test(value)
+  )
+}
+
 const resolveApiBaseUrl = () => {
   const explicitBaseUrl = trimTrailingSlash(
     process.env.UNI_APP_API_BASE_URL ||
@@ -20,10 +29,18 @@ const resolveApiBaseUrl = () => {
   }
 
   if (typeof window !== 'undefined' && window.location?.origin) {
-    const { origin, hostname } = window.location
+    const { origin, protocol, hostname, port } = window.location
 
     if (isLocalHostname(hostname)) {
       return 'http://localhost:8080/api'
+    }
+
+    if (process.env.NODE_ENV === 'development' && protocol === 'http:' && isPrivateNetworkHostname(hostname)) {
+      return `http://${hostname}:8080/api`
+    }
+
+    if (process.env.NODE_ENV === 'development' && protocol === 'http:' && port && port !== '8080') {
+      return `http://${hostname}:8080/api`
     }
 
     return `${trimTrailingSlash(origin)}/api`
@@ -38,7 +55,7 @@ export const API_CONFIG = {
   BASE_URL: resolveApiBaseUrl(),
   
   // Request timeout (milliseconds)
-  TIMEOUT: 10000,
+  TIMEOUT: 20000,
   
   // Token storage key
   TOKEN_KEY: 'token',

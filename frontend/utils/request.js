@@ -8,7 +8,7 @@ import { API_CONFIG } from '@/config/api.config.js'
 
 // API Base Configuration
 const BASE_URL = API_CONFIG.BASE_URL
-const TIMEOUT = 10000
+const TIMEOUT = API_CONFIG.TIMEOUT || 20000
 
 /**
  * Get stored token

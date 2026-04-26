@@ -57,9 +57,11 @@ public class BookingController {
 
     @PostMapping("/{bookingId}/end")
     @Operation(summary = "End Ride", description = "User ends rental and pays")
-    public ResponseEntity<Result<EndRideResponse>> endRide(@PathVariable Integer bookingId) {
+    public ResponseEntity<Result<EndRideResponse>> endRide(
+            @PathVariable Integer bookingId,
+            @RequestBody(required = false) Map<String, Object> payload) {
         try {
-            return ResponseEntity.ok(Result.success(bookingService.endRide(bookingId)));
+            return ResponseEntity.ok(Result.success(bookingService.endRide(bookingId, payload)));
         } catch (IllegalArgumentException | IllegalStateException ex) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Result.error(400, ex.getMessage()));
@@ -68,13 +70,25 @@ public class BookingController {
 
     @PostMapping("/end")
     @Operation(summary = "End Ride (Legacy)", description = "Compatibility route that accepts bookingId in the request body")
-    public ResponseEntity<Result<EndRideResponse>> endRideLegacy(@RequestBody Map<String, Integer> request) {
-        Integer bookingId = request.get("bookingId");
+    public ResponseEntity<Result<EndRideResponse>> endRideLegacy(@RequestBody Map<String, Object> request) {
+        Integer bookingId = parseInteger(request == null ? null : request.get("bookingId"));
         if (bookingId == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Result.error(400, "Booking ID is required"));
         }
-        return endRide(bookingId);
+        return endRide(bookingId, request);
+    }
+
+    private Integer parseInteger(Object value) {
+        if (value == null) return null;
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        try {
+            return Integer.parseInt(String.valueOf(value).trim());
+        } catch (NumberFormatException ex) {
+            return null;
+        }
     }
 
     @PostMapping("/{bookingId}/extend")

@@ -27,6 +27,7 @@ public class RideAutomationService {
     private final IssueReportMapper issueReportMapper;
     private final AutomationEventMapper automationEventMapper;
     private final PaymentGatewayService paymentGatewayService;
+    private volatile boolean automationTablesReady = false;
 
     public RideAutomationService(
             BookingMapper bookingMapper,
@@ -40,16 +41,37 @@ public class RideAutomationService {
     }
 
     public void ensureAutomationTables() {
-        bookingMapper.addPlannedEndTimeColumn();
-        bookingMapper.addPlanTypeColumn();
-        bookingMapper.addPaymentStatusColumn();
-        bookingMapper.addUnlockStatusColumn();
-        bookingMapper.addUnlockReferenceColumn();
-        bookingMapper.addOvertimeFeeColumn();
-        bookingMapper.addOvertimeChargeTotalColumn();
-        bookingMapper.addDamageChargeTotalColumn();
-        bookingMapper.addLastReminderAtColumn();
-        automationEventMapper.createTableIfNotExists();
+        if (automationTablesReady) {
+            return;
+        }
+        synchronized (this) {
+            if (automationTablesReady) {
+                return;
+            }
+            bookingMapper.addPlannedEndTimeColumn();
+            bookingMapper.addPlanTypeColumn();
+            bookingMapper.addPaymentStatusColumn();
+            bookingMapper.addUnlockStatusColumn();
+            bookingMapper.addUnlockReferenceColumn();
+            bookingMapper.addOvertimeFeeColumn();
+            bookingMapper.addOvertimeChargeTotalColumn();
+            bookingMapper.addDamageChargeTotalColumn();
+            bookingMapper.addElectricityChargeTotalColumn();
+            bookingMapper.addMarketCodeColumn();
+            bookingMapper.addServiceModeColumn();
+            bookingMapper.addBookingChannelColumn();
+            bookingMapper.addPickupStoreCodeColumn();
+            bookingMapper.addPickupStoreNameColumn();
+            bookingMapper.addReturnStoreCodeColumn();
+            bookingMapper.addReturnStoreNameColumn();
+            bookingMapper.addStartBatteryLevelColumn();
+            bookingMapper.addEstimatedReturnBatteryColumn();
+            bookingMapper.addReturnBatteryLevelColumn();
+            bookingMapper.addLiabilityAcceptedColumn();
+            bookingMapper.addLastReminderAtColumn();
+            automationEventMapper.createTableIfNotExists();
+            automationTablesReady = true;
+        }
     }
 
     public List<AutomationEvent> getRecentEvents(int limit) {

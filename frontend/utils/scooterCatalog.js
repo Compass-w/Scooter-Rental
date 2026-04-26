@@ -1,6 +1,29 @@
 const commonsFilePath = (fileName) =>
   `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(fileName).replace(/%20/g, '%20')}`
 
+const MODEL_ASSET_LIBRARY = Object.freeze({
+  'ninebot-max-g2': {
+    modelUrl: '/static/models/homepage/sf_scooter_2.glb',
+    posterUrl: commonsFilePath('Electric scooter (51950182293).jpg')
+  },
+  'xiaomi-pro-2': {
+    modelUrl: '/static/models/homepage/tier-scooter_1.glb',
+    posterUrl: commonsFilePath('Bolt electric scooter.jpg')
+  },
+  'niu-kqi3': {
+    modelUrl: '/static/models/homepage/electric_scooter_3.glb?v=quantized',
+    posterUrl: commonsFilePath('Gogoro Smart Electric Scooter (23849136874).jpg')
+  },
+  'pure-advance': {
+    modelUrl: '/static/models/homepage/tier-scooter_1.glb',
+    posterUrl: commonsFilePath('BeRider Electric scooter.jpg')
+  },
+  'yadea-elite': {
+    modelUrl: '/static/models/homepage/electric_scooter_3.glb?v=quantized',
+    posterUrl: commonsFilePath('OLA Electric scooter.jpg')
+  }
+})
+
 const PROFILE_LIBRARY = [
   {
     slug: 'ninebot-max-g2',
@@ -231,8 +254,12 @@ export const createPlanPricingForProfile = (profile, basePricing = {}) => {
   }
 }
 
+export const getScooterModelAsset = (profileSlug = '') =>
+  MODEL_ASSET_LIBRARY[profileSlug] || MODEL_ASSET_LIBRARY[fallbackProfile.slug]
+
 export const enrichScooter = (source = {}) => {
   const profile = getScooterProfileByModel(source.model)
+  const modelAsset = getScooterModelAsset(source.profileSlug || profile.slug)
   const batteryLevel = Math.max(0, Math.min(100, Number(source.batteryLevel ?? 0)))
   const remainingRangeKm = Math.max(
     6,
@@ -247,6 +274,8 @@ export const enrichScooter = (source = {}) => {
     displayName: profile.displayName,
     category: profile.category,
     imageUrl: source.imageUrl || profile.imageUrl,
+    posterUrl: source.posterUrl || modelAsset.posterUrl || source.imageUrl || profile.imageUrl,
+    modelUrl: source.modelUrl || modelAsset.modelUrl,
     gallery: Array.isArray(source.gallery) && source.gallery.length ? source.gallery : profile.gallery,
     photoCredit: source.photoCredit || profile.photoCredit,
     specs: {

@@ -14,7 +14,7 @@
       </view>
 
       <view class="scooter-hero">
-        <view class="hero-photo-frame" @tap="previewVisible = true">
+        <view class="hero-photo-frame" @tap="modelPreviewVisible = true">
           <image class="hero-photo" :src="selectedVehicle.imageUrl" mode="aspectFill" />
           <view class="hero-photo-badge">
             <uni-icons type="search" size="14" color="#FFFFFF"></uni-icons>
@@ -408,25 +408,17 @@
       </button>
     </view>
 
-    <view v-if="previewVisible" class="preview-overlay" @tap="previewVisible = false">
-      <view class="preview-dialog" @tap.stop>
-        <view class="preview-stage">
-          <view class="preview-rotator">
-            <image class="preview-image" :src="selectedVehicle.imageUrl" mode="aspectFit" />
-          </view>
-        </view>
-        <text class="preview-title">{{ selectedVehicle.displayName }}</text>
-        <text class="preview-copy">Large product preview with a slow 3D-style rotation so the rider can inspect the selected scooter before payment.</text>
-        <button class="preview-close" @tap="previewVisible = false">
-          <text>Close Preview</text>
-        </button>
-      </view>
-    </view>
+    <ScooterModelViewer
+      :visible="modelPreviewVisible"
+      :scooter="selectedVehicle"
+      @close="modelPreviewVisible = false"
+    />
   </view>
 </template>
 
 <script setup>
 import { computed, ref, watch } from 'vue'
+import ScooterModelViewer from '@/components/ScooterModelViewer.vue'
 import { RENTAL_PACKAGE_PRICING } from '@/utils/pricing.js'
 import {
   detectMarketCode,
@@ -482,7 +474,7 @@ const selectedServiceMode = ref('SHARING')
 const selectedStoreChannel = ref('WALK_IN_COUNTER')
 const pickupStoreCode = ref(STORE_BRANCHES[0]?.code || '')
 const returnStoreCode = ref(STORE_BRANCHES[0]?.code || '')
-const previewVisible = ref(false)
+const modelPreviewVisible = ref(false)
 const paymentProcessing = ref(false)
 const liabilityAccepted = ref(false)
 const detailSections = ref({
@@ -624,7 +616,7 @@ watch(
   ([isVisible]) => {
     if (!isVisible) {
       paymentProcessing.value = false
-      previewVisible.value = false
+      modelPreviewVisible.value = false
       return
     }
 
@@ -651,13 +643,13 @@ watch(
     }
     resetFormErrors()
     paymentProcessing.value = false
-    previewVisible.value = false
+    modelPreviewVisible.value = false
   },
   { immediate: true }
 )
 
 const handleBackdropClose = () => {
-  if (paymentProcessing.value || props.submitting || previewVisible.value) return
+  if (paymentProcessing.value || props.submitting || modelPreviewVisible.value) return
   emit('close')
 }
 
