@@ -24,6 +24,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.Duration;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -33,6 +34,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 @Service
@@ -40,6 +45,8 @@ public class AdminService {
 
     private static final DateTimeFormatter DAY_FORMATTER = DateTimeFormatter.ofPattern("MM-dd");
     private static final Logger log = LoggerFactory.getLogger(AdminService.class);
+    private static final long DASHBOARD_CACHE_TTL_SECONDS = 20;
+    private static final long DASHBOARD_BUILD_TIMEOUT_SECONDS = 6;
 
     private final BookingMapper bookingMapper;
     private final ScooterService scooterService;
@@ -53,6 +60,8 @@ public class AdminService {
     private final PaymentGatewayService paymentGatewayService;
     private final OpsAssignmentMapper opsAssignmentMapper;
     private volatile boolean adminTablesReady = false;
+    private volatile Map<String, Object> cachedDashboardSnapshot = null;
+    private volatile LocalDateTime cachedDashboardAt = null;
 
     public AdminService(
             BookingMapper bookingMapper,
@@ -80,21 +89,54 @@ public class AdminService {
     }
 
     public Map<String, Object> getDashboardSnapshot() {
-        ensureAdminTables();
+        Map<String, Object> cached = cachedDashboardSnapshot;
+        if (cached != null && cachedDashboardAt != null
+                && Duration.between(cachedDashboardAt, LocalDateTime.now()).getSeconds() < DASHBOARD_CACHE_TTL_SECONDS) {
+            return cached;
+        }
 
-        List<Booking> bookings = bookingMapper.selectAllForAdmin();
-        List<Scooter> scooters = scooterService.list();
-        List<IssueReport> issues = issueReportService.getIssueReports();
-        List<MaintenanceLog> maintenanceLogs = maintenanceLogMapper.selectRecent();
-        List<StaffBooking> staffBookings = staffBookingMapper.selectAll();
-        List<AutomationEvent> automationEvents = rideAutomationService.getRecentEvents(8);
-        List<PaymentTransaction> paymentTransactions = paymentGatewayService.getRecentTransactions(8);
-        List<VehicleUnlockSession> unlockSessions = vehicleIntegrationService.getRecentSessions(8);
-        List<OpsAssignment> opsAssignments = opsAssignmentMapper.selectAll();
+        CompletableFuture<Map<String, Object>> snapshotTask = CompletableFuture.supplyAsync(() -> {
+            Map<String, Object> snapshot = buildDashboardSnapshot();
+            cachedDashboardSnapshot = snapshot;
+            cachedDashboardAt = LocalDateTime.now();
+            return snapshot;
+        });
+
+        try {
+            return snapshotTask.get(DASHBOARD_BUILD_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        } catch (TimeoutException ex) {
+            log.warn("Admin dashboard snapshot is still building after {} seconds; returning cached/fallback snapshot.",
+                    DASHBOARD_BUILD_TIMEOUT_SECONDS);
+            return fallbackDashboardSnapshot("Dashboard is warming up. Cached or fallback data is shown temporarily.");
+        } catch (Exception ex) {
+            log.error("Failed to build admin dashboard snapshot", ex);
+            return fallbackDashboardSnapshot("Dashboard data could not be fully loaded. Check backend database connectivity.");
+        }
+    }
+
+    private Map<String, Object> buildDashboardSnapshot() {
+        try {
+            ensureAdminTables();
+        } catch (Exception ex) {
+            log.error("Admin table initialization failed; continuing with best-effort dashboard data.", ex);
+        }
+
+        List<Booking> bookings = safeList("bookings", bookingMapper::selectAllForAdmin);
+        List<Scooter> scooters = safeList("scooters", scooterService::list);
+        List<IssueReport> issues = safeList("issues", issueReportService::getIssueReports);
+        List<MaintenanceLog> maintenanceLogs = safeList("maintenance logs", maintenanceLogMapper::selectRecent);
+        List<StaffBooking> staffBookings = safeList("staff bookings", staffBookingMapper::selectAll);
+        List<AutomationEvent> automationEvents = safeList("automation events", () -> rideAutomationService.getRecentEvents(8));
+        List<PaymentTransaction> paymentTransactions = safeList("payment transactions", () -> paymentGatewayService.getRecentTransactions(8));
+        List<VehicleUnlockSession> unlockSessions = safeList("unlock sessions", () -> vehicleIntegrationService.getRecentSessions(8));
+        List<OpsAssignment> opsAssignments = safeList("ops assignments", opsAssignmentMapper::selectAll);
         List<User> users = List.of();
 
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("generatedAt", LocalDateTime.now());
+        response.put("dashboardStatus", mapOf(
+                "mode", "LIVE",
+                "detail", "Dashboard data loaded from backend services."));
         response.put("analytics", buildAnalytics(bookings));
         response.put("fleet", buildFleetSnapshot(scooters, bookings, maintenanceLogs));
         response.put("issues", buildIssueSnapshot(issues));
@@ -134,6 +176,28 @@ public class AdminService {
                     "level", "warning")));
         }
         return response;
+    }
+
+    private <T> List<T> safeList(String label, Supplier<List<T>> supplier) {
+        try {
+            List<T> items = supplier.get();
+            return items == null ? List.of() : items;
+        } catch (Exception ex) {
+            log.error("Failed to load admin dashboard {}", label, ex);
+            return List.of();
+        }
+    }
+
+    private Map<String, Object> fallbackDashboardSnapshot(String detail) {
+        Map<String, Object> cached = cachedDashboardSnapshot;
+        if (cached != null) {
+            Map<String, Object> copy = new LinkedHashMap<>(cached);
+            copy.put("dashboardStatus", mapOf(
+                    "mode", "CACHED",
+                    "detail", detail));
+            return copy;
+        }
+        return buildEmptyDashboardSnapshot(detail);
     }
 
     public Scooter addScooter(Scooter scooter) {
@@ -995,6 +1059,73 @@ public class AdminService {
                         "watch", 0,
                         "openIssues", 0,
                         "recentPosBookings", 0));
+    }
+
+    private Map<String, Object> buildEmptyDashboardSnapshot(String detail) {
+        return mapOf(
+                "generatedAt", LocalDateTime.now(),
+                "dashboardStatus", mapOf(
+                        "mode", "FALLBACK",
+                        "detail", detail),
+                "analytics", mapOf(
+                        "financialSummary", mapOf(
+                                "weeklyRevenue", BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP),
+                                "dailyRevenue", BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP),
+                                "averageOrderValue", BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP),
+                                "completedRides", 0,
+                                "popularPeriod", "Unavailable"),
+                        "weeklyRevenueTable", List.of(),
+                        "dailyRevenueTable", List.of(),
+                        "popularPeriods", List.of(),
+                        "chart", mapOf(
+                                "dailyLabels", List.of(),
+                                "dailyRevenue", List.of(),
+                                "weeklyLabels", List.of(),
+                                "weeklyRevenue", List.of())),
+                "fleet", mapOf(
+                        "statusSummary", mapOf(),
+                        "chargingQueue", List.of(),
+                        "hotspots", List.of(),
+                        "scooters", List.of(),
+                        "maintenanceLogs", List.of()),
+                "issues", mapOf(
+                        "records", List.of(),
+                        "summary", mapOf(
+                                "total", 0,
+                                "highPriority", 0,
+                                "workflow", mapOf()),
+                        "highPriorityView", List.of()),
+                "pos", mapOf(
+                        "summary", mapOf(
+                                "count", 0,
+                                "sentConfirmations", 0),
+                        "recentBookings", List.of()),
+                "automation", mapOf(
+                        "summary", mapOf(
+                                "automationEvents", 0,
+                                "unlockedTrips", 0,
+                                "liveSessions", 0,
+                                "nonReturnEscalations", 0,
+                                "capturedTransactions", 0,
+                                "overtimeCaptured", BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP),
+                                "damageCaptured", BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP)),
+                        "events", List.of(),
+                        "payments", List.of(),
+                        "unlockSessions", List.of()),
+                "opsTeam", mapOf(
+                        "summary", mapOf(
+                                "totalStaff", 0,
+                                "deployments", 0,
+                                "collections", 0,
+                                "activeShifts", 0),
+                        "records", List.of()),
+                "users", buildEmptyUserSnapshot(),
+                "discountRules", buildEmptyDiscountRules(),
+                "releaseAudit", buildEmptyReleaseAudit(),
+                "recommendations", List.of(mapOf(
+                        "title", "Dashboard fallback",
+                        "detail", detail,
+                        "level", "warning")));
     }
 
     private void seedOpsAssignmentsIfEmpty() {

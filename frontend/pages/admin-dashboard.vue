@@ -1115,6 +1115,7 @@ const createEmptySnapshot = () => ({
 
 const snapshot = reactive(createEmptySnapshot())
 const loading = ref(false)
+const ADMIN_DASHBOARD_CACHE_KEY = 'adminDashboardSnapshot'
 // Currency the admin panel uses to display all monetary values.
 // Defaults to the device locale; the operator can switch it via the toolbar.
 const adminCurrencyCode = ref(detectCurrencyCode())
@@ -1378,6 +1379,23 @@ const applySnapshot = (data) => {
   Object.assign(snapshot, fresh, data || {})
 }
 
+const getCachedDashboardSnapshot = () => {
+  try {
+    const cached = uni.getStorageSync(ADMIN_DASHBOARD_CACHE_KEY)
+    return typeof cached === 'string' ? JSON.parse(cached) : cached
+  } catch {
+    return null
+  }
+}
+
+const cacheDashboardSnapshot = (data) => {
+  try {
+    uni.setStorageSync(ADMIN_DASHBOARD_CACHE_KEY, data)
+  } catch (error) {
+    console.warn('Failed to cache admin dashboard snapshot:', error)
+  }
+}
+
 const resetScooterForm = () => {
   Object.assign(scooterForm, {
     id: '',
@@ -1454,6 +1472,15 @@ const loadDashboard = async () => {
   try {
     const data = await getAdminDashboard()
     applySnapshot(data)
+    if (!data?.dashboardStatus || ['LIVE', 'CACHED'].includes(data.dashboardStatus.mode)) {
+      cacheDashboardSnapshot(data)
+    }
+    if (data?.dashboardStatus && data.dashboardStatus.mode !== 'LIVE') {
+      uni.showToast({
+        title: data.dashboardStatus.mode === 'CACHED' ? 'Loaded cached dashboard' : 'Loaded fallback dashboard',
+        icon: 'none'
+      })
+    }
 
     if (!selectedScooterId.value && snapshot.fleet.scooters?.length) {
       selectedScooterId.value = snapshot.fleet.scooters[0].id
@@ -1469,6 +1496,20 @@ const loadDashboard = async () => {
     }
   } catch (error) {
     console.error('Failed to load admin dashboard:', error)
+    const cached = getCachedDashboardSnapshot()
+    if (cached) {
+      applySnapshot({
+        ...cached,
+        dashboardStatus: {
+          mode: 'LOCAL_CACHE',
+          detail: 'Backend request failed; showing the last dashboard snapshot stored in this browser.'
+        }
+      })
+      uni.showToast({
+        title: 'Loaded local dashboard cache',
+        icon: 'none'
+      })
+    }
   } finally {
     loading.value = false
   }

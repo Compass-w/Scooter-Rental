@@ -1,6 +1,6 @@
 import request from '@/utils/request.js'
 
-const ADMIN_READ_OPTIONS = { timeout: 30000 }
+const ADMIN_READ_OPTIONS = { timeout: 45000 }
 const ADMIN_WRITE_OPTIONS = { timeout: 25000 }
 
 export const getAdminDashboard = () => request.get('/admin/dashboard', {}, ADMIN_READ_OPTIONS)
