@@ -457,9 +457,31 @@
                 </view>
 
                 <view v-if="selectedScooter" class="preview-stage">
-                  <view class="preview-card-3d">
-                    <view class="preview-card-3d-inner">
+                  <view class="preview-model-shell">
+                    <model-viewer
+                      v-if="adminModelViewerReady && selectedScooter.modelUrl"
+                      class="admin-model-viewer"
+                      :src="selectedScooter.modelUrl"
+                      :poster="selectedScooter.posterUrl || activePreviewImage"
+                      :alt="`${selectedScooter.displayName} 3D scooter model`"
+                      camera-controls
+                      touch-action="pan-y"
+                      auto-rotate
+                      auto-rotate-delay="0"
+                      rotation-per-second="22deg"
+                      shadow-intensity="1"
+                      shadow-softness="0.9"
+                      exposure="1.02"
+                      environment-image="neutral"
+                      interaction-prompt="none"
+                      camera-orbit="0deg 74deg 108%"
+                      min-camera-orbit="auto 55deg 55%"
+                      max-camera-orbit="auto 92deg 180%"
+                      field-of-view="26deg"
+                    ></model-viewer>
+                    <view v-else class="preview-model-fallback">
                       <image class="preview-main-image" :src="activePreviewImage" mode="aspectFit" />
+                      <text class="preview-model-fallback-copy">Loading 3D model...</text>
                     </view>
                   </view>
                   <view class="preview-copy-block">
@@ -721,6 +743,7 @@
                     <view class="field-picker">Workflow: {{ issue.workflowStatus }}</view>
                   </picker>
                   <button class="hero-btn hero-btn-ghost hero-btn-small" @tap="autoAssignIssue(issue)">Auto-assign</button>
+                  <button class="hero-btn hero-btn-secondary hero-btn-small" @tap="fixIssue(issue)">Fix</button>
                 </view>
                 <view class="issue-footer">
                   <text class="issue-assignee">Assigned to {{ issue.assignedStaff || 'Unassigned' }}</text>
@@ -749,6 +772,37 @@
                   Next
                 </button>
               </view>
+            </view>
+
+            <view class="resolved-issues-block">
+              <view class="subpanel-head subpanel-tight">
+                <view>
+                  <text class="subpanel-title">Resolved Issues</text>
+                  <text class="subpanel-copy">Records marked fixed by the admin team appear here.</text>
+                </view>
+                <text class="sync-pill">{{ resolvedIssues.length }} fixed</text>
+              </view>
+              <view v-if="resolvedIssues.length" class="issue-list issue-list-resolved">
+                <view
+                  v-for="issue in resolvedIssues"
+                  :key="`resolved-${issue.issueId}`"
+                  class="issue-card issue-card-resolved"
+                >
+                  <view class="issue-card-head">
+                    <view>
+                      <text class="issue-title">Issue #{{ issue.issueId }} · Scooter #{{ issue.scooterId }}</text>
+                      <text class="issue-meta">{{ issue.category }} · fixed · {{ formatDateTime(issue.updatedAt || issue.createdAt) }}</text>
+                    </view>
+                    <view class="priority-pill priority-low">FIXED</view>
+                  </view>
+                  <text class="issue-description">{{ issue.description }}</text>
+                  <view class="issue-footer">
+                    <text class="issue-assignee">Resolved by {{ issue.assignedStaff || 'Admin team' }}</text>
+                    <text class="issue-status">{{ issue.status || 'RESOLVED' }}</text>
+                  </view>
+                </view>
+              </view>
+              <text v-else class="empty-copy">No fixed issue records yet.</text>
             </view>
           </view>
 
@@ -979,7 +1033,7 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import BaseLayout from './BaseLayout.vue'
 import {
@@ -1116,6 +1170,7 @@ const createEmptySnapshot = () => ({
 const snapshot = reactive(createEmptySnapshot())
 const loading = ref(false)
 const ADMIN_DASHBOARD_CACHE_KEY = 'adminDashboardSnapshot'
+const adminModelViewerReady = ref(false)
 // Currency the admin panel uses to display all monetary values.
 // Defaults to the device locale; the operator can switch it via the toolbar.
 const adminCurrencyCode = ref(detectCurrencyCode())
@@ -1233,8 +1288,20 @@ const selectedScooter = computed(() =>
 
 const editingExisting = computed(() => Boolean(scooterForm.id))
 const issueSummary = computed(() => snapshot.issues.summary || {})
+const openIssues = computed(() =>
+  (snapshot.issues.records || []).filter(item =>
+    String(item.workflowStatus || '').toUpperCase() !== 'FIXED' &&
+    String(item.status || '').toUpperCase() !== 'RESOLVED'
+  )
+)
+const resolvedIssues = computed(() =>
+  (snapshot.issues.records || []).filter(item =>
+    String(item.workflowStatus || '').toUpperCase() === 'FIXED' ||
+    String(item.status || '').toUpperCase() === 'RESOLVED'
+  )
+)
 const displayedIssues = computed(() => {
-  const records = snapshot.issues.records || []
+  const records = openIssues.value
   if (!highPriorityOnly.value) return records
   return records.filter(item => ['HIGH', 'CRITICAL'].includes(String(item.priority || '').toUpperCase()))
 })
@@ -1659,9 +1726,35 @@ const autoAssignIssue = async (issue) => {
   }
 }
 
+const fixIssue = async (issue) => {
+  if (!issue?.issueId) return
+  try {
+    await updateAdminIssue(issue.issueId, { workflowStatus: 'FIXED' })
+    uni.showToast({ title: 'Issue fixed', icon: 'success' })
+    await loadDashboard()
+  } catch (error) {
+    console.error('Failed to fix issue:', error)
+  }
+}
+
 const toggleHighPriorityOnly = () => {
   highPriorityOnly.value = !highPriorityOnly.value
   issuePage.value = 1
+}
+
+const ensureAdminModelViewer = async () => {
+  if (typeof window === 'undefined' || typeof customElements === 'undefined') return
+  if (customElements.get('model-viewer')) {
+    adminModelViewerReady.value = true
+    return
+  }
+
+  try {
+    await import('@google/model-viewer')
+    adminModelViewerReady.value = Boolean(customElements.get('model-viewer'))
+  } catch (error) {
+    console.error('Failed to initialize admin 3D preview:', error)
+  }
 }
 
 const goToCustomerPage = (page) => {
@@ -1887,6 +1980,10 @@ const exportDashboardPdf = () => {
     uni.showToast({ title: 'PDF export is available on web only', icon: 'none' })
   }
 }
+
+onMounted(() => {
+  ensureAdminModelViewer()
+})
 
 onShow(() => {
   if (!ensureAdminAccess()) return
@@ -3247,6 +3344,128 @@ watch(
   50% {
     transform: rotateY(10deg) rotateX(-4deg) translateY(-8rpx);
   }
+}
+
+/* ─── Admin layout hardening ─── */
+.panel,
+.fleet-top-grid,
+.fleet-main-grid,
+.ops-grid,
+.fleet-list-card,
+.fleet-form-card,
+.heatmap-card,
+.fleet-side-panel,
+.ops-form-card,
+.ops-list-card,
+.mini-card {
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.subpanel-head,
+.panel-head,
+.fleet-row,
+.pos-row,
+.charging-row,
+.issue-card-head,
+.issue-footer,
+.pagination-row {
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.fleet-row,
+.pos-row {
+  align-items: flex-start;
+  overflow: hidden;
+}
+
+.fleet-row-main,
+.pos-row-main {
+  min-width: 0;
+  flex: 1 1 320rpx;
+}
+
+.fleet-row-title,
+.fleet-row-meta,
+.fleet-row-coordinates,
+.pos-row-title,
+.pos-row-meta,
+.issue-title,
+.issue-meta,
+.issue-description,
+.issue-policy-value,
+.preview-title,
+.preview-summary,
+.subpanel-copy,
+.panel-subtitle {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.status-btn,
+.hero-btn-small {
+  flex: 0 0 auto;
+  margin-top: 8rpx;
+}
+
+.form-actions,
+.issue-controls,
+.pagination-row {
+  margin-top: 22rpx;
+  padding-top: 12rpx;
+}
+
+.pagination-actions {
+  align-items: center;
+}
+
+.preview-model-shell {
+  min-height: 360rpx;
+  border-radius: 28rpx;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(147, 197, 253, 0.16), transparent 46%),
+    linear-gradient(160deg, #0F172A, #1E3A5F);
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 24rpx 52rpx rgba(15, 23, 42, 0.2);
+}
+
+.admin-model-viewer {
+  width: 100%;
+  height: 360rpx;
+  display: block;
+  background: transparent;
+}
+
+.preview-model-fallback {
+  min-height: 360rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+}
+
+.preview-model-fallback-copy {
+  font-size: 22rpx;
+  color: #DBEAFE;
+  font-weight: 700;
+}
+
+.resolved-issues-block {
+  margin-top: 30rpx;
+  padding-top: 24rpx;
+  border-top: 1px solid rgba(37, 99, 235, 0.1);
+}
+
+.issue-list-resolved {
+  opacity: 0.92;
+}
+
+.issue-card-resolved {
+  background: #F0FDF4;
+  border-color: rgba(34, 197, 94, 0.18);
 }
 
 /* ─── Responsive: Tablet ─── */
