@@ -22,6 +22,8 @@ public class RideAutomationService {
     private static final String EVENT_REMINDER = "REMINDER";
     private static final String EVENT_OVERTIME = "OVERTIME_CHARGE";
     private static final String EVENT_DAMAGE = "DAMAGE_CHARGE";
+    private static final String EVENT_NON_RETURN = "NON_RETURN_ESCALATION";
+    private static final long NON_RETURN_ESCALATION_HOURS = 24;
 
     private final BookingMapper bookingMapper;
     private final IssueReportMapper issueReportMapper;
@@ -90,6 +92,7 @@ public class RideAutomationService {
         for (Booking booking : activeBookings) {
             handleReminder(booking, now);
             handleOvertimeCharges(booking, now);
+            handleNonReturnEscalation(booking, now);
         }
 
         for (IssueReport issue : issueReportMapper.selectAll()) {
@@ -197,15 +200,35 @@ public class RideAutomationService {
         bookingMapper.updateAutomationState(booking);
     }
 
+    private void handleNonReturnEscalation(Booking booking, LocalDateTime now) {
+        if (booking.getPlannedEndTime() == null || now.isBefore(booking.getPlannedEndTime().plusHours(NON_RETURN_ESCALATION_HOURS))) {
+            return;
+        }
+        if (automationEventMapper.countCompletedByBookingAndType(booking.getBookingId(), EVENT_NON_RETURN) > 0) {
+            return;
+        }
+
+        AutomationEvent event = new AutomationEvent();
+        event.setBookingId(booking.getBookingId());
+        event.setEventType(EVENT_NON_RETURN);
+        event.setStatus("COMPLETED");
+        event.setAmount(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
+        event.setDetail("Ride is more than 24 hours overdue. Account flagged for contact, vehicle recovery, and continued card billing review.");
+        event.setDueAt(booking.getPlannedEndTime().plusHours(NON_RETURN_ESCALATION_HOURS));
+        event.setProcessedAt(now);
+        automationEventMapper.insert(event);
+
+        booking.setPaymentStatus("NON_RETURN_ESCALATED");
+        booking.setLastReminderAt(now);
+        bookingMapper.updateAutomationState(booking);
+    }
+
     private boolean isDamageIssue(IssueReport issue) {
         String category = String.valueOf(issue.getCategory() == null ? "" : issue.getCategory()).toLowerCase(Locale.ROOT);
         String description = String.valueOf(issue.getDescription() == null ? "" : issue.getDescription()).toLowerCase(Locale.ROOT);
         return category.contains("damage")
-                || category.contains("crash")
-                || category.contains("accident")
                 || description.contains("damage")
                 || description.contains("scratch")
-                || description.contains("crash")
                 || description.contains("broken");
     }
 

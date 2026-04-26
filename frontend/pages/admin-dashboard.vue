@@ -351,6 +351,10 @@
                       <text class="mini-title">Damage Captured</text>
                       <text class="mini-value mini-value-compact">{{ formatCurrency(automationSummary.damageCaptured) }}</text>
                     </view>
+                    <view class="mini-card">
+                      <text class="mini-title">Non-return Escalations</text>
+                      <text class="mini-value">{{ automationSummary.nonReturnEscalations || 0 }}</text>
+                    </view>
                   </view>
 
                   <view class="audit-list">
@@ -686,6 +690,29 @@
                   </view>
                 </view>
                 <text class="issue-description">{{ issue.description }}</text>
+                <view class="issue-policy-grid">
+                  <view class="issue-policy-item">
+                    <text class="issue-policy-label">Safety action</text>
+                    <text class="issue-policy-value">{{ issue.safetyAction || 'Support triage required.' }}</text>
+                  </view>
+                  <view class="issue-policy-item">
+                    <text class="issue-policy-label">Insurance status</text>
+                    <text class="issue-policy-value">{{ issue.insuranceCaseStatus || 'NOT_REQUIRED' }}</text>
+                  </view>
+                  <view class="issue-policy-item">
+                    <text class="issue-policy-label">Repair estimate</text>
+                    <text class="issue-policy-value">{{ formatCurrency(issue.repairChargeEstimate || 0) }}</text>
+                  </view>
+                  <view class="issue-policy-item issue-policy-item-wide">
+                    <text class="issue-policy-label">Charge policy</text>
+                    <text class="issue-policy-value">{{ issue.customerChargePolicy || 'Support review decides whether any customer charge applies.' }}</text>
+                  </view>
+                </view>
+                <view v-if="issue.riderInjured || issue.thirdPartyInvolved || issue.emergencyServicesContacted" class="issue-incident-flags">
+                  <text v-if="issue.riderInjured" class="incident-flag">Rider injury</text>
+                  <text v-if="issue.thirdPartyInvolved" class="incident-flag">Third party involved</text>
+                  <text v-if="issue.emergencyServicesContacted" class="incident-flag">Emergency contacted</text>
+                </view>
                 <view class="issue-controls">
                   <picker :range="priorityOptions" @change="updateIssueField(issue, 'priority', priorityOptions[$event.detail.value])">
                     <view class="field-picker">Priority: {{ issue.priority }}</view>
@@ -1037,6 +1064,7 @@ const createEmptySnapshot = () => ({
       automationEvents: 0,
       unlockedTrips: 0,
       liveSessions: 0,
+      nonReturnEscalations: 0,
       capturedTransactions: 0,
       overtimeCaptured: 0,
       damageCaptured: 0
@@ -3034,6 +3062,59 @@ watch(
   padding: 22rpx 24rpx;
   background: #F8FAFF;
   border: 1px solid rgba(37, 99, 235, 0.07);
+}
+
+.issue-policy-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12rpx;
+  margin-top: 8rpx;
+}
+
+.issue-policy-item {
+  padding: 14rpx;
+  border-radius: 18rpx;
+  background: #FFFFFF;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.issue-policy-item-wide {
+  grid-column: 1 / -1;
+}
+
+.issue-policy-label {
+  display: block;
+  font-size: 20rpx;
+  font-weight: 800;
+  color: #94A3B8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6rpx;
+}
+
+.issue-policy-value {
+  display: block;
+  font-size: 22rpx;
+  line-height: 1.5;
+  color: #334155;
+  font-weight: 650;
+}
+
+.issue-incident-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8rpx;
+  margin-top: 4rpx;
+}
+
+.incident-flag {
+  padding: 6rpx 12rpx;
+  border-radius: 999rpx;
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  color: #B91C1C;
+  font-size: 20rpx;
+  font-weight: 800;
 }
 
 .priority-pill {

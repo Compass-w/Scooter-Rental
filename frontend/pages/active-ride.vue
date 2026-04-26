@@ -118,6 +118,10 @@
             <text class="trip-return-value">{{ activeRide.startBatteryLevel || 0 }}% → {{ activeRide.estimatedReturnBattery || 0 }}%</text>
           </view>
           <view class="trip-return-item">
+            <text class="trip-return-label">Battery status</text>
+            <text class="trip-return-value">{{ currentBatteryLevel }}% · {{ batteryStatusLabel }}</text>
+          </view>
+          <view class="trip-return-item">
             <text class="trip-return-label">Electricity fee</text>
             <text class="trip-return-value">{{ formatMoney(activeRide.electricityFeeEstimate || 0) }}</text>
           </view>
@@ -470,8 +474,24 @@
           class="textarea"
           :style="ui.textarea"
           maxlength="300"
-          placeholder="Describe the fault, unusual noise, brake issue, battery issue, or anything else we should know."
+          :placeholder="issuePlaceholder"
         />
+        <view v-if="incidentFollowUpRequired" class="incident-panel">
+          <text class="section-label" :style="ui.tileLabel">Safety follow-up</text>
+          <label class="incident-check">
+            <checkbox :checked="issueForm.riderInjured" color="#DC2626" style="transform:scale(0.82)" @tap.stop="toggleIssueFlag('riderInjured')" />
+            <text class="incident-check-text">Rider injury or medical concern</text>
+          </label>
+          <label class="incident-check">
+            <checkbox :checked="issueForm.thirdPartyInvolved" color="#DC2626" style="transform:scale(0.82)" @tap.stop="toggleIssueFlag('thirdPartyInvolved')" />
+            <text class="incident-check-text">Third party, vehicle, or property involved</text>
+          </label>
+          <label class="incident-check">
+            <checkbox :checked="issueForm.emergencyServicesContacted" color="#DC2626" style="transform:scale(0.82)" @tap.stop="toggleIssueFlag('emergencyServicesContacted')" />
+            <text class="incident-check-text">Emergency services contacted</text>
+          </label>
+          <text class="incident-note">{{ incidentPolicyNote }}</text>
+        </view>
         <view class="actions" :style="ui.actions">
           <button class="btn btn-secondary" :style="[ui.button, ui.buttonSecondary]" @tap="closeIssuePopup">
             <text>Cancel</text>
@@ -505,6 +525,9 @@ const issueCategories = [
   { label: 'Mechanical', value: 'MECHANICAL' },
   { label: 'Electrical', value: 'ELECTRICAL' },
   { label: 'Battery', value: 'BATTERY' },
+  { label: 'Damage', value: 'DAMAGE' },
+  { label: 'Accident', value: 'ACCIDENT' },
+  { label: 'Safety', value: 'SAFETY' },
   { label: 'Other', value: 'OTHER' }
 ]
 
@@ -515,7 +538,14 @@ const countdownReached = ref(false)
 const activeRide = ref(getStoredActiveRide())
 const selectedExtensionIndex = ref(0)
 const issuePanelOpen = ref(false)
-const issueForm = ref({ category: 'OTHER', description: '' })
+const createIssueForm = () => ({
+  category: 'OTHER',
+  description: '',
+  riderInjured: false,
+  thirdPartyInvolved: false,
+  emergencyServicesContacted: false
+})
+const issueForm = ref(createIssueForm())
 const nowTick = ref(Date.now())
 let timer = null
 
@@ -836,12 +866,35 @@ const rideVehicle = computed(() => {
   })
 })
 const returnCompliance = computed(() => evaluateReturnCompliance(activeRide.value || {}))
+const currentBatteryLevel = computed(() =>
+  Math.max(0, Math.min(100, Number(activeRide.value?.returnBatteryLevel ?? activeRide.value?.estimatedReturnBattery ?? activeRide.value?.startBatteryLevel ?? 0)))
+)
+const batteryStatusLabel = computed(() => {
+  const level = currentBatteryLevel.value
+  if (level <= 15) return 'Critical, charge required'
+  if (level <= 25) return 'Low, return recommended'
+  if (level <= 55) return 'Usable'
+  return 'Healthy'
+})
 const rideTelemetryText = computed(() => {
   if (!rideVehicle.value?.telemetry?.length) {
     return 'GPS, mileage, battery, and unlock status will be synced to the backend once the scooter is paired.'
   }
   return rideVehicle.value.telemetry.join(' · ')
 })
+const incidentFollowUpRequired = computed(() =>
+  ['ACCIDENT', 'SAFETY'].includes(String(issueForm.value.category || '').toUpperCase())
+)
+const issuePlaceholder = computed(() =>
+  incidentFollowUpRequired.value
+    ? 'Describe what happened, location, injuries, other parties, traffic conditions, and whether the scooter can still be moved safely.'
+    : 'Describe the fault, damage, unusual noise, brake issue, battery issue, or anything else we should know.'
+)
+const incidentPolicyNote = computed(() =>
+  issueForm.value.riderInjured || issueForm.value.thirdPartyInvolved || issueForm.value.emergencyServicesContacted
+    ? 'This will be marked for insurance and safety review before any accident-related charge is finalized.'
+    : 'The scooter will be held for safety review; traffic fines and uncovered negligence remain the rider responsibility.'
+)
 const storeHandoverLabel = computed(() => {
   if (!activeRide.value || activeRide.value.serviceMode !== 'WALK_IN') return 'Not applicable'
   const pickup = activeRide.value.pickupStoreName || 'Pickup store'
@@ -1042,6 +1095,13 @@ const closeIssuePopup = () => {
   issuePanelOpen.value = false
 }
 
+const toggleIssueFlag = (key) => {
+  issueForm.value = {
+    ...issueForm.value,
+    [key]: !issueForm.value[key]
+  }
+}
+
 const submitIssue = async () => {
   if (!activeRide.value?.scooterId || busyAction.value) return
   const description = String(issueForm.value.description || '').trim()
@@ -1056,10 +1116,13 @@ const submitIssue = async () => {
       scooterId: activeRide.value.scooterId,
       bookingId: activeRide.value.bookingId,
       description,
-      category: issueForm.value.category
+      category: issueForm.value.category,
+      riderInjured: issueForm.value.riderInjured,
+      thirdPartyInvolved: issueForm.value.thirdPartyInvolved,
+      emergencyServicesContacted: issueForm.value.emergencyServicesContacted
     })
     issuePanelOpen.value = false
-    issueForm.value = { category: 'OTHER', description: '' }
+    issueForm.value = createIssueForm()
     uni.showToast({ title: 'Issue reported', icon: 'success' })
   } catch (error) {
     console.error('Failed to report issue:', error)
@@ -1114,6 +1177,10 @@ onUnload(() => {
 .chip-text { font-size: 26rpx; font-weight: 600; color: #64748B; }
 .chip-text-active { color: #2563EB; }
 .textarea { width: 100%; min-height: 200rpx; padding: 24rpx; box-sizing: border-box; border-radius: 20rpx; background: #F8FBFF; border: 2rpx solid #E2E8F0; font-size: 26rpx; line-height: 1.6; color: #0F172A; margin-bottom: 20rpx; }
+.incident-panel { margin: 0 0 24rpx; padding: 22rpx; border-radius: 22rpx; background: #FFF7ED; border: 1rpx solid #FED7AA; }
+.incident-check { display: flex; align-items: center; gap: 12rpx; margin-top: 14rpx; }
+.incident-check-text { flex: 1; font-size: 24rpx; line-height: 1.5; color: #7C2D12; font-weight: 700; }
+.incident-note { display: block; margin-top: 18rpx; font-size: 23rpx; line-height: 1.55; color: #9A3412; }
 .actions { display: flex; flex-wrap: wrap; gap: 16rpx; }
 .btn { min-height: 90rpx; border-radius: 999rpx; display: flex; align-items: center; justify-content: center; font-size: 28rpx; font-weight: 700; border: none; flex: 1 1 220rpx; }
 .btn::after { border: none; }

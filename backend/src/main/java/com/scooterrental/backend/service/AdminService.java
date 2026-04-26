@@ -548,6 +548,13 @@ public class AdminService {
                         "priority", item.getPriority() == null ? "MEDIUM" : item.getPriority(),
                         "workflowStatus", item.getWorkflowStatus() == null ? "REPORTED" : item.getWorkflowStatus(),
                         "assignedStaff", item.getAssignedStaff() == null ? "Unassigned" : item.getAssignedStaff(),
+                        "safetyAction", defaultText(item.getSafetyAction(), "Support triage required."),
+                        "insuranceCaseStatus", defaultText(item.getInsuranceCaseStatus(), "NOT_REQUIRED"),
+                        "customerChargePolicy", defaultText(item.getCustomerChargePolicy(), "Support review decides whether any customer charge applies."),
+                        "repairChargeEstimate", scale(item.getRepairChargeEstimate()),
+                        "riderInjured", Boolean.TRUE.equals(item.getRiderInjured()),
+                        "thirdPartyInvolved", Boolean.TRUE.equals(item.getThirdPartyInvolved()),
+                        "emergencyServicesContacted", Boolean.TRUE.equals(item.getEmergencyServicesContacted()),
                         "createdAt", item.getCreatedAt(),
                         "updatedAt", item.getUpdatedAt()))
                 .toList();
@@ -806,12 +813,16 @@ public class AdminService {
         long liveSessions = unlockSessions.stream()
                 .filter(item -> "LIVE".equalsIgnoreCase(item.getTelemetryStatus()))
                 .count();
+        long nonReturnEscalations = automationEvents.stream()
+                .filter(item -> "NON_RETURN_ESCALATION".equalsIgnoreCase(item.getEventType()))
+                .count();
 
         return mapOf(
                 "summary", mapOf(
                         "automationEvents", automationEvents.size(),
                         "unlockedTrips", unlockedTrips,
                         "liveSessions", liveSessions,
+                        "nonReturnEscalations", nonReturnEscalations,
                         "capturedTransactions", paymentTransactions.stream().filter(item -> "CAPTURED".equalsIgnoreCase(item.getStatus())).count(),
                         "overtimeCaptured", overtimeCaptured,
                         "damageCaptured", damageCaptured),

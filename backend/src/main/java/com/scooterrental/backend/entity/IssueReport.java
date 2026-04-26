@@ -16,6 +16,13 @@ public class IssueReport {
     private String priority;
     private String workflowStatus;
     private String assignedStaff;
+    private String safetyAction;
+    private String insuranceCaseStatus;
+    private String customerChargePolicy;
+    private java.math.BigDecimal repairChargeEstimate;
+    private Boolean riderInjured;
+    private Boolean thirdPartyInvolved;
+    private Boolean emergencyServicesContacted;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

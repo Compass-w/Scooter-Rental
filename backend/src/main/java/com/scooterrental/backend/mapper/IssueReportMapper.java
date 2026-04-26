@@ -24,6 +24,13 @@ public interface IssueReportMapper {
                 priority VARCHAR(16) NOT NULL DEFAULT 'MEDIUM',
                 workflow_status VARCHAR(24) NOT NULL DEFAULT 'REPORTED',
                 assigned_staff VARCHAR(80),
+                safety_action TEXT,
+                insurance_case_status VARCHAR(40) NOT NULL DEFAULT 'NOT_REQUIRED',
+                customer_charge_policy TEXT,
+                repair_charge_estimate DECIMAL(10, 2) NOT NULL DEFAULT 0,
+                rider_injured BOOLEAN NOT NULL DEFAULT FALSE,
+                third_party_involved BOOLEAN NOT NULL DEFAULT FALSE,
+                emergency_services_contacted BOOLEAN NOT NULL DEFAULT FALSE,
                 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
@@ -42,6 +49,27 @@ public interface IssueReportMapper {
     @Update("ALTER TABLE issue_reports ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP")
     void ensureUpdatedAtColumn();
 
+    @Update("ALTER TABLE issue_reports ADD COLUMN IF NOT EXISTS safety_action TEXT")
+    void ensureSafetyActionColumn();
+
+    @Update("ALTER TABLE issue_reports ADD COLUMN IF NOT EXISTS insurance_case_status VARCHAR(40) NOT NULL DEFAULT 'NOT_REQUIRED'")
+    void ensureInsuranceCaseStatusColumn();
+
+    @Update("ALTER TABLE issue_reports ADD COLUMN IF NOT EXISTS customer_charge_policy TEXT")
+    void ensureCustomerChargePolicyColumn();
+
+    @Update("ALTER TABLE issue_reports ADD COLUMN IF NOT EXISTS repair_charge_estimate DECIMAL(10, 2) NOT NULL DEFAULT 0")
+    void ensureRepairChargeEstimateColumn();
+
+    @Update("ALTER TABLE issue_reports ADD COLUMN IF NOT EXISTS rider_injured BOOLEAN NOT NULL DEFAULT FALSE")
+    void ensureRiderInjuredColumn();
+
+    @Update("ALTER TABLE issue_reports ADD COLUMN IF NOT EXISTS third_party_involved BOOLEAN NOT NULL DEFAULT FALSE")
+    void ensureThirdPartyInvolvedColumn();
+
+    @Update("ALTER TABLE issue_reports ADD COLUMN IF NOT EXISTS emergency_services_contacted BOOLEAN NOT NULL DEFAULT FALSE")
+    void ensureEmergencyServicesContactedColumn();
+
     @Insert("""
             INSERT INTO issue_reports (
                 user_id,
@@ -53,6 +81,13 @@ public interface IssueReportMapper {
                 priority,
                 workflow_status,
                 assigned_staff,
+                safety_action,
+                insurance_case_status,
+                customer_charge_policy,
+                repair_charge_estimate,
+                rider_injured,
+                third_party_involved,
+                emergency_services_contacted,
                 updated_at
             )
             VALUES (
@@ -65,6 +100,13 @@ public interface IssueReportMapper {
                 #{priority},
                 #{workflowStatus},
                 #{assignedStaff},
+                #{safetyAction},
+                #{insuranceCaseStatus},
+                #{customerChargePolicy},
+                #{repairChargeEstimate},
+                #{riderInjured},
+                #{thirdPartyInvolved},
+                #{emergencyServicesContacted},
                 #{updatedAt}
             )
             """)
@@ -82,6 +124,13 @@ public interface IssueReportMapper {
                    priority,
                    workflow_status AS workflowStatus,
                    assigned_staff AS assignedStaff,
+                   safety_action AS safetyAction,
+                   insurance_case_status AS insuranceCaseStatus,
+                   customer_charge_policy AS customerChargePolicy,
+                   repair_charge_estimate AS repairChargeEstimate,
+                   rider_injured AS riderInjured,
+                   third_party_involved AS thirdPartyInvolved,
+                   emergency_services_contacted AS emergencyServicesContacted,
                    created_at AS createdAt,
                    updated_at AS updatedAt
             FROM issue_reports
@@ -100,6 +149,13 @@ public interface IssueReportMapper {
                    priority,
                    workflow_status AS workflowStatus,
                    assigned_staff AS assignedStaff,
+                   safety_action AS safetyAction,
+                   insurance_case_status AS insuranceCaseStatus,
+                   customer_charge_policy AS customerChargePolicy,
+                   repair_charge_estimate AS repairChargeEstimate,
+                   rider_injured AS riderInjured,
+                   third_party_involved AS thirdPartyInvolved,
+                   emergency_services_contacted AS emergencyServicesContacted,
                    created_at AS createdAt,
                    updated_at AS updatedAt
             FROM issue_reports
