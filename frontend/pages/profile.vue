@@ -616,6 +616,337 @@
         </view>
       </view>
 
+      <!-- ========== PROBLEM FEEDBACK MODAL ========== -->
+      <view v-if="feedbackModal.open" class="modal-overlay" @tap="closeProblemFeedback">
+        <view class="modal-card support-modal" @tap.stop>
+          <view class="modal-header">
+            <view class="modal-icon-bg feedback-icon-bg">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              </svg>
+            </view>
+            <view class="modal-header-text">
+              <text class="modal-title">Problem Feedback</text>
+              <text class="modal-subtitle">Report a vehicle, ride, or safety issue</text>
+            </view>
+            <view class="modal-close-btn" @tap="closeProblemFeedback">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2.2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </view>
+          </view>
+          <scroll-view scroll-y class="support-modal-body">
+            <view class="support-section">
+              <text class="support-section-title">Issue type</text>
+              <view class="support-chip-row">
+                <view
+                  v-for="item in feedbackCategories"
+                  :key="item.value"
+                  :class="['support-chip', feedbackForm.category === item.value ? 'support-chip-active' : '']"
+                  @tap="feedbackForm.category = item.value"
+                >
+                  <text :class="['support-chip-text', feedbackForm.category === item.value ? 'support-chip-text-active' : '']">{{ item.label }}</text>
+                </view>
+              </view>
+            </view>
+
+            <view v-if="feedbackRideOptions.length" class="support-section">
+              <text class="support-section-title">Related ride</text>
+              <view class="support-related-list">
+                <view
+                  v-for="ride in feedbackRideOptions"
+                  :key="ride.key"
+                  :class="['support-related-card', feedbackForm.rideKey === ride.key ? 'support-related-card-active' : '']"
+                  @tap="selectFeedbackRide(ride)"
+                >
+                  <view>
+                    <text class="support-related-title">{{ ride.title }}</text>
+                    <text class="support-related-meta">{{ ride.meta }}</text>
+                  </view>
+                  <text class="support-related-tag">{{ ride.statusLabel }}</text>
+                </view>
+              </view>
+            </view>
+
+            <view class="support-section">
+              <text class="support-section-title">Describe what happened</text>
+              <textarea
+                v-model="feedbackForm.description"
+                class="support-textarea"
+                maxlength="500"
+                placeholder="Tell us what happened, what the scooter did, and whether the ride had to be stopped."
+              />
+              <text class="support-helper-text">{{ feedbackForm.description.length }}/500 characters</text>
+            </view>
+
+            <view class="support-section support-grid-two">
+              <view class="dform-group">
+                <text class="dform-label">Scooter ID</text>
+                <input
+                  v-model="feedbackForm.scooterId"
+                  class="dform-input-alone"
+                  type="number"
+                  placeholder="Required"
+                />
+              </view>
+              <view class="dform-group">
+                <text class="dform-label">Booking ID</text>
+                <input
+                  v-model="feedbackForm.bookingId"
+                  class="dform-input-alone"
+                  type="number"
+                  placeholder="Optional"
+                />
+              </view>
+            </view>
+
+            <view class="support-section">
+              <text class="support-section-title">Incident details</text>
+              <view class="support-toggle-list">
+                <view class="support-toggle-row" @tap="feedbackForm.riderInjured = !feedbackForm.riderInjured">
+                  <text class="support-toggle-copy">Rider injured</text>
+                  <view :class="['toggle-switch', { 'toggle-on': feedbackForm.riderInjured }]"><view class="toggle-thumb"></view></view>
+                </view>
+                <view class="support-toggle-row" @tap="feedbackForm.thirdPartyInvolved = !feedbackForm.thirdPartyInvolved">
+                  <text class="support-toggle-copy">Third party involved</text>
+                  <view :class="['toggle-switch', { 'toggle-on': feedbackForm.thirdPartyInvolved }]"><view class="toggle-thumb"></view></view>
+                </view>
+                <view class="support-toggle-row" @tap="feedbackForm.emergencyServicesContacted = !feedbackForm.emergencyServicesContacted">
+                  <text class="support-toggle-copy">Emergency services contacted</text>
+                  <view :class="['toggle-switch', { 'toggle-on': feedbackForm.emergencyServicesContacted }]"><view class="toggle-thumb"></view></view>
+                </view>
+              </view>
+            </view>
+
+            <view class="support-section">
+              <text class="support-section-title">Support triage preview</text>
+              <view class="support-preview-card">
+                <view class="support-preview-row">
+                  <text class="support-preview-label">Priority</text>
+                  <text class="support-preview-value">{{ feedbackPreview.priority }}</text>
+                </view>
+                <view class="support-preview-row">
+                  <text class="support-preview-label">Safety action</text>
+                  <text class="support-preview-copy">{{ feedbackPreview.safetyAction }}</text>
+                </view>
+              </view>
+            </view>
+
+            <view v-if="feedbackHistory.length" class="support-section">
+              <text class="support-section-title">Recent reports</text>
+              <view
+                v-for="item in feedbackHistory.slice(0, 3)"
+                :key="item.localId"
+                class="support-history-card"
+              >
+                <view class="support-history-top">
+                  <text class="support-history-title">{{ item.categoryLabel }}</text>
+                  <text class="support-history-status">#{{ item.issueId || 'Pending' }}</text>
+                </view>
+                <text class="support-history-copy">{{ item.description }}</text>
+                <text class="support-history-meta">{{ item.createdAtLabel }}</text>
+              </view>
+            </view>
+
+            <view class="support-action-row">
+              <button class="btn-ghost" @tap="closeProblemFeedback">Cancel</button>
+              <button class="dform-btn-primary" :disabled="feedbackModal.submitting" @tap="submitProblemFeedback">
+                <text>{{ feedbackModal.submitting ? 'Submitting…' : 'Submit Report' }}</text>
+              </button>
+            </view>
+          </scroll-view>
+        </view>
+      </view>
+
+      <!-- ========== SAFETY CENTER MODAL ========== -->
+      <view v-if="safetyModal.open" class="modal-overlay" @tap="closeSafetyCenter">
+        <view class="modal-card support-modal" @tap.stop>
+          <view class="modal-header">
+            <view class="modal-icon-bg safety-icon-bg">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              </svg>
+            </view>
+            <view class="modal-header-text">
+              <text class="modal-title">Safety Center</text>
+              <text class="modal-subtitle">Ride checks, incident steps, and live reminders</text>
+            </view>
+            <view class="modal-close-btn" @tap="closeSafetyCenter">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2.2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </view>
+          </view>
+          <scroll-view scroll-y class="support-modal-body">
+            <view class="safety-hero-card">
+              <text class="safety-hero-title">{{ safetyStatus.title }}</text>
+              <text class="safety-hero-copy">{{ safetyStatus.copy }}</text>
+              <view class="safety-hero-tags">
+                <text class="safety-hero-tag">{{ safetyStatus.badge }}</text>
+                <text class="safety-hero-tag">{{ wallet.paymentMethods.length }} saved cards</text>
+              </view>
+            </view>
+
+            <view class="support-section">
+              <text class="support-section-title">Before you unlock</text>
+              <view class="support-checklist">
+                <view v-for="item in safetyChecklist" :key="item.label" class="support-checklist-item">
+                  <view :class="['support-check-icon', item.done ? 'support-check-icon-active' : '']"></view>
+                  <view class="support-check-copy">
+                    <text class="support-check-title">{{ item.label }}</text>
+                    <text class="support-check-sub">{{ item.detail }}</text>
+                  </view>
+                </view>
+              </view>
+            </view>
+
+            <view class="support-section">
+              <text class="support-section-title">If something goes wrong</text>
+              <view class="support-emergency-card">
+                <view v-for="step in safetyEmergencySteps" :key="step.title" class="support-emergency-row">
+                  <view class="support-step-badge"><text class="support-step-badge-text">{{ step.step }}</text></view>
+                  <view class="support-step-copy">
+                    <text class="support-step-title">{{ step.title }}</text>
+                    <text class="support-step-sub">{{ step.copy }}</text>
+                  </view>
+                </view>
+              </view>
+            </view>
+
+            <view class="support-section">
+              <text class="support-section-title">Quick actions</text>
+              <view class="support-quick-grid">
+                <view class="support-quick-card" @tap="openProblemFeedbackFromSafety">
+                  <text class="support-quick-title">Report a scooter issue</text>
+                  <text class="support-quick-copy">Send triage details to support without leaving your profile.</text>
+                </view>
+                <view class="support-quick-card" @tap="goToFindScooter">
+                  <text class="support-quick-title">Check nearby vehicles</text>
+                  <text class="support-quick-copy">Only unlock scooters with safe battery levels and normal status.</text>
+                </view>
+              </view>
+            </view>
+          </scroll-view>
+        </view>
+      </view>
+
+      <!-- ========== CAREERS & PARTNERSHIPS MODAL ========== -->
+      <view v-if="careerModal.open" class="modal-overlay" @tap="closeCareerCenter">
+        <view class="modal-card support-modal" @tap.stop>
+          <view class="modal-header">
+            <view class="modal-icon-bg career-icon-bg">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+                <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+              </svg>
+            </view>
+            <view class="modal-header-text">
+              <text class="modal-title">Careers & Partnerships</text>
+              <text class="modal-subtitle">Explore roles, operator programs, and leave your interest</text>
+            </view>
+            <view class="modal-close-btn" @tap="closeCareerCenter">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2.2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </view>
+          </view>
+          <scroll-view scroll-y class="support-modal-body">
+            <view class="support-section">
+              <text class="support-section-title">Open tracks</text>
+              <view class="support-history-card" v-for="item in careerOpportunities" :key="item.title">
+                <view class="support-history-top">
+                  <text class="support-history-title">{{ item.title }}</text>
+                  <text class="support-history-status">{{ item.type }}</text>
+                </view>
+                <text class="support-history-copy">{{ item.copy }}</text>
+              </view>
+            </view>
+
+            <view class="support-section">
+              <text class="support-section-title">Partnership programs</text>
+              <view class="support-quick-grid">
+                <view class="support-quick-card" v-for="item in partnershipPrograms" :key="item.title">
+                  <text class="support-quick-title">{{ item.title }}</text>
+                  <text class="support-quick-copy">{{ item.copy }}</text>
+                </view>
+              </view>
+            </view>
+
+            <view class="support-section">
+              <text class="support-section-title">Leave your interest</text>
+              <view class="support-chip-row">
+                <view
+                  v-for="item in careerInterestTypes"
+                  :key="item.value"
+                  :class="['support-chip', careerForm.interestType === item.value ? 'support-chip-active' : '']"
+                  @tap="selectCareerInterestType(item.value)"
+                >
+                  <text :class="['support-chip-text', careerForm.interestType === item.value ? 'support-chip-text-active' : '']">{{ item.label }}</text>
+                </view>
+              </view>
+              <view class="support-chip-row">
+                <view
+                  v-for="item in careerFocusOptions"
+                  :key="item"
+                  :class="['support-chip', careerForm.focusArea === item ? 'support-chip-active' : '']"
+                  @tap="careerForm.focusArea = item"
+                >
+                  <text :class="['support-chip-text', careerForm.focusArea === item ? 'support-chip-text-active' : '']">{{ item }}</text>
+                </view>
+              </view>
+            </view>
+
+            <view class="support-section support-grid-two">
+              <view class="dform-group">
+                <text class="dform-label">Name</text>
+                <input v-model="careerForm.name" class="dform-input-alone" placeholder="Your name" />
+              </view>
+              <view class="dform-group">
+                <text class="dform-label">Email</text>
+                <input v-model="careerForm.email" class="dform-input-alone" placeholder="you@example.com" />
+              </view>
+            </view>
+
+            <view class="support-section">
+              <view class="dform-group">
+                <text class="dform-label">Company / School</text>
+                <input v-model="careerForm.organization" class="dform-input-alone" placeholder="Optional" />
+              </view>
+              <view class="dform-group">
+                <text class="dform-label">Why are you interested?</text>
+                <textarea
+                  v-model="careerForm.message"
+                  class="support-textarea"
+                  maxlength="400"
+                  placeholder="Tell us the city, role, or partnership idea you are interested in."
+                />
+              </view>
+            </view>
+
+            <view v-if="careerHistory.length" class="support-section">
+              <text class="support-section-title">Saved interests</text>
+              <view class="support-history-card" v-for="item in careerHistory.slice(0, 3)" :key="item.localId">
+                <view class="support-history-top">
+                  <text class="support-history-title">{{ item.interestTypeLabel }} · {{ item.focusArea }}</text>
+                  <text class="support-history-status">{{ item.createdAtLabel }}</text>
+                </view>
+                <text class="support-history-copy">{{ item.message }}</text>
+              </view>
+            </view>
+
+            <view class="support-action-row">
+              <button class="btn-ghost" @tap="closeCareerCenter">Close</button>
+              <button class="dform-btn-primary" :disabled="careerModal.submitting" @tap="submitCareerInterest">
+                <text>{{ careerModal.submitting ? 'Saving…' : 'Save Interest' }}</text>
+              </button>
+            </view>
+          </scroll-view>
+        </view>
+      </view>
+
       <!-- ========== PROFILE HEADER ========== -->
       <view class="profile-header">
         <!-- Blue gradient background layer -->
@@ -781,7 +1112,7 @@
         <view class="pc-card pc-menu-card">
 
           <!-- Problem Feedback -->
-          <view class="pc-menu-item" @tap="goToHelp">
+          <view class="pc-menu-item" @tap="openProblemFeedback">
             <view class="pc-menu-icon-wrap" style="background:#FEE2E2;">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -812,7 +1143,7 @@
           <view class="pc-menu-divider"></view>
 
           <!-- Safety Center -->
-          <view class="pc-menu-item" @tap="goToHelp">
+          <view class="pc-menu-item" @tap="openSafetyCenter">
             <view class="pc-menu-icon-wrap" style="background:#DBEAFE;">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
@@ -826,7 +1157,7 @@
           <view class="pc-menu-divider"></view>
 
           <!-- Careers & Partnerships -->
-          <view class="pc-menu-item" @tap="goToHelp">
+          <view class="pc-menu-item" @tap="openCareerCenter">
             <view class="pc-menu-icon-wrap" style="background:#D1FAE5;">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
@@ -904,10 +1235,82 @@ import {
   getBookings, cancelBooking,
   getSettings, updateSettings
 } from '@/api/profile.js'
+import { reportIssue } from '@/api/issue.js'
 import { logout as apiLogout } from '@/api/user.js'
 import { formatCny } from '@/utils/pricing.js'
 
 const PROFILE_REFRESH_TTL_MS = 30 * 1000
+const FEEDBACK_HISTORY_STORAGE_KEY = 'profileFeedbackHistory'
+const CAREER_HISTORY_STORAGE_KEY = 'profileCareerHistory'
+
+const feedbackCategories = [
+  { value: 'MECHANICAL', label: 'Mechanical' },
+  { value: 'BATTERY', label: 'Battery' },
+  { value: 'ELECTRICAL', label: 'Electrical' },
+  { value: 'DAMAGE', label: 'Damage' },
+  { value: 'SAFETY', label: 'Safety' },
+  { value: 'ACCIDENT', label: 'Accident' },
+  { value: 'OTHER', label: 'Other' }
+]
+
+const careerInterestTypes = [
+  { value: 'CAREER', label: 'Career' },
+  { value: 'PARTNERSHIP', label: 'Partnership' },
+  { value: 'CAMPUS', label: 'Campus Program' }
+]
+
+const careerOpportunities = [
+  {
+    title: 'City Operations Coordinator',
+    type: 'Full-time',
+    copy: 'Own fleet availability, rider support follow-up, and field-quality loops for one launch city.'
+  },
+  {
+    title: 'Safety & Incident Analyst',
+    type: 'Hybrid',
+    copy: 'Review ride incidents, improve playbooks, and keep rider safety guidance aligned with live operations.'
+  },
+  {
+    title: 'Growth Intern',
+    type: 'Internship',
+    copy: 'Support campus activations, local partnerships, and rider research for new market launches.'
+  }
+]
+
+const partnershipPrograms = [
+  {
+    title: 'University Mobility Partner',
+    copy: 'Launch scooter access near campus housing, libraries, and commuter hubs with shared safety education.'
+  },
+  {
+    title: 'Retail & Venue Pickup Points',
+    copy: 'Create branded parking and pickup zones for malls, stations, and event venues.'
+  },
+  {
+    title: 'Operations Vendor Network',
+    copy: 'Work with us on repairs, battery logistics, local warehousing, and vehicle turnaround.'
+  }
+]
+
+const createFeedbackForm = () => ({
+  category: 'MECHANICAL',
+  rideKey: '',
+  scooterId: '',
+  bookingId: '',
+  description: '',
+  riderInjured: false,
+  thirdPartyInvolved: false,
+  emergencyServicesContacted: false
+})
+
+const createCareerForm = () => ({
+  interestType: 'CAREER',
+  focusArea: 'City Operations',
+  name: '',
+  email: '',
+  organization: '',
+  message: ''
+})
 
 // Reactive state — user profile
 const userInfo    = ref({ username: '', name: '', email: '', phone: '', city: '', avatar: '', avatarUrl: '', createdAt: '' })
@@ -929,6 +1332,15 @@ const periodStats  = ref({ rides: 0, minutes: 0, spent: '0.00' })
 // Reactive state — wallet
 const wallet  = ref({ balance: '0.00', autoTopUp: false, paymentMethods: [] })
 const newCard = ref({ number: '', expires: '', cvv: '' })
+
+// Reactive state — profile feature modals
+const feedbackModal = ref({ open: false, submitting: false })
+const safetyModal = ref({ open: false })
+const careerModal = ref({ open: false, submitting: false })
+const feedbackForm = ref(createFeedbackForm())
+const careerForm = ref(createCareerForm())
+const feedbackHistory = ref([])
+const careerHistory = ref([])
 
 // Reactive state — trips & bookings
 const recentTrips      = ref([])
@@ -970,6 +1382,165 @@ const featuredTripIsActive = computed(() => String(featuredTrip.value?.status ||
 const memberSince = computed(() => {
   if (!userInfo.value.createdAt) return '2024'
   return new Date(userInfo.value.createdAt).getFullYear()
+})
+
+const getScopedStorageKey = (baseKey) => {
+  const cachedUser = readStoredProfileUser()
+  const userId = userInfo.value.userId || userInfo.value.id || cachedUser.userId || cachedUser.id || 'guest'
+  return `${baseKey}:${userId}`
+}
+
+const readScopedHistory = (baseKey) => {
+  try {
+    const cached = uni.getStorageSync(getScopedStorageKey(baseKey))
+    if (!cached) return []
+    const parsed = typeof cached === 'string' ? JSON.parse(cached) : cached
+    return Array.isArray(parsed) ? parsed : []
+  } catch (error) {
+    globalThis.__APP_LOGGER__?.error('Failed to read scoped history:', error)
+    return []
+  }
+}
+
+const writeScopedHistory = (baseKey, items) => {
+  uni.setStorageSync(getScopedStorageKey(baseKey), JSON.stringify(items))
+}
+
+const formatLocalDateTime = (value = Date.now()) => {
+  const date = new Date(value)
+  return date.toLocaleString('en-GB', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+const feedbackRideOptions = computed(() => {
+  const items = [currentRide.value, ...recentTrips.value]
+  const deduped = []
+  const seen = new Set()
+
+  items.forEach((item) => {
+    if (!item?.bookingId || seen.has(String(item.bookingId))) return
+    seen.add(String(item.bookingId))
+    deduped.push({
+      key: String(item.bookingId),
+      bookingId: item.bookingId,
+      scooterId: item.scooterId || '',
+      title: item.scooterLabel || `Booking #${item.bookingId}`,
+      meta: `${item.date} · ${item.duration} min`,
+      statusLabel: item.statusLabel || 'Ride'
+    })
+  })
+
+  return deduped
+})
+
+const feedbackPreview = computed(() => {
+  const category = String(feedbackForm.value.category || 'OTHER').toUpperCase()
+  const description = String(feedbackForm.value.description || '').toLowerCase()
+
+  const isUrgentByWords =
+    description.includes('brake') ||
+    description.includes('crash') ||
+    description.includes('injur') ||
+    description.includes('smoke') ||
+    description.includes('fire') ||
+    description.includes('unlock')
+
+  let priority = 'LOW'
+  if (['ACCIDENT', 'SAFETY'].includes(category) || feedbackForm.value.riderInjured || feedbackForm.value.thirdPartyInvolved || feedbackForm.value.emergencyServicesContacted) {
+    priority = 'CRITICAL'
+  } else if (['DAMAGE', 'BATTERY', 'ELECTRICAL'].includes(category) || isUrgentByWords) {
+    priority = 'HIGH'
+  } else if (category === 'MECHANICAL') {
+    priority = 'MEDIUM'
+  }
+
+  let safetyAction = 'Support triage will review the report and decide whether maintenance is required.'
+  if (priority === 'CRITICAL') {
+    safetyAction = 'Stop the ride, move to a safe location, and contact emergency services first when anyone is injured or at risk.'
+  } else if (['MECHANICAL', 'BATTERY', 'ELECTRICAL', 'DAMAGE'].includes(category)) {
+    safetyAction = 'Stop using the scooter and leave it parked safely until maintenance review is complete.'
+  }
+
+  return { priority, safetyAction }
+})
+
+const safetyChecklist = computed(() => [
+  {
+    label: 'Location access is enabled',
+    detail: settings.value.location
+      ? 'Live location is available for finding legal pickup and return areas.'
+      : 'Turn location back on before starting a ride so nearby scooters and parking zones can be verified.',
+    done: Boolean(settings.value.location)
+  },
+  {
+    label: 'Ride alerts are configured',
+    detail: settings.value.notifications
+      ? 'You can receive unlock, overtime, and incident guidance in time.'
+      : 'Enable notifications to avoid missing unlock and return warnings.',
+    done: Boolean(settings.value.notifications)
+  },
+  {
+    label: 'Payment method is ready',
+    detail: wallet.paymentMethods.length
+      ? `You have ${wallet.paymentMethods.length} saved card${wallet.paymentMethods.length > 1 ? 's' : ''} for holds or damage review.`
+      : 'Add a card so damage review, overtime fees, or refunds can be handled smoothly.',
+    done: wallet.paymentMethods.length > 0
+  },
+  {
+    label: 'Current ride status is clear',
+    detail: currentRide.value
+      ? `You currently have ${currentRide.value.scooterLabel} active. End it before starting another scooter.`
+      : 'No active rides detected, so you are clear to start a new trip.',
+    done: !currentRide.value
+  }
+])
+
+const safetyEmergencySteps = [
+  {
+    step: '1',
+    title: 'Move to safety first',
+    copy: 'Get off the scooter, move away from traffic, and only continue the report once everyone is safe.'
+  },
+  {
+    step: '2',
+    title: 'Call emergency services if needed',
+    copy: 'Use local emergency services immediately for injuries, collisions, blocked roads, or fire risk.'
+  },
+  {
+    step: '3',
+    title: 'Submit a detailed issue report',
+    copy: 'Include the scooter ID, what failed, and whether another rider or vehicle was involved.'
+  }
+]
+
+const safetyStatus = computed(() => {
+  if (currentRide.value) {
+    return {
+      title: `Active ride on ${currentRide.value.scooterLabel}`,
+      copy: 'Stay in bike lanes where available, avoid riding with one hand, and park only in permitted zones before ending the trip.',
+      badge: 'Live ride safety'
+    }
+  }
+
+  return {
+    title: 'Ready for your next ride',
+    copy: 'Complete the quick checks below before unlocking to reduce incident risk and avoid return penalties.',
+    badge: 'Pre-ride checklist'
+  }
+})
+
+const careerFocusOptions = computed(() => {
+  if (careerForm.value.interestType === 'PARTNERSHIP') {
+    return ['Campus Launch', 'Retail Venue', 'Fleet Operations', 'Brand Campaign']
+  }
+  if (careerForm.value.interestType === 'CAMPUS') {
+    return ['Student Ambassador', 'Events', 'Research Project', 'Pilot Program']
+  }
+  return ['City Operations', 'Safety & Support', 'Growth', 'Engineering']
 })
 
 let profileRefreshPromise = null
@@ -1188,6 +1759,11 @@ async function loadSettings() {
   }
 }
 
+function loadProfileFeatureHistory() {
+  feedbackHistory.value = readScopedHistory(FEEDBACK_HISTORY_STORAGE_KEY)
+  careerHistory.value = readScopedHistory(CAREER_HISTORY_STORAGE_KEY)
+}
+
 /**
  * Component mounted lifecycle hook
  * Load all page data in parallel
@@ -1222,6 +1798,7 @@ const refreshProfilePage = ({ force = false } = {}) => {
     loadBookings('upcoming'),
     loadBookings('past')
   ]).finally(() => {
+    loadProfileFeatureHistory()
     lastProfileRefreshAt.value = Date.now()
     profileNeedsRefresh.value = false
     profileRefreshPromise = null
@@ -1454,6 +2031,181 @@ const walletModal     = ref({ open: false, showAddForm: false })
 const openWalletModal  = () => { walletModal.value = { open: true, showAddForm: false } }
 const closeWalletModal = () => { walletModal.value.open = false }
 
+const selectFeedbackRide = (ride) => {
+  feedbackForm.value = {
+    ...feedbackForm.value,
+    rideKey: ride?.key || '',
+    scooterId: ride?.scooterId ? String(ride.scooterId) : '',
+    bookingId: ride?.bookingId ? String(ride.bookingId) : ''
+  }
+}
+
+const openProblemFeedback = () => {
+  closeDrawer()
+  const currentUser = readStoredProfileUser()
+  feedbackForm.value = {
+    ...createFeedbackForm(),
+    scooterId: currentRide.value?.scooterId ? String(currentRide.value.scooterId) : '',
+    bookingId: currentRide.value?.bookingId ? String(currentRide.value.bookingId) : ''
+  }
+  if (currentRide.value?.bookingId) {
+    feedbackForm.value.rideKey = String(currentRide.value.bookingId)
+  } else if (!feedbackForm.value.scooterId && feedbackRideOptions.value[0]) {
+    selectFeedbackRide(feedbackRideOptions.value[0])
+  }
+  if (!feedbackForm.value.description && currentUser?.username) {
+    feedbackForm.value.description = ''
+  }
+  loadProfileFeatureHistory()
+  feedbackModal.value = { open: true, submitting: false }
+}
+
+const closeProblemFeedback = () => {
+  if (feedbackModal.value.submitting) return
+  feedbackModal.value.open = false
+}
+
+const submitProblemFeedback = async () => {
+  const currentUser = readStoredProfileUser()
+  const resolvedUserId = userInfo.value.userId || userInfo.value.id || currentUser.userId || currentUser.id
+  const scooterId = Number(feedbackForm.value.scooterId)
+  const bookingId = Number(feedbackForm.value.bookingId)
+  const description = String(feedbackForm.value.description || '').trim()
+
+  if (!resolvedUserId) {
+    uni.showToast({ title: 'Please log in again', icon: 'none' })
+    return
+  }
+  if (!Number.isInteger(scooterId) || scooterId <= 0) {
+    uni.showToast({ title: 'Scooter ID is required', icon: 'none' })
+    return
+  }
+  if (description.length < 8) {
+    uni.showToast({ title: 'Please add more detail', icon: 'none' })
+    return
+  }
+
+  feedbackModal.value.submitting = true
+  try {
+    const response = await reportIssue({
+      userId: resolvedUserId,
+      scooterId,
+      bookingId: Number.isInteger(bookingId) && bookingId > 0 ? bookingId : null,
+      category: feedbackForm.value.category,
+      description,
+      riderInjured: Boolean(feedbackForm.value.riderInjured),
+      thirdPartyInvolved: Boolean(feedbackForm.value.thirdPartyInvolved),
+      emergencyServicesContacted: Boolean(feedbackForm.value.emergencyServicesContacted)
+    })
+
+    const issue = typeof response === 'object' && response !== null ? response : {}
+    const nextHistory = [
+      {
+        localId: `${Date.now()}`,
+        issueId: issue.issueId || '',
+        category: feedbackForm.value.category,
+        categoryLabel: feedbackCategories.find(item => item.value === feedbackForm.value.category)?.label || 'Issue',
+        description,
+        createdAtLabel: formatLocalDateTime(issue.createdAt || Date.now())
+      },
+      ...feedbackHistory.value
+    ].slice(0, 10)
+
+    feedbackHistory.value = nextHistory
+    writeScopedHistory(FEEDBACK_HISTORY_STORAGE_KEY, nextHistory)
+    feedbackModal.value = { open: false, submitting: false }
+    uni.showToast({ title: 'Report submitted', icon: 'success' })
+  } catch (error) {
+    globalThis.__APP_LOGGER__?.error('Failed to submit issue report:', error)
+    feedbackModal.value.submitting = false
+    uni.showToast({ title: 'Submit failed', icon: 'none' })
+  }
+}
+
+const openSafetyCenter = () => {
+  closeDrawer()
+  safetyModal.value.open = true
+}
+
+const closeSafetyCenter = () => {
+  safetyModal.value.open = false
+}
+
+const openProblemFeedbackFromSafety = () => {
+  safetyModal.value.open = false
+  openProblemFeedback()
+}
+
+const openCareerCenter = () => {
+  closeDrawer()
+  careerForm.value = {
+    ...createCareerForm(),
+    name: userInfo.value.name || userInfo.value.username || '',
+    email: userInfo.value.email || ''
+  }
+  loadProfileFeatureHistory()
+  careerModal.value = { open: true, submitting: false }
+}
+
+const selectCareerInterestType = (value) => {
+  careerForm.value.interestType = value
+  careerForm.value.focusArea =
+    value === 'PARTNERSHIP'
+      ? 'Campus Launch'
+      : value === 'CAMPUS'
+        ? 'Student Ambassador'
+        : 'City Operations'
+}
+
+const closeCareerCenter = () => {
+  if (careerModal.value.submitting) return
+  careerModal.value.open = false
+}
+
+const submitCareerInterest = async () => {
+  const name = String(careerForm.value.name || '').trim()
+  const email = String(careerForm.value.email || '').trim()
+  const message = String(careerForm.value.message || '').trim()
+
+  if (!name) {
+    uni.showToast({ title: 'Name is required', icon: 'none' })
+    return
+  }
+  if (!email || !validateEmail(email)) {
+    uni.showToast({ title: 'Valid email required', icon: 'none' })
+    return
+  }
+  if (message.length < 12) {
+    uni.showToast({ title: 'Please add more detail', icon: 'none' })
+    return
+  }
+
+  careerModal.value.submitting = true
+
+  const nextHistory = [
+    {
+      localId: `${Date.now()}`,
+      interestType: careerForm.value.interestType,
+      interestTypeLabel: careerInterestTypes.find(item => item.value === careerForm.value.interestType)?.label || 'Interest',
+      focusArea: careerForm.value.focusArea,
+      organization: String(careerForm.value.organization || '').trim(),
+      message,
+      createdAtLabel: formatLocalDateTime()
+    },
+    ...careerHistory.value
+  ].slice(0, 10)
+
+  careerHistory.value = nextHistory
+  writeScopedHistory(CAREER_HISTORY_STORAGE_KEY, nextHistory)
+  careerForm.value = {
+    ...createCareerForm(),
+    name,
+    email
+  }
+  careerModal.value = { open: false, submitting: false }
+  uni.showToast({ title: 'Interest saved', icon: 'success' })
+}
+
 /**
  * Set a saved card as the default payment method
  * @param {number} index - Index of the card in paymentMethods array
@@ -1587,7 +2339,7 @@ const goToChangePassword = () => {
     : ''
   uni.navigateTo({ url: `/pages/forget-password${emailQuery}` })
 }
-const goToHelp           = () => uni.showToast({ title: 'Help coming soon', icon: 'none' })
+const goToHelp           = () => openSafetyCenter()
 const viewTripDetail     = (trip) => openTripDetailModal(trip)
 
 /**
@@ -2015,6 +2767,9 @@ const confirmLogout = () => {
 .receipt-icon-bg { background: linear-gradient(135deg, #6366F1, #4F46E5); }
 .cancel-icon-bg  { background: linear-gradient(135deg, #EF4444, #DC2626); }
 .wallet-icon-bg  { background: linear-gradient(135deg, #10B981, #059669); }
+.feedback-icon-bg { background: linear-gradient(135deg, #F97316, #EA580C); }
+.safety-icon-bg   { background: linear-gradient(135deg, #2563EB, #1D4ED8); }
+.career-icon-bg   { background: linear-gradient(135deg, #10B981, #047857); }
 
 .modal-header-text {
   flex: 1;
@@ -3387,6 +4142,415 @@ const confirmLogout = () => {
   }
 }
 
+.support-modal {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-height: 90vh;
+  height: 90vh;
+}
+
+.support-modal-body {
+  flex: 1;
+  min-height: 0;
+  padding: 0 36rpx 40rpx;
+  box-sizing: border-box;
+  height: 100%;
+}
+
+.support-section {
+  margin: 24rpx 0 0;
+}
+
+.support-section-title {
+  display: block;
+  font-size: 24rpx;
+  font-weight: 700;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 1.6px;
+  margin-bottom: 16rpx;
+}
+
+.support-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+
+.support-chip {
+  padding: 14rpx 22rpx;
+  border-radius: 999rpx;
+  background: #F8FAFC;
+  border: 1.5rpx solid #E2E8F0;
+}
+
+.support-chip-active {
+  background: #EFF6FF;
+  border-color: #93C5FD;
+}
+
+.support-chip-text {
+  font-size: 24rpx;
+  color: #64748B;
+  font-weight: 600;
+}
+
+.support-chip-text-active {
+  color: #1D4ED8;
+}
+
+.support-related-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+}
+
+.support-related-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18rpx;
+  padding: 20rpx 22rpx;
+  border-radius: 18rpx;
+  border: 1.5rpx solid #E2E8F0;
+  background: #FFFFFF;
+}
+
+.support-related-card-active {
+  border-color: #93C5FD;
+  background: linear-gradient(180deg, #F8FBFF 0%, #EFF6FF 100%);
+}
+
+.support-related-title {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.support-related-meta {
+  display: block;
+  font-size: 23rpx;
+  color: #94A3B8;
+  margin-top: 4rpx;
+}
+
+.support-related-tag {
+  font-size: 22rpx;
+  color: #2563EB;
+  background: #EFF6FF;
+  border-radius: 999rpx;
+  padding: 10rpx 16rpx;
+  font-weight: 700;
+}
+
+.support-textarea {
+  width: 100%;
+  min-height: 220rpx;
+  background: #F8FAFC;
+  border: 1.5rpx solid #E2E8F0;
+  border-radius: 18rpx;
+  padding: 22rpx;
+  box-sizing: border-box;
+  font-size: 27rpx;
+  color: #1E293B;
+}
+
+.support-helper-text {
+  display: block;
+  text-align: right;
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  color: #94A3B8;
+}
+
+.support-grid-two {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16rpx;
+}
+
+.support-toggle-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.support-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  padding: 18rpx 20rpx;
+  border-radius: 18rpx;
+  border: 1.5rpx solid #E2E8F0;
+  background: #FFFFFF;
+}
+
+.support-toggle-copy {
+  font-size: 27rpx;
+  color: #1E293B;
+  font-weight: 600;
+}
+
+.support-preview-card,
+.support-history-card,
+.safety-hero-card,
+.support-emergency-card,
+.support-quick-card {
+  border-radius: 20rpx;
+  border: 1.5rpx solid #E2E8F0;
+  background: #FFFFFF;
+}
+
+.support-preview-card {
+  padding: 20rpx 22rpx;
+  background: linear-gradient(180deg, #FFF7ED 0%, #FFFFFF 100%);
+  border-color: #FED7AA;
+}
+
+.support-preview-row + .support-preview-row {
+  margin-top: 14rpx;
+}
+
+.support-preview-label {
+  display: block;
+  font-size: 22rpx;
+  font-weight: 700;
+  color: #C2410C;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.support-preview-value {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 28rpx;
+  color: #9A3412;
+  font-weight: 800;
+}
+
+.support-preview-copy {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 25rpx;
+  color: #7C2D12;
+  line-height: 1.6;
+}
+
+.support-history-card {
+  padding: 18rpx 20rpx;
+  margin-bottom: 14rpx;
+}
+
+.support-history-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14rpx;
+}
+
+.support-history-title {
+  font-size: 27rpx;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.support-history-status {
+  font-size: 22rpx;
+  color: #2563EB;
+  font-weight: 700;
+}
+
+.support-history-copy {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: #475569;
+  line-height: 1.6;
+}
+
+.support-history-meta {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  color: #94A3B8;
+}
+
+.support-action-row {
+  display: flex;
+  gap: 16rpx;
+  margin: 28rpx 0 6rpx;
+}
+
+.safety-hero-card {
+  padding: 24rpx;
+  margin-top: 24rpx;
+  background: linear-gradient(135deg, #1D4ED8 0%, #2563EB 45%, #60A5FA 100%);
+  border: none;
+}
+
+.safety-hero-title {
+  display: block;
+  font-size: 34rpx;
+  font-weight: 800;
+  color: #FFFFFF;
+}
+
+.safety-hero-copy {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 25rpx;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.7;
+}
+
+.safety-hero-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rpx;
+  margin-top: 18rpx;
+}
+
+.safety-hero-tag {
+  font-size: 22rpx;
+  color: #DBEAFE;
+  padding: 10rpx 16rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.support-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+}
+
+.support-checklist-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 16rpx;
+  padding: 18rpx 20rpx;
+  border-radius: 18rpx;
+  background: #FFFFFF;
+  border: 1.5rpx solid #E2E8F0;
+}
+
+.support-check-icon {
+  width: 24rpx;
+  height: 24rpx;
+  margin-top: 6rpx;
+  border-radius: 50%;
+  border: 2rpx solid #CBD5E1;
+  background: #FFFFFF;
+  flex-shrink: 0;
+}
+
+.support-check-icon-active {
+  border-color: #10B981;
+  background: #10B981;
+  box-shadow: 0 0 0 6rpx rgba(16, 185, 129, 0.12);
+}
+
+.support-check-copy {
+  flex: 1;
+}
+
+.support-check-title {
+  display: block;
+  font-size: 27rpx;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.support-check-sub {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 24rpx;
+  color: #64748B;
+  line-height: 1.6;
+}
+
+.support-emergency-card {
+  padding: 20rpx;
+  background: linear-gradient(180deg, #FFF7ED 0%, #FFFFFF 100%);
+  border-color: #FED7AA;
+}
+
+.support-emergency-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16rpx;
+}
+
+.support-emergency-row + .support-emergency-row {
+  margin-top: 18rpx;
+  padding-top: 18rpx;
+  border-top: 1rpx dashed #FDBA74;
+}
+
+.support-step-badge {
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 50%;
+  background: #EA580C;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.support-step-badge-text {
+  font-size: 24rpx;
+  color: #FFFFFF;
+  font-weight: 800;
+}
+
+.support-step-copy {
+  flex: 1;
+}
+
+.support-step-title {
+  display: block;
+  font-size: 27rpx;
+  font-weight: 700;
+  color: #9A3412;
+}
+
+.support-step-sub {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 24rpx;
+  color: #7C2D12;
+  line-height: 1.6;
+}
+
+.support-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16rpx;
+}
+
+.support-quick-card {
+  padding: 20rpx;
+}
+
+.support-quick-title {
+  display: block;
+  font-size: 27rpx;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.support-quick-copy {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: #64748B;
+  line-height: 1.6;
+}
+
 /* ========== Responsive Adjustments ========== */
 @media (max-width: 750px) {
   .settings-drawer {
@@ -3403,6 +4567,11 @@ const confirmLogout = () => {
 
   .pc-scroll {
     padding: 20rpx 20rpx 0;
+  }
+
+  .support-grid-two,
+  .support-quick-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

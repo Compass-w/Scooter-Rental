@@ -174,6 +174,42 @@
     <!-- Simple Footer for pages without full footer -->
     <view v-else class="footer-simple"></view>
 
+    <view v-if="legalModal.open && currentLegalDoc" class="legal-overlay" @tap="closeLegalNotice">
+      <view class="legal-modal" @tap.stop>
+        <view class="legal-modal-header">
+          <view>
+            <text class="legal-modal-title">{{ currentLegalDoc.title }}</text>
+            <text class="legal-modal-subtitle">Last updated {{ currentLegalDoc.updatedAt }}</text>
+          </view>
+          <view class="legal-close-btn" @tap="closeLegalNotice">
+            <uni-icons type="closeempty" size="22" color="#64748B"></uni-icons>
+          </view>
+        </view>
+
+        <scroll-view scroll-y class="legal-modal-body">
+          <view class="legal-summary-card">
+            <text class="legal-summary-title">{{ currentLegalDoc.summary }}</text>
+            <text class="legal-summary-copy">{{ currentLegalDoc.intro }}</text>
+          </view>
+
+          <view
+            v-for="section in currentLegalDoc.sections"
+            :key="section.heading"
+            class="legal-section"
+          >
+            <text class="legal-section-heading">{{ section.heading }}</text>
+            <text
+              v-for="paragraph in section.paragraphs"
+              :key="paragraph"
+              class="legal-paragraph"
+            >
+              {{ paragraph }}
+            </text>
+          </view>
+        </scroll-view>
+      </view>
+    </view>
+
     <view v-if="showMobileBottomNav" class="mobile-bottom-nav">
       <view
         v-for="item in mobileNavItems"
@@ -259,6 +295,128 @@ const activeMobileNavPage = computed(() => {
 const showMobileBottomNav = computed(() =>
   props.showMenu && ['home', 'find-scooter', 'booking', 'trip', 'profile'].includes(props.currentPage)
 )
+
+const legalDocuments = {
+  'Privacy Policy': {
+    title: 'Privacy Policy',
+    updatedAt: 'April 28, 2026',
+    summary: 'How ScooterGo collects, uses, and protects rider information.',
+    intro: 'We use account, ride, device, and support data to operate scooter rentals safely, process payments, prevent fraud, and improve service quality across supported cities.',
+    sections: [
+      {
+        heading: '1. Information We Collect',
+        paragraphs: [
+          'We collect details you provide directly, including account profile information, email address, phone number, payment card metadata, support submissions, and optional profile content such as avatars.',
+          'We also collect ride-related information such as booking identifiers, scooter identifiers, start and end times, return status, battery state, and issue reports created during or after a ride.',
+          'When enabled, location services and device signals may be used to show nearby scooters, validate permitted pickup and return zones, and investigate ride safety or fraud concerns.'
+        ]
+      },
+      {
+        heading: '2. How We Use Data',
+        paragraphs: [
+          'We use personal data to create and manage your account, authenticate sessions, process bookings, support ride completion, handle charges or refunds, and provide customer support.',
+          'Operational and diagnostic data may be used to detect unsafe vehicle conditions, respond to incidents, improve maintenance planning, and keep fleet availability accurate.',
+          'We may also use limited analytics and service-preference data to improve product design, provided features, and communication timing.'
+        ]
+      },
+      {
+        heading: '3. Sharing and Retention',
+        paragraphs: [
+          'We share information only when necessary to deliver the service, such as with payment processors, hosting providers, operations partners, or emergency-response workflows connected to an incident.',
+          'We retain account and transaction information for as long as reasonably required for customer support, accounting, legal compliance, fraud prevention, and dispute resolution.',
+          'If you request account closure, we will delete or anonymize data where possible, except where records must be retained for security, financial, or legal reasons.'
+        ]
+      },
+      {
+        heading: '4. Your Choices',
+        paragraphs: [
+          'You can update profile information from your account area, adjust supported notification settings, and choose whether some optional analytics preferences remain enabled.',
+          'Location permissions can be turned off at the device level, but some ride-discovery, unlock, and return-validation features may stop working correctly if location access is disabled.'
+        ]
+      }
+    ]
+  },
+  'Terms of Service': {
+    title: 'Terms of Service',
+    updatedAt: 'April 28, 2026',
+    summary: 'The rules that apply when you register, book, unlock, and ride with ScooterGo.',
+    intro: 'By creating an account or using ScooterGo vehicles, you agree to follow local traffic laws, parking rules, billing terms, and safety instructions presented before or during a ride.',
+    sections: [
+      {
+        heading: '1. Rider Eligibility',
+        paragraphs: [
+          'You must provide accurate account information and only use the service if you are legally permitted to ride electric scooters in your city or country.',
+          'Some markets may require identity verification, valid payment methods, or additional onboarding steps before scan-to-unlock becomes available.'
+        ]
+      },
+      {
+        heading: '2. Ride Responsibilities',
+        paragraphs: [
+          'You are responsible for inspecting the scooter before starting, riding safely, wearing recommended protective gear, and ending the ride only in approved areas.',
+          'You must not lend access to another person, tamper with the scooter hardware, bypass safety features, or continue riding a scooter that appears damaged or unsafe.'
+        ]
+      },
+      {
+        heading: '3. Charges, Fees, and Damage',
+        paragraphs: [
+          'Ride prices, overtime fees, and any pre-authorized amounts shown before confirmation may vary by market, vehicle type, hire period, and service mode.',
+          'If a ride results in fines, improper parking charges, confirmed misuse, or rider-caused damage, ScooterGo may charge the saved payment method after review according to the policy shown in the booking flow.',
+          'Accidents or safety incidents may require additional insurance or liability review before any final customer charge is determined.'
+        ]
+      },
+      {
+        heading: '4. Suspension and Service Limits',
+        paragraphs: [
+          'We may suspend or limit access to the service when we detect fraud, repeated unsafe use, unresolved payment failures, harassment of staff, or repeated violation of ride rules.',
+          'Service availability, supported cities, and specific feature sets may change over time as fleet operations, local regulations, or maintenance conditions evolve.'
+        ]
+      }
+    ]
+  },
+  'Cookie Policy': {
+    title: 'Cookie Policy',
+    updatedAt: 'April 28, 2026',
+    summary: 'How ScooterGo uses cookies and similar browser storage on the web experience.',
+    intro: 'On web surfaces, ScooterGo uses cookies or similar local storage to keep sessions active, remember preferences, support navigation, and measure product performance.',
+    sections: [
+      {
+        heading: '1. Essential Storage',
+        paragraphs: [
+          'Essential cookies or local storage entries help maintain login state, save lightweight account preferences, and preserve in-progress interface settings needed for normal operation.',
+          'Without these items, some protected pages, profile preferences, or ride flows may not work as expected.'
+        ]
+      },
+      {
+        heading: '2. Functional Preferences',
+        paragraphs: [
+          'We may store information such as remembered usernames, interface state, selected settings, or other convenience features that improve repeat visits.',
+          'These items are intended to improve usability and are generally scoped to your device or browser session.'
+        ]
+      },
+      {
+        heading: '3. Analytics and Performance',
+        paragraphs: [
+          'Where enabled, analytics-related storage helps us understand page performance, error frequency, and general usage trends so we can improve reliability and design decisions.',
+          'We do not use these technologies to sell your personal information. Any optional analytics use should stay aligned with your available in-app settings and applicable law.'
+        ]
+      },
+      {
+        heading: '4. Managing Cookies',
+        paragraphs: [
+          'You can clear browser storage or block cookies through your browser settings at any time, although doing so may sign you out or reset saved preferences.',
+          'If you use multiple browsers or devices, your choices may need to be updated separately in each environment.'
+        ]
+      }
+    ]
+  }
+}
+
+const legalModal = ref({
+  open: false,
+  documentName: ''
+})
+
+const currentLegalDoc = computed(() => legalDocuments[legalModal.value.documentName] || null)
 
 /**
  * Read auth state from storage and update reactive refs.
@@ -381,11 +539,15 @@ const goToFooterService = (target) => {
 }
 
 const openLegalNotice = (documentName) => {
-  uni.showToast({
-    title: `${documentName} coming soon`,
-    icon: 'none',
-    duration: 1800
-  })
+  if (!legalDocuments[documentName]) return
+  legalModal.value = {
+    open: true,
+    documentName
+  }
+}
+
+const closeLegalNotice = () => {
+  legalModal.value.open = false
 }
 
 const goToBooking = () => {
@@ -786,6 +948,121 @@ const mobileNavItems = computed(() => ([
   min-height: 52rpx;
 }
 
+.legal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  background: rgba(15, 23, 42, 0.58);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32rpx;
+  box-sizing: border-box;
+}
+
+.legal-modal {
+  width: min(1200rpx, 100%);
+  max-width: 100%;
+  height: min(86vh, 1320rpx);
+  background: linear-gradient(180deg, #F8FBFF 0%, #FFFFFF 24%);
+  border: 1rpx solid rgba(148, 163, 184, 0.2);
+  border-radius: 32rpx;
+  box-shadow: 0 28rpx 80rpx rgba(15, 23, 42, 0.24);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.legal-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20rpx;
+  padding: 32rpx 34rpx 24rpx;
+  border-bottom: 1rpx solid #E2E8F0;
+  background: rgba(255, 255, 255, 0.9);
+  flex-shrink: 0;
+}
+
+.legal-modal-title {
+  display: block;
+  font-size: 34rpx;
+  font-weight: 800;
+  color: #0F172A;
+}
+
+.legal-modal-subtitle {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 23rpx;
+  color: #64748B;
+}
+
+.legal-close-btn {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  background: #F1F5F9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.legal-modal-body {
+  flex: 1;
+  min-height: 0;
+  padding: 28rpx 34rpx 34rpx;
+  box-sizing: border-box;
+}
+
+.legal-summary-card {
+  padding: 24rpx 24rpx 22rpx;
+  border-radius: 22rpx;
+  background: linear-gradient(135deg, #EFF6FF 0%, #F8FBFF 100%);
+  border: 1rpx solid #BFDBFE;
+}
+
+.legal-summary-title {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #1D4ED8;
+}
+
+.legal-summary-copy {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  line-height: 1.7;
+  color: #475569;
+}
+
+.legal-section {
+  margin-top: 24rpx;
+  padding: 22rpx 24rpx;
+  border-radius: 22rpx;
+  background: #FFFFFF;
+  border: 1rpx solid #E2E8F0;
+}
+
+.legal-section-heading {
+  display: block;
+  font-size: 26rpx;
+  font-weight: 800;
+  color: #0F172A;
+  margin-bottom: 10rpx;
+}
+
+.legal-paragraph {
+  display: block;
+  font-size: 24rpx;
+  line-height: 1.75;
+  color: #475569;
+  margin-top: 10rpx;
+}
+
 @media (hover: hover) {
   .logo-container:hover {
     transform: translateY(-2rpx);
@@ -800,6 +1077,11 @@ const mobileNavItems = computed(() => ([
   .user-avatar-wrap:hover {
     transform: translateY(-3rpx) scale(1.02);
     box-shadow: 0 10rpx 24rpx rgba(37, 99, 235, 0.18);
+  }
+
+  .legal-close-btn:hover {
+    background: #E2E8F0;
+    transform: translateY(-2rpx);
   }
 }
 
@@ -821,6 +1103,22 @@ const mobileNavItems = computed(() => ([
 
   .footer-content {
     padding: 36rpx 40rpx 24rpx;
+  }
+
+  .legal-overlay {
+    padding: 20rpx;
+  }
+
+  .legal-modal {
+    width: 100%;
+    height: 88vh;
+    border-radius: 26rpx;
+  }
+
+  .legal-modal-header,
+  .legal-modal-body {
+    padding-left: 24rpx;
+    padding-right: 24rpx;
   }
 
   .footer-bottom {
