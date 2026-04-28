@@ -34,7 +34,7 @@ const getUserId = () => {
     const user = cached ? (typeof cached === 'string' ? JSON.parse(cached) : cached) : {}
     return user.userId || user.id || ''
   } catch (error) {
-    console.error('Failed to get userId:', error)
+    globalThis.__APP_LOGGER__?.error('Failed to get userId:', error)
     return ''
   }
 }

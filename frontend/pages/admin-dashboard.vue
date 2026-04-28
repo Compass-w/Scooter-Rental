@@ -1395,9 +1395,9 @@ const adminAccessLabel = computed(() => {
     const userInfo = typeof stored === 'string' ? JSON.parse(stored) : stored
     const role = String(userInfo?.role || '').toUpperCase()
     if (ADMIN_ROLES.includes(role)) return `${role} session`
-    return 'Demo / shared access'
+    return 'Restricted'
   } catch {
-    return 'Demo / shared access'
+    return 'Restricted'
   }
 })
 
@@ -1459,7 +1459,7 @@ const cacheDashboardSnapshot = (data) => {
   try {
     uni.setStorageSync(ADMIN_DASHBOARD_CACHE_KEY, data)
   } catch (error) {
-    console.warn('Failed to cache admin dashboard snapshot:', error)
+    globalThis.__APP_LOGGER__?.warn('Failed to cache admin dashboard snapshot:', error)
   }
 }
 
@@ -1529,7 +1529,7 @@ const loadMaintenanceLogs = async (scooterId) => {
   try {
     maintenanceLogs.value = await getMaintenanceLogs(scooterId)
   } catch (error) {
-    console.error('Failed to load maintenance logs:', error)
+    globalThis.__APP_LOGGER__?.error('Failed to load maintenance logs:', error)
     maintenanceLogs.value = snapshot.fleet.maintenanceLogs || []
   }
 }
@@ -1562,7 +1562,7 @@ const loadDashboard = async () => {
       maintenanceLogs.value = snapshot.fleet.maintenanceLogs || []
     }
   } catch (error) {
-    console.error('Failed to load admin dashboard:', error)
+    globalThis.__APP_LOGGER__?.error('Failed to load admin dashboard:', error)
     const cached = getCachedDashboardSnapshot()
     if (cached) {
       applySnapshot({
@@ -1621,7 +1621,7 @@ const cycleStatus = async (scooter) => {
     uni.showToast({ title: `Status -> ${next}`, icon: 'success' })
     await loadDashboard()
   } catch (error) {
-    console.error('Failed to override scooter status:', error)
+    globalThis.__APP_LOGGER__?.error('Failed to override scooter status:', error)
   }
 }
 
@@ -1676,7 +1676,7 @@ const submitScooterForm = async () => {
     resetScooterForm()
     await loadDashboard()
   } catch (error) {
-    console.error('Failed to save scooter:', error)
+    globalThis.__APP_LOGGER__?.error('Failed to save scooter:', error)
   } finally {
     submittingScooter.value = false
   }
@@ -1701,7 +1701,7 @@ const submitMaintenanceLog = async () => {
     await loadDashboard()
     await loadMaintenanceLogs(selectedScooterId.value)
   } catch (error) {
-    console.error('Failed to log maintenance:', error)
+    globalThis.__APP_LOGGER__?.error('Failed to log maintenance:', error)
   } finally {
     submittingMaintenance.value = false
   }
@@ -1712,7 +1712,7 @@ const updateIssueField = async (issue, key, value) => {
     await updateAdminIssue(issue.issueId, { [key]: value })
     await loadDashboard()
   } catch (error) {
-    console.error('Failed to update issue:', error)
+    globalThis.__APP_LOGGER__?.error('Failed to update issue:', error)
   }
 }
 
@@ -1722,7 +1722,7 @@ const autoAssignIssue = async (issue) => {
     uni.showToast({ title: 'Issue assigned', icon: 'success' })
     await loadDashboard()
   } catch (error) {
-    console.error('Failed to auto assign issue:', error)
+    globalThis.__APP_LOGGER__?.error('Failed to auto assign issue:', error)
   }
 }
 
@@ -1733,7 +1733,7 @@ const fixIssue = async (issue) => {
     uni.showToast({ title: 'Issue fixed', icon: 'success' })
     await loadDashboard()
   } catch (error) {
-    console.error('Failed to fix issue:', error)
+    globalThis.__APP_LOGGER__?.error('Failed to fix issue:', error)
   }
 }
 
@@ -1753,7 +1753,7 @@ const ensureAdminModelViewer = async () => {
     await import('@google/model-viewer')
     adminModelViewerReady.value = Boolean(customElements.get('model-viewer'))
   } catch (error) {
-    console.error('Failed to initialize admin 3D preview:', error)
+    globalThis.__APP_LOGGER__?.error('Failed to initialize admin 3D preview:', error)
   }
 }
 
@@ -1831,7 +1831,7 @@ const submitPosBooking = async () => {
     resetPosForm()
     await loadDashboard()
   } catch (error) {
-    console.error('Failed to create POS booking:', error)
+    globalThis.__APP_LOGGER__?.error('Failed to create POS booking:', error)
   } finally {
     submittingPos.value = false
   }
@@ -1843,7 +1843,7 @@ const sendConfirmation = async (booking) => {
     uni.showToast({ title: 'Confirmation sent', icon: 'success' })
     await loadDashboard()
   } catch (error) {
-    console.error('Failed to send confirmation:', error)
+    globalThis.__APP_LOGGER__?.error('Failed to send confirmation:', error)
   }
 }
 
@@ -1863,7 +1863,7 @@ const submitOpsAssignment = async () => {
     resetOpsForm()
     await loadDashboard()
   } catch (error) {
-    console.error('Failed to create operations assignment:', error)
+    globalThis.__APP_LOGGER__?.error('Failed to create operations assignment:', error)
   } finally {
     submittingOps.value = false
   }
@@ -1887,7 +1887,7 @@ const cycleOpsShift = async (assignment) => {
     uni.showToast({ title: `Shift -> ${nextStatus}`, icon: 'success' })
     await loadDashboard()
   } catch (error) {
-    console.error('Failed to update operations shift:', error)
+    globalThis.__APP_LOGGER__?.error('Failed to update operations shift:', error)
   }
 }
 

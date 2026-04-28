@@ -983,7 +983,7 @@ const enrichRideDetails = async (ride) => {
       pricePerMinute: hasPricing ? ride.pricePerMinute : scooter?.pricePerMin
     }), ride)
   } catch (error) {
-    console.error('Failed to enrich ride details:', error)
+    globalThis.__APP_LOGGER__?.error('Failed to enrich ride details:', error)
     return ride
   }
 }
@@ -1007,7 +1007,7 @@ const syncActiveRide = async () => {
     updateActiveRideState(await enrichRideDetails(liveRide))
     return activeRide.value
   } catch (error) {
-    console.error('Failed to sync active ride:', error)
+    globalThis.__APP_LOGGER__?.error('Failed to sync active ride:', error)
     return activeRide.value || cached || null
   } finally {
     syncing.value = false
@@ -1036,7 +1036,7 @@ const handleExtendRide = async () => {
     updateActiveRideState({ ...activeRide.value, ...response, status: response?.bookingStatus || activeRide.value.status })
     uni.showToast({ title: `Added ${extensionMinutes.value} min`, icon: 'success' })
   } catch (error) {
-    console.error('Failed to extend ride:', error)
+    globalThis.__APP_LOGGER__?.error('Failed to extend ride:', error)
   } finally {
     busyAction.value = ''
   }
@@ -1077,7 +1077,7 @@ const handleEndRide = () => {
           showCancel: false
         })
       } catch (error) {
-        console.error('Failed to end ride:', error)
+        globalThis.__APP_LOGGER__?.error('Failed to end ride:', error)
       } finally {
         busyAction.value = ''
       }
@@ -1125,7 +1125,7 @@ const submitIssue = async () => {
     issueForm.value = createIssueForm()
     uni.showToast({ title: 'Issue reported', icon: 'success' })
   } catch (error) {
-    console.error('Failed to report issue:', error)
+    globalThis.__APP_LOGGER__?.error('Failed to report issue:', error)
   } finally {
     busyAction.value = ''
   }

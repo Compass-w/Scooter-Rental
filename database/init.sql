@@ -1,12 +1,10 @@
--- 1. Clean up existing tables (Drop in order due to foreign key constraints)
-DROP TABLE IF EXISTS bank_cards;
-DROP TABLE IF EXISTS bookings;
-DROP TABLE IF EXISTS scooters;
-DROP TABLE IF EXISTS users;
+-- 1. Idempotent initialization
+-- Keep existing data when the script is re-run so test accounts and booking
+-- history are not wiped out during local development.
 
 -- 2. Create Users Table [ID: 22]
 -- Added fields: phone, total_riding_minutes, achievements
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     user_id SERIAL PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
     email VARCHAR(100),
@@ -21,7 +19,7 @@ CREATE TABLE users (
 );
 
 -- 3. Create Scooters Table
-CREATE TABLE scooters (
+CREATE TABLE IF NOT EXISTS scooters (
     scooter_id SERIAL PRIMARY KEY,
     model VARCHAR(50) NOT NULL,
     latitude DECIMAL(10, 6) NOT NULL,
@@ -35,7 +33,7 @@ CREATE TABLE scooters (
 
 -- 4. Create Bookings Table [ID: 8, 12]
 -- Support for booking history, receipts, and cancellation
-CREATE TABLE bookings (
+CREATE TABLE IF NOT EXISTS bookings (
     booking_id SERIAL PRIMARY KEY,
     user_id INT REFERENCES users(user_id),
     scooter_id INT REFERENCES scooters(scooter_id),
@@ -49,7 +47,7 @@ CREATE TABLE bookings (
 
 -- 5. Create Bank Cards Table [ID: 2, 3]
 -- Securely store masked card information
-CREATE TABLE bank_cards (
+CREATE TABLE IF NOT EXISTS bank_cards (
     card_id SERIAL PRIMARY KEY,
     user_id INT REFERENCES users(user_id),
     card_holder_name VARCHAR(100) NOT NULL,
@@ -62,10 +60,18 @@ CREATE TABLE bank_cards (
 
 -- Insert Test User (Password is '123456' hashed via BCrypt)
 INSERT INTO users (username, email, phone, city, password_hash, role, total_riding_minutes, achievements) 
-VALUES ('student1', 'student1@leeds.ac.uk', '07123456789', 'Leeds', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOcd.g/w2.H4q', 'customer', 80, 'Eco-Warrior,Newcomer');
+VALUES ('student1', 'student1@leeds.ac.uk', '07123456789', 'Leeds', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOcd.g/w2.H4q', 'customer', 80, 'Eco-Warrior,Newcomer')
+ON CONFLICT (username) DO NOTHING;
+
+-- Insert Manager User (Password is 'Tyz114031!' hashed via BCrypt)
+INSERT INTO users (username, email, phone, city, password_hash, role, total_riding_minutes, achievements)
+VALUES ('manager1', 'manager1@leeds.ac.uk', '07123450001', 'Leeds', '$2y$10$o9w2LkXNfi6dgHUIlrMxNuiiUhnxwRlxJ9NwMTLZWGI9ImY64rD4K', 'manager', 12, '')
+ON CONFLICT (username) DO NOTHING;
 
 -- Insert Test Scooters
-INSERT INTO scooters (model, latitude, longitude, battery_level, status, base_price, price_per_min) 
+INSERT INTO scooters (model, latitude, longitude, battery_level, status, base_price, price_per_min)
+SELECT seed.model, seed.latitude, seed.longitude, seed.battery_level, seed.status, seed.base_price, seed.price_per_min
+FROM (
 VALUES 
 ('Xiaomi Pro 2', 53.801277, -1.548567, 95, 'AVAILABLE', 1.00, 0.20),
 ('Ninebot Max', 53.800755, -1.549077, 88, 'AVAILABLE', 1.00, 0.20),
@@ -145,15 +151,22 @@ VALUES
 
 -- Hong Kong
 ('Xiaomi 1S', 22.319300, 114.169400, 81, 'AVAILABLE', 1.20, 0.24),
-('Ninebot Max G2', 22.284900, 114.158900, 68, 'AVAILABLE', 1.20, 0.24);
+('Ninebot Max G2', 22.284900, 114.158900, 68, 'AVAILABLE', 1.20, 0.24)
+) AS seed(model, latitude, longitude, battery_level, status, base_price, price_per_min)
+WHERE NOT EXISTS (SELECT 1 FROM scooters);
 
 -- Insert Mock Booking History for User 1 (For Stats Chart & History List) [ID: 8, 22]
 INSERT INTO bookings (user_id, scooter_id, start_time, end_time, duration_minutes, total_cost, status)
+SELECT seed.user_id, seed.scooter_id, seed.start_time, seed.end_time, seed.duration_minutes, seed.total_cost, seed.status
+FROM (
 VALUES 
 (1, 1, NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days' + INTERVAL '20 minutes', 20, 5.00, 'COMPLETED'),
 (1, 2, NOW() - INTERVAL '1 days', NOW() - INTERVAL '1 days' + INTERVAL '45 minutes', 45, 10.00, 'COMPLETED'),
-(1, 1, NOW(), NOW() + INTERVAL '15 minutes', 15, 3.50, 'COMPLETED');
+(1, 1, NOW(), NOW() + INTERVAL '15 minutes', 15, 3.50, 'COMPLETED')
+) AS seed(user_id, scooter_id, start_time, end_time, duration_minutes, total_cost, status)
+WHERE NOT EXISTS (SELECT 1 FROM bookings);
 
 -- Insert Mock Bank Card for User 1 [ID: 2, 3]
 INSERT INTO bank_cards (user_id, card_holder_name, card_number_masked, expiry_date, is_default)
-VALUES (1, 'LZY', '**** 8888', '12/28', true);
+SELECT 1, 'LZY', '**** 8888', '12/28', true
+WHERE NOT EXISTS (SELECT 1 FROM bank_cards);

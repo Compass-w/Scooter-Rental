@@ -979,7 +979,7 @@ const readStoredProfileUser = () => {
     const cached = uni.getStorageSync('userInfo')
     return cached ? (typeof cached === 'string' ? JSON.parse(cached) : cached) : {}
   } catch (error) {
-    console.error('Failed to read cached user info:', error)
+    globalThis.__APP_LOGGER__?.error('Failed to read cached user info:', error)
     return {}
   }
 }
@@ -1098,7 +1098,7 @@ async function loadProfile() {
         userInfo.value = normalizeProfileRecord(o)
       }
     } catch (e) {
-      console.error('Failed to load profile from cache:', e)
+      globalThis.__APP_LOGGER__?.error('Failed to load profile from cache:', e)
     }
   }
 }
@@ -1122,7 +1122,7 @@ async function loadStats(period = 'Month') {
       spent:   data.periodSpent   ?? '0.00'
     }
   } catch (e) {
-    console.error('Failed to load stats:', e)
+    globalThis.__APP_LOGGER__?.error('Failed to load stats:', e)
   }
 }
 
@@ -1139,7 +1139,7 @@ async function loadWallet() {
     }
     settings.value.autoTopUp = wallet.value.autoTopUp
   } catch (e) {
-    console.error('Failed to load wallet:', e)
+    globalThis.__APP_LOGGER__?.error('Failed to load wallet:', e)
   }
 }
 
@@ -1151,7 +1151,7 @@ async function loadRecentTrips() {
     const data = await getRecentTrips()
     recentTrips.value = Array.isArray(data) ? data : (data.items ?? [])
   } catch (e) {
-    console.error('Failed to load trips:', e)
+    globalThis.__APP_LOGGER__?.error('Failed to load trips:', e)
   }
 }
 
@@ -1166,7 +1166,7 @@ async function loadBookings(status) {
     if (status === 'upcoming') upcomingBookings.value = list
     else                       pastBookings.value     = list
   } catch (e) {
-    console.error('Failed to load bookings:', e)
+    globalThis.__APP_LOGGER__?.error('Failed to load bookings:', e)
   }
 }
 
@@ -1184,7 +1184,7 @@ async function loadSettings() {
       autoTopUp:     data.autoTopUp     ?? false
     }
   } catch (e) {
-    console.error('Failed to load settings:', e)
+    globalThis.__APP_LOGGER__?.error('Failed to load settings:', e)
   }
 }
 
@@ -1320,7 +1320,7 @@ const saveInfo = async () => {
     editingInfo.value = false
     uni.showToast({ title: 'Profile updated!', icon: 'success' })
   } catch (e) {
-    console.error(e)
+    globalThis.__APP_LOGGER__?.error(e)
     uni.showToast({ title: 'Failed to save', icon: 'none' })
   } finally {
     savingInfo.value = false
@@ -1381,7 +1381,7 @@ const changeAvatar = () => {
         profileNeedsRefresh.value = false
         uni.showToast({ title: 'Avatar updated', icon: 'success' })
       } catch (error) {
-        console.error('Failed to save avatar:', error)
+        globalThis.__APP_LOGGER__?.error('Failed to save avatar:', error)
         userInfo.value = {
           ...userInfo.value,
           avatar: previousAvatar,
@@ -1470,7 +1470,7 @@ const setDefaultCard = async (index) => {
     profileNeedsRefresh.value = false
     uni.showToast({ title: 'Default card updated', icon: 'success' })
   } catch (e) {
-    console.error('Failed to set default card:', e)
+    globalThis.__APP_LOGGER__?.error('Failed to set default card:', e)
   }
 }
 
@@ -1493,7 +1493,7 @@ const removeCard = (index) => {
         profileNeedsRefresh.value = false
         uni.showToast({ title: 'Card removed', icon: 'success' })
       } catch (e) {
-        console.error('Failed to remove card:', e)
+        globalThis.__APP_LOGGER__?.error('Failed to remove card:', e)
       }
     }
   })
@@ -1530,7 +1530,7 @@ const addNewCard = async () => {
     profileNeedsRefresh.value = false
     uni.showToast({ title: 'Card added securely', icon: 'success' })
   } catch (e) {
-    console.error('Failed to add card:', e)
+    globalThis.__APP_LOGGER__?.error('Failed to add card:', e)
   }
 }
 
@@ -1549,7 +1549,7 @@ async function patchSetting(key, value) {
   try {
     await updateSettings({ [key]: value })
   } catch (e) {
-    console.error('Failed to update setting:', e)
+    globalThis.__APP_LOGGER__?.error('Failed to update setting:', e)
   }
 }
 
@@ -1578,16 +1578,14 @@ const viewAllTrips       = () => {
   uni.navigateTo({ url: '/pages/active-ride?source=trip' })
 }
 /**
- * Navigate to the change password page
- * Passes source=profile so the reset-password page skips token verification
- * and shows the logged-in change-password flow instead
+ * Navigate to the password reset request page with a prefilled email when available.
  */
 const goToChangePassword = () => {
   closeDrawer()
   const emailQuery = userInfo.value.email
-    ? `&email=${encodeURIComponent(userInfo.value.email)}`
+    ? `?email=${encodeURIComponent(userInfo.value.email)}`
     : ''
-  uni.navigateTo({ url: `/pages/reset-password?source=profile${emailQuery}` })
+  uni.navigateTo({ url: `/pages/forget-password${emailQuery}` })
 }
 const goToHelp           = () => uni.showToast({ title: 'Help coming soon', icon: 'none' })
 const viewTripDetail     = (trip) => openTripDetailModal(trip)

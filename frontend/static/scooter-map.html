@@ -462,7 +462,7 @@
         id: "singapore-bugis",
         city: "Singapore",
         name: "Bugis Urban Ride Lab",
-        type: "Demo + Premium Fleet",
+        type: "Flagship + Premium Fleet",
         address: "200 Victoria Street, Bugis Junction",
         lat: 1.299,
         lng: 103.8558,
@@ -822,7 +822,7 @@
 
         window.parent.postMessage(JSON.stringify({ type, data }), "*")
       } catch (error) {
-        console.warn("[scooter-map] postMessage failed", error)
+        window.__APP_LOGGER__?.warn?.("[scooter-map] postMessage failed", error)
       }
     }
 

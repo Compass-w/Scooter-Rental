@@ -31,7 +31,7 @@
                 @confirm="handleReset"
               />
             </view>
-            <text class="input-hint">We'll verify this email before opening the reset flow</text>
+            <text class="input-hint">We'll send a secure reset link to this address if the account exists</text>
           </view>
 
           <button class="btn-primary-pill" @tap="handleReset" :disabled="loading">
@@ -42,7 +42,7 @@
           <view class="info-box">
             <uni-icons type="info" size="20" color="#2563EB"></uni-icons>
             <text class="info-text">
-              The reset link expires in 24 hours. In this demo build, we'll open the reset page directly after verification.
+              The reset link expires in 24 hours. Open it from your inbox to choose a new password.
             </text>
           </view>
 
@@ -54,7 +54,7 @@
           <view class="help-section">
             <text class="help-title">Need more help?</text>
             <text class="help-text">
-              Contact our support team at support@scootergo.com or call +44 20 1234 5678
+              If you still cannot sign in, contact your operations lead or support channel.
             </text>
           </view>
         </view>
@@ -64,13 +64,26 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { forgotPassword } from '@/api/user.js'
 import BaseLayout from '@/pages/BaseLayout.vue'
 
 // Reactive state variables
 const email = ref('')
 const loading = ref(false)
+
+onMounted(() => {
+  try {
+    const pages = getCurrentPages()
+    const currentPage = pages[pages.length - 1]
+    const prefilledEmail = decodeURIComponent(currentPage?.options?.email || '')
+    if (prefilledEmail) {
+      email.value = prefilledEmail
+    }
+  } catch {
+    // Ignore route parsing issues and leave the field empty.
+  }
+})
 
 /**
  * Validate email format
@@ -115,24 +128,22 @@ const handleReset = async () => {
   try {
     // Call forgot password API
     const result = await forgotPassword({ email: normalizedEmail })
-    const resetPath = result?.resetPath || (result?.resetToken ? `/pages/reset-password?token=${encodeURIComponent(result.resetToken)}` : '')
-
-    if (!resetPath) {
-      throw new Error('Reset link was not returned by the server')
-    }
+    const deliveryNote = result?.smsSent
+      ? 'We also sent a backup notification to your verified phone number.'
+      : 'If you do not see it soon, check your spam folder.'
 
     uni.showModal({
-      title: 'Reset link ready',
-      content: `We verified ${result?.email || normalizedEmail}. We'll open the secure reset page now.`,
+      title: 'Reset link sent',
+      content: `A secure password reset link has been sent to ${result?.email || normalizedEmail}. ${deliveryNote}`,
       showCancel: false,
       success: () => {
         email.value = ''
-        uni.navigateTo({ url: resetPath })
+        goToLogin()
       }
     })
     
   } catch (error) {
-    console.error('Failed to send reset link:', error)
+    globalThis.__APP_LOGGER__?.error('Failed to send reset link:', error)
     // Error message is already handled by request.js
   } finally {
     loading.value = false

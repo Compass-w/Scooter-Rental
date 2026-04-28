@@ -264,7 +264,7 @@ const openViewer = async () => {
     clearLoadingTimer()
     loading.value = false
     loadError.value = 'The 3D viewer could not initialize in this browser session.'
-    console.error('Failed to initialize model-viewer', error)
+    globalThis.__APP_LOGGER__?.error('Failed to initialize model-viewer', error)
   }
 }
 

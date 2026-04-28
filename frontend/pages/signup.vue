@@ -614,7 +614,7 @@ const handleSignup = async () => {
     uni.showToast({ title: 'Account created successfully! 🎉', icon: 'success', duration: 2000 })
     setTimeout(() => uni.reLaunch({ url: '/pages/login' }), 2000)
   } catch (error) {
-    console.error('Registration failed:', error)
+    globalThis.__APP_LOGGER__?.error('Registration failed:', error)
     const code = error?.statusCode || error?.code
     const msg  = (error?.message || error?.msg || '').toLowerCase()
     // Backend returns HTTP 400 with "Username already exists" for duplicates (not 409)

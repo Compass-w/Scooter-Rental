@@ -102,7 +102,7 @@ onMounted(() => {
       remember.value = true
     }
   } catch (e) {
-    console.error('Failed to load saved username:', e)
+    globalThis.__APP_LOGGER__?.error('Failed to load saved username:', e)
   }
 })
 
@@ -198,7 +198,7 @@ const handleLogin = async () => {
     }, 1500)
 
   } catch (error) {
-    console.error('Login failed:', error)
+    globalThis.__APP_LOGGER__?.error('Login failed:', error)
     // Error message is handled by request.js
   } finally {
     if (!navigating.value) {

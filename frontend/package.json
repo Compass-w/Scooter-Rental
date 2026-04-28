@@ -1,13 +1,13 @@
 {
-  "name": "uniapp-login-system",
+  "name": "scootergo-frontend",
   "version": "2.0.0",
-  "description": "uni-app Login System with Vue 3 and Composition API",
+  "description": "ScooterGo rental frontend built with uni-app, Vue 3, and Vite",
   "main": "main.js",
   "scripts": {
-    "dev:h5": "cross-env NODE_ENV=development UNI_PLATFORM=h5 uni",
-    "build:h5": "cross-env NODE_ENV=production UNI_PLATFORM=h5 uni build",
-    "dev:mp-weixin": "cross-env NODE_ENV=development UNI_PLATFORM=mp-weixin uni",
-    "build:mp-weixin": "cross-env NODE_ENV=production UNI_PLATFORM=mp-weixin uni build"
+    "dev:h5": "cross-env NODE_ENV=development UNI_PLATFORM=h5 UNI_INPUT_DIR=. uni",
+    "build:h5": "cross-env NODE_ENV=production UNI_PLATFORM=h5 UNI_INPUT_DIR=. uni build",
+    "dev:mp-weixin": "cross-env NODE_ENV=development UNI_PLATFORM=mp-weixin UNI_INPUT_DIR=. uni",
+    "build:mp-weixin": "cross-env NODE_ENV=production UNI_PLATFORM=mp-weixin UNI_INPUT_DIR=. uni build"
   },
   "dependencies": {
     "@dcloudio/uni-app": "^3.0.0-alpha-4030220250106001",

@@ -1,19 +1,32 @@
 package com.scooterrental.backend.config;
 
+import com.scooterrental.backend.security.SessionAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
+    private final SessionAuthenticationFilter sessionAuthenticationFilter;
+
+    @Value("${app.cors.allowed-origin-patterns:http://localhost:3000,http://localhost:5173}")
+    private String allowedOriginPatterns;
+
+    public SecurityConfig(SessionAuthenticationFilter sessionAuthenticationFilter) {
+        this.sessionAuthenticationFilter = sessionAuthenticationFilter;
+    }
 
     /**
      * 1. 密码加密器 (保留你原来的，非常正确)
@@ -29,25 +42,16 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                // 禁用 CSRF (REST API 不需要)
                 .csrf(AbstractHttpConfigurer::disable)
-
-                // ✅ 新增: 开启跨域支持 (CORS)
-                // 如果不加这一行，前端会报 "CORS error"
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-
-                // 配置路径拦截规则
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // 放行注册和登录接口 (必须!)
                         .requestMatchers("/api/auth/**").permitAll()
-                        // 放行 Swagger 文档 (方便你调试)
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                        // 放行查询滑板车 (允许未登录看地图)
                         .requestMatchers("/api/scooters/available").permitAll()
-
-                        // ⚠️ 暂时全部放行 (方便你和前端先调通)
-                        // 等你们 Token 功能写好了，再改成 .anyRequest().authenticated()
+                        .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "MANAGER")
                         .anyRequest().permitAll());
+        http.addFilterBefore(sessionAuthenticationFilter, AnonymousAuthenticationFilter.class);
 
         return http.build();
     }
@@ -59,10 +63,15 @@ public class SecurityConfig {
     @Bean
     public UrlBasedCorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowCredentials(true); // 允许带 Cookie/Token
-        config.addAllowedOriginPattern("*"); // 允许所有来源
-        config.addAllowedHeader("*"); // 允许所有请求头
-        config.addAllowedMethod("*"); // 允许所有方法 (GET, POST, PUT, DELETE)
+        config.setAllowCredentials(true);
+        for (String originPattern : allowedOriginPatterns.split(",")) {
+            String trimmed = originPattern.trim();
+            if (!trimmed.isEmpty()) {
+                config.addAllowedOriginPattern(trimmed);
+            }
+        }
+        config.addAllowedHeader("*");
+        config.addAllowedMethod("*");
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);

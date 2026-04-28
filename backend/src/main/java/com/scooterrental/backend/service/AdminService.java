@@ -58,6 +58,7 @@ public class AdminService {
     private final RideAutomationService rideAutomationService;
     private final VehicleIntegrationService vehicleIntegrationService;
     private final PaymentGatewayService paymentGatewayService;
+    private final NotificationService notificationService;
     private final OpsAssignmentMapper opsAssignmentMapper;
     private volatile boolean adminTablesReady = false;
     private volatile Map<String, Object> cachedDashboardSnapshot = null;
@@ -74,6 +75,7 @@ public class AdminService {
             RideAutomationService rideAutomationService,
             VehicleIntegrationService vehicleIntegrationService,
             PaymentGatewayService paymentGatewayService,
+            NotificationService notificationService,
             OpsAssignmentMapper opsAssignmentMapper) {
         this.bookingMapper = bookingMapper;
         this.scooterService = scooterService;
@@ -85,6 +87,7 @@ public class AdminService {
         this.rideAutomationService = rideAutomationService;
         this.vehicleIntegrationService = vehicleIntegrationService;
         this.paymentGatewayService = paymentGatewayService;
+        this.notificationService = notificationService;
         this.opsAssignmentMapper = opsAssignmentMapper;
     }
 
@@ -319,13 +322,22 @@ public class AdminService {
         booking.setPaymentStatus("CARD_BOUND");
         booking.setDesiredStartTime(parseDateTime(payload == null ? null : payload.get("desiredStartTime")));
         booking.setEstimatedCost(estimateHireCost(hirePeriod, scooter));
-        booking.setBookingStatus(Boolean.TRUE.equals(payload == null ? null : payload.get("sendConfirmation"))
-                && booking.getGuestEmail() != null ? "CONFIRMATION_SENT" : "BOOKED");
-        booking.setConfirmationSentAt("CONFIRMATION_SENT".equals(booking.getBookingStatus()) ? LocalDateTime.now() : null);
+        booking.setBookingStatus("BOOKED");
+        booking.setConfirmationSentAt(null);
         booking.setNotes(trimToNull(Objects.toString(payload == null ? null : payload.get("notes"), null)));
         booking.setCreatedBy(trimToDefault(payload == null ? null : payload.get("createdBy"), "Front Desk"));
         staffBookingMapper.insert(booking);
-        return staffBookingMapper.selectById(booking.getBookingId());
+        StaffBooking savedBooking = staffBookingMapper.selectById(booking.getBookingId());
+        if (Boolean.TRUE.equals(payload == null ? null : payload.get("sendConfirmation")) && savedBooking.getGuestEmail() != null) {
+            try {
+                return sendConfirmation(savedBooking.getBookingId(), savedBooking.getGuestEmail());
+            } catch (IllegalArgumentException ex) {
+                log.warn("Booking {} was created but confirmation could not be sent immediately: {}",
+                        savedBooking.getBookingId(),
+                        ex.getMessage());
+            }
+        }
+        return savedBooking;
     }
 
     public StaffBooking sendConfirmation(Integer bookingId, String email) {
@@ -342,6 +354,10 @@ public class AdminService {
         }
         if (resolvedEmail == null) {
             throw new IllegalArgumentException("Guest email is required to send confirmation");
+        }
+
+        if (!notificationService.sendStaffBookingConfirmationEmail(existing, resolvedEmail)) {
+            throw new IllegalArgumentException("Confirmation email service is unavailable");
         }
 
         staffBookingMapper.updateConfirmationStatus(bookingId, resolvedEmail, LocalDateTime.now(), "CONFIRMATION_SENT");
@@ -831,8 +847,8 @@ public class AdminService {
                         "detail", "Discount ladders are exposed in admin and the 4-hour package can now be surfaced consistently."),
                 mapOf(
                         "title", "Booking confirmations",
-                        "status", "WATCH",
-                        "detail", "Confirmation status is tracked in-app, but a real outbound email provider is still not wired in."),
+                        "status", "READY",
+                        "detail", "Confirmation delivery is wired through the configured outbound email service, with SMS alerts available when phone details exist."),
                 mapOf(
                         "title", "Map coverage",
                         "status", "WATCH",

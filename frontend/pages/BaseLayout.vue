@@ -143,13 +143,13 @@
                 <view class="footer-contact-icon">
                   <uni-icons type="email" size="18" color="#2563EB"></uni-icons>
                 </view>
-                <text class="footer-contact footer-contact-stack">support@scootergo.com</text>
+                <text class="footer-contact footer-contact-stack">Support via in-app help</text>
               </view>
               <view class="footer-contact-item">
                 <view class="footer-contact-icon">
                   <uni-icons type="phone" size="18" color="#2563EB"></uni-icons>
                 </view>
-                <text class="footer-contact footer-contact-stack">+44 20 1234 5678</text>
+                <text class="footer-contact footer-contact-stack">Service hours 09:00 - 18:00</text>
               </view>
             </view>
           </view>

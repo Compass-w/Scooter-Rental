@@ -367,7 +367,7 @@ const featuredStoreLocations = [
     id: 'singapore-bugis',
     city: 'Singapore',
     name: 'Bugis Urban Ride Lab',
-    type: 'Demo + Premium Fleet',
+    type: 'Flagship + Premium Fleet',
     address: '200 Victoria Street, Bugis Junction',
     lat: 1.299,
     lng: 103.8558,
@@ -375,7 +375,7 @@ const featuredStoreLocations = [
     color: '#10B981'
   }
 ]
-const DEMO_FALLBACK_LOCATION = {
+const DEFAULT_FALLBACK_LOCATION = {
   lat: featuredStoreLocations[0].lat,
   lng: featuredStoreLocations[0].lng,
   label: featuredStoreLocations[0].name
@@ -563,7 +563,7 @@ const syncRideScooterToLocation = (location) => {
       batteryLevel: syncedRide.startBatteryLevel ?? selectedScooter.value?.batteryLevel ?? bookingScooter.value?.batteryLevel ?? null,
       lockState: 'UNLOCKED'
     }).catch(error => {
-      console.warn('Telemetry sync failed:', error)
+      globalThis.__APP_LOGGER__?.warn('Telemetry sync failed:', error)
     })
   }
 
@@ -632,7 +632,7 @@ const getDeviceLocation = async ({ allowFallback = false } = {}) => {
 
   if (allowFallback && realLocationUnavailable.value) {
     return {
-      ...DEMO_FALLBACK_LOCATION,
+      ...DEFAULT_FALLBACK_LOCATION,
       fallback: true
     }
   }
@@ -663,7 +663,7 @@ const getDeviceLocation = async ({ allowFallback = false } = {}) => {
 
   if (allowFallback) {
     return {
-      ...DEMO_FALLBACK_LOCATION,
+      ...DEFAULT_FALLBACK_LOCATION,
       fallback: true,
       sourceError: errors.find(Boolean)
     }
@@ -887,7 +887,7 @@ const sendToMap = (cmd, data) => {
   try {
     _mapWindow.postMessage(JSON.stringify({ cmd, data }), '*')
   } catch (e) {
-    console.warn('[sendToMap] postMessage failed:', e)
+    globalThis.__APP_LOGGER__?.warn('[sendToMap] postMessage failed:', e)
   }
 }
 
@@ -996,7 +996,7 @@ const requestUserLocation = ({ showErrorToast = true, toastOnSuccess = false, al
 
         if (location.fallback) {
           uni.showToast({
-            title: `Using demo location: ${location.label}`,
+            title: `Using saved location: ${location.label}`,
             icon: 'none'
           })
           resolve(location)
@@ -1181,7 +1181,7 @@ const getCurrentActiveRide = async (userId) => {
     }
     return liveRide
   } catch (error) {
-    console.error('Failed to check active ride:', error)
+    globalThis.__APP_LOGGER__?.error('Failed to check active ride:', error)
     return matchingCachedRide
   }
 }
@@ -1362,7 +1362,7 @@ const confirmRideStart = async (paymentData) => {
         batteryLevel: paymentData.startBatteryLevel ?? rideScooter.batteryLevel ?? null,
         lockState: 'UNLOCKED'
       }).catch(error => {
-        console.warn('Initial telemetry sync failed:', error)
+        globalThis.__APP_LOGGER__?.warn('Initial telemetry sync failed:', error)
       })
     }
     startRideLocationTracking()
@@ -1379,7 +1379,7 @@ const confirmRideStart = async (paymentData) => {
       loadScooters().catch(() => {})
     }, 1200)
   } catch (e) {
-    console.error('Failed to start ride:', e)
+    globalThis.__APP_LOGGER__?.error('Failed to start ride:', e)
   } finally {
     riding.value = false
   }

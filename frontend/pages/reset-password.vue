@@ -123,8 +123,7 @@
 
 <script setup>
 import { computed, ref, onMounted } from 'vue'
-import { forgotPassword, resetPassword, verifyResetToken } from '@/api/user.js'
-import { getProfile } from '@/api/profile.js'
+import { resetPassword, verifyResetToken } from '@/api/user.js'
 import BaseLayout from '@/pages/BaseLayout.vue'
 
 // Reactive state variables
@@ -137,7 +136,6 @@ const verifying = ref(true)
 const tokenInvalid = ref(false)
 const resetToken = ref('')
 const userEmail = ref('')
-const pageSource = ref('')
 const errorTitle = ref('Invalid or Expired Link')
 const errorMessage = ref('This password reset link is invalid or has expired. Please request a new one.')
 const invalidActionLabel = ref('Request New Link')
@@ -161,13 +159,6 @@ onMounted(async () => {
   const pages = getCurrentPages()
   const currentPage = pages[pages.length - 1]
   const options = currentPage.options || {}
-  pageSource.value = options.source || ''
-  const routeEmail = options.email ? decodeURIComponent(options.email) : ''
-
-  if (pageSource.value === 'profile') {
-    await bootstrapProfileReset(routeEmail)
-    return
-  }
 
   resetToken.value = options.token || ''
   
@@ -186,72 +177,11 @@ onMounted(async () => {
   await verifyToken()
 })
 
-const readStoredUserInfo = () => {
-  try {
-    const cached = uni.getStorageSync('userInfo')
-    return typeof cached === 'string' ? JSON.parse(cached) : (cached || {})
-  } catch (error) {
-    console.error('Failed to read stored user info:', error)
-    return {}
-  }
-}
-
 const markResetFlowInvalid = (title, message, actionLabel = 'Request New Link') => {
   errorTitle.value = title
   errorMessage.value = message
   invalidActionLabel.value = actionLabel
   tokenInvalid.value = true
-}
-
-const bootstrapProfileReset = async (prefilledEmail = '') => {
-  verifying.value = true
-
-  const storedUser = readStoredUserInfo()
-  const preferredUserId = storedUser?.userId || storedUser?.id || null
-  let email = String(prefilledEmail || storedUser?.email || '').trim()
-
-  if (!email) {
-    try {
-      const profile = await getProfile()
-      email = String(profile?.email || '').trim()
-    } catch (error) {
-      console.error('Failed to fetch latest profile for password reset:', error)
-    }
-  }
-
-  if (!email) {
-    markResetFlowInvalid(
-      'Email Required',
-      'Add an email address in your profile before changing your password from this page.',
-      'Back to Profile'
-    )
-    verifying.value = false
-    return
-  }
-
-  try {
-    const result = await forgotPassword({
-      email,
-      userId: preferredUserId
-    })
-    resetToken.value = result?.resetToken || ''
-    userEmail.value = result?.email || email
-
-    if (!resetToken.value) {
-      throw new Error('Reset token not returned for profile flow')
-    }
-
-    tokenInvalid.value = false
-  } catch (error) {
-    console.error('Failed to initialize profile password reset:', error)
-    markResetFlowInvalid(
-      'Unable to Start Reset',
-      'We could not prepare a secure reset session right now. Please try again from your profile.',
-      'Back to Profile'
-    )
-  } finally {
-    verifying.value = false
-  }
 }
 
 /**
@@ -270,7 +200,7 @@ const verifyToken = async () => {
     
     tokenInvalid.value = false
   } catch (error) {
-    console.error('Token verification failed:', error)
+    globalThis.__APP_LOGGER__?.error('Token verification failed:', error)
     markResetFlowInvalid(
       'Invalid or Expired Link',
       'This password reset link is invalid or has expired. Please request a new one.',
@@ -356,7 +286,7 @@ const handleResetPassword = async () => {
     }, 2000)
     
   } catch (error) {
-    console.error('Password reset failed:', error)
+    globalThis.__APP_LOGGER__?.error('Password reset failed:', error)
     // Error message is already handled by request.js
   } finally {
     loading.value = false
@@ -385,11 +315,6 @@ const goToForget = () => {
 }
 
 const handleInvalidStateAction = () => {
-  if (pageSource.value === 'profile') {
-    uni.navigateBack({ delta: 1 })
-    return
-  }
-
   goToForget()
 }
 </script>

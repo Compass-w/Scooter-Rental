@@ -247,10 +247,16 @@
       </view>
 
       <view class="section-block">
-        <label class="liability-check">
-          <checkbox :checked="liabilityAccepted" color="#2563EB" style="transform:scale(0.82)" @tap.stop="toggleLiability" />
+        <view
+          class="liability-check"
+          :class="{ 'liability-check-active': liabilityAccepted }"
+          @tap="toggleLiability"
+        >
+          <view class="liability-box" :class="{ 'liability-box-active': liabilityAccepted }">
+            <uni-icons v-if="liabilityAccepted" type="checkmarkempty" size="18" color="#2563EB"></uni-icons>
+          </view>
           <text class="liability-copy">I understand that road-law compliance remains the rider's responsibility, and uncovered penalties or damage may still be charged.</text>
-        </label>
+        </view>
         <text v-if="formErrors.liabilityAccepted" class="input-error input-error-block">{{ formErrors.liabilityAccepted }}</text>
       </view>
 
@@ -394,7 +400,7 @@
       </view>
 
       <text class="sheet-note">
-        This demo now reflects real scooter photos, model-specific pricing, region-specific onboarding, battery delta visibility, auto-charging for overtime, and safety disclaimers.
+        Pricing reflects the selected model, region, hire period, battery estimate, overtime policy, and safety acknowledgement.
       </text>
 
       <button
@@ -1375,6 +1381,33 @@ const handleConfirm = async () => {
   display: flex;
   align-items: flex-start;
   gap: 12rpx;
+  border: 1rpx solid transparent;
+  border-radius: 22rpx;
+  padding: 8rpx;
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+
+.liability-check-active {
+  background: rgba(37, 99, 235, 0.04);
+  border-color: rgba(37, 99, 235, 0.16);
+}
+
+.liability-box {
+  width: 40rpx;
+  height: 40rpx;
+  margin-top: 4rpx;
+  border-radius: 12rpx;
+  border: 2rpx solid #CBD5E1;
+  background: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.liability-box-active {
+  border-color: #2563EB;
+  background: #EFF6FF;
 }
 
 .liability-copy {

@@ -807,11 +807,11 @@ const featuredStores = ref([
   {
     city: 'Singapore',
     name: 'Bugis Urban Ride Lab',
-    type: 'Demo + Premium Fleet',
+    type: 'Flagship + Premium Fleet',
     address: '200 Victoria Street, Bugis Junction mobility deck, street-level entrance B.',
     hours: '10:30 - 22:30',
-    summary: 'Our flagship Southeast Asia store for premium model demos, longer range consultation, and guided pickups for visitors exploring the core city districts.',
-    highlights: ['Model demos', 'Tourist onboarding', 'Premium fleet', 'Battery advice']
+    summary: 'Our flagship Southeast Asia store for premium models, longer-range consultations, and guided pickups for visitors exploring the core city districts.',
+    highlights: ['Model lineup', 'Tourist onboarding', 'Premium fleet', 'Battery advice']
   }
 ])
 

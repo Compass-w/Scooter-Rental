@@ -17,7 +17,7 @@ const getToken = () => {
   try {
     return uni.getStorageSync('token') || ''
   } catch (e) {
-    console.error('Failed to get token:', e)
+    globalThis.__APP_LOGGER__?.error('Failed to get token:', e)
     return ''
   }
 }
@@ -29,7 +29,7 @@ const setToken = (token) => {
   try {
     uni.setStorageSync('token', token)
   } catch (e) {
-    console.error('Failed to save token:', e)
+    globalThis.__APP_LOGGER__?.error('Failed to save token:', e)
   }
 }
 
@@ -40,7 +40,7 @@ const clearToken = () => {
   try {
     uni.removeStorageSync('token')
   } catch (e) {
-    console.error('Failed to clear token:', e)
+    globalThis.__APP_LOGGER__?.error('Failed to clear token:', e)
   }
 }
 
@@ -88,11 +88,11 @@ const request = (options) => {
         if (code === 200) {
           resolve(data)
         } 
-        // 401 means unauthorized or token expired
-        else if (code === 401 || statusCode === 401) {
+        // 401/403 means unauthorized, expired session, or insufficient privileges
+        else if (code === 401 || statusCode === 401 || code === 403 || statusCode === 403) {
           clearToken()
           uni.showToast({
-            title: message || error || 'Please login again',
+            title: message || error || (statusCode === 403 || code === 403 ? 'Access denied' : 'Please login again'),
             icon: 'none'
           })
           // Redirect to login page
@@ -101,7 +101,7 @@ const request = (options) => {
               url: '/pages/login'
             })
           }, 1500)
-          reject(new Error(message || 'Authentication failed'))
+          reject(new Error(message || error || (statusCode === 403 || code === 403 ? 'Access denied' : 'Authentication failed')))
         }
         // Other errors
         else {
@@ -123,7 +123,7 @@ const request = (options) => {
         }
       },
       fail: (err) => {
-        console.error('Request failed:', err)
+        globalThis.__APP_LOGGER__?.error('Request failed:', err)
         
         // Network error message
         let errorMsg = 'Network error'

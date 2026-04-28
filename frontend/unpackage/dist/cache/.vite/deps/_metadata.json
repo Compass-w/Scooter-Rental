@@ -1,13 +1,13 @@
 {
-  "hash": "240b854a",
+  "hash": "afe4dca0",
   "configHash": "1eb244d1",
-  "lockfileHash": "c321e1e1",
-  "browserHash": "19c9f82d",
+  "lockfileHash": "958c2220",
+  "browserHash": "9704dce7",
   "optimized": {
     "@google/model-viewer": {
       "src": "../../../../../node_modules/@google/model-viewer/lib/model-viewer.js",
       "file": "@google_model-viewer.js",
-      "fileHash": "be191a7d",
+      "fileHash": "ef43a07f",
       "needsInterop": false
     }
   },

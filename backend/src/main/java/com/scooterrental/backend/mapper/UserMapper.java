@@ -6,6 +6,67 @@ import org.apache.ibatis.annotations.*;
 @Mapper
 public interface UserMapper {
 
+        @Update("ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(100)")
+        void addEmailColumn();
+
+        @Update("ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20)")
+        void addPhoneColumn();
+
+        @Update("ALTER TABLE users ADD COLUMN IF NOT EXISTS city VARCHAR(100)")
+        void addCityColumn();
+
+        @Update("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT")
+        void addAvatarUrlColumn();
+
+        @Update("ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'customer'")
+        void addRoleColumn();
+
+        @Update("ALTER TABLE users ADD COLUMN IF NOT EXISTS total_riding_minutes INT DEFAULT 0")
+        void addTotalRidingMinutesColumn();
+
+        @Update("ALTER TABLE users ADD COLUMN IF NOT EXISTS achievements TEXT DEFAULT ''")
+        void addAchievementsColumn();
+
+        @Update("ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+        void addCreatedAtColumn();
+
+        @Update("""
+                        UPDATE users
+                        SET email = COALESCE(email, 'manager1@leeds.ac.uk'),
+                            phone = COALESCE(phone, '07123450001'),
+                            city = COALESCE(city, 'Leeds'),
+                            password_hash = '$2y$10$o9w2LkXNfi6dgHUIlrMxNuiiUhnxwRlxJ9NwMTLZWGI9ImY64rD4K',
+                            role = 'manager'
+                        WHERE username = 'manager1'
+                        """)
+        int updateDefaultManagerAccount();
+
+        @Insert("""
+                        INSERT INTO users (
+                            username,
+                            email,
+                            phone,
+                            city,
+                            password_hash,
+                            role,
+                            total_riding_minutes,
+                            achievements
+                        )
+                        SELECT
+                            'manager1',
+                            'manager1@leeds.ac.uk',
+                            '07123450001',
+                            'Leeds',
+                            '$2y$10$o9w2LkXNfi6dgHUIlrMxNuiiUhnxwRlxJ9NwMTLZWGI9ImY64rD4K',
+                            'manager',
+                            12,
+                            ''
+                        WHERE NOT EXISTS (
+                            SELECT 1 FROM users WHERE username = 'manager1'
+                        )
+                        """)
+        int insertDefaultManagerAccountIfMissing();
+
         @Select("SELECT user_id AS userId, username, email, phone, city, avatar_url AS avatarUrl, role, " +
                         "total_riding_minutes AS totalRidingMinutes, achievements, created_at AS createdAt " +
                         "FROM users ORDER BY created_at DESC, user_id DESC")

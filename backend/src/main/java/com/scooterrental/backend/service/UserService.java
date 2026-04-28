@@ -2,6 +2,8 @@ package com.scooterrental.backend.service;
 
 import com.scooterrental.backend.entity.User;
 import com.scooterrental.backend.mapper.UserMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -16,6 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class UserService {
 
+    private static final Logger log = LoggerFactory.getLogger(UserService.class);
     private static final long RESET_TOKEN_EXPIRY_HOURS = 24;
 
     @Autowired
@@ -25,16 +28,43 @@ public class UserService {
     private PasswordEncoder passwordEncoder;
 
     private final Map<String, PasswordResetSession> passwordResetTokens = new ConcurrentHashMap<>();
+    private volatile boolean userTableReady = false;
 
     public User login(String username, String password) {
+        ensureUserTableCompatibility();
+
         User user = userMapper.findByUsername(username);
-        if (user != null && passwordEncoder.matches(password, user.getPasswordHash())) {
+        if (user == null || password == null) {
+            return null;
+        }
+
+        String storedPassword = user.getPasswordHash();
+        if (storedPassword == null || storedPassword.isBlank()) {
+            return null;
+        }
+
+        try {
+            if (looksLikeBcryptHash(storedPassword) && passwordEncoder.matches(password, storedPassword)) {
+                return user;
+            }
+        } catch (IllegalArgumentException ignored) {
+            // Fall back to legacy password compatibility below.
+        }
+
+        // Compatibility path for legacy rows that still store a plain-text or otherwise
+        // non-BCrypt password. When the raw password matches, transparently upgrade it.
+        if (password.equals(storedPassword)) {
+            userMapper.updatePasswordHash(user.getUserId(), passwordEncoder.encode(password));
+            user.setPasswordHash(null);
             return user;
         }
+
         return null;
     }
 
     public boolean register(User user) {
+        ensureUserTableCompatibility();
+
         if (userMapper.findByUsername(user.getUsername()) != null) {
             return false;
         }
@@ -48,10 +78,13 @@ public class UserService {
     }
 
     public User getUserById(Integer userId) {
+        ensureUserTableCompatibility();
         return userMapper.selectById(userId);
     }
 
     public boolean emailBelongsToAnotherUser(Integer userId, String email) {
+        ensureUserTableCompatibility();
+
         if (email == null || email.isBlank()) {
             return false;
         }
@@ -59,7 +92,9 @@ public class UserService {
         return userMapper.countByEmailExcludingUserId(email.trim(), userId == null ? -1 : userId) > 0;
     }
 
-    public Map<String, Object> createPasswordReset(String email, Integer preferredUserId) {
+    public PasswordResetRequestData createPasswordReset(String email, Integer preferredUserId) {
+        ensureUserTableCompatibility();
+
         if ((email == null || email.isBlank()) && preferredUserId == null) {
             return null;
         }
@@ -83,12 +118,12 @@ public class UserService {
         LocalDateTime expiresAt = LocalDateTime.now().plusHours(RESET_TOKEN_EXPIRY_HOURS);
         passwordResetTokens.put(token, new PasswordResetSession(user.getUserId(), user.getEmail(), expiresAt));
 
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("email", user.getEmail());
-        payload.put("resetToken", token);
-        payload.put("resetPath", "/pages/reset-password?token=" + token);
-        payload.put("expiresAt", expiresAt);
-        return payload;
+        return new PasswordResetRequestData(
+                user.getUserId(),
+                user.getEmail(),
+                user.getPhone(),
+                token,
+                expiresAt);
     }
 
     public Map<String, Object> verifyPasswordResetToken(String token) {
@@ -104,6 +139,8 @@ public class UserService {
     }
 
     public boolean resetPassword(String token, String newPassword) {
+        ensureUserTableCompatibility();
+
         PasswordResetSession session = getValidResetSession(token);
         if (session == null || newPassword == null || newPassword.isBlank()) {
             return false;
@@ -125,6 +162,8 @@ public class UserService {
      * @return true if update was successful.
      */
     public boolean updateUser(User user) {
+        ensureUserTableCompatibility();
+
         if (user == null || user.getUserId() == null) {
             return false;
         }
@@ -140,6 +179,8 @@ public class UserService {
      * Gamification logic: check and award achievements [ID: 22].
      */
     public void checkAndAwardAchievements(Integer userId) {
+        ensureUserTableCompatibility();
+
         User user = userMapper.selectById(userId);
         if (user == null)
             return;
@@ -156,6 +197,40 @@ public class UserService {
 
         if (updated) {
             userMapper.updateAchievements(userId, current);
+        }
+    }
+
+    private void ensureUserTableCompatibility() {
+        if (userTableReady) {
+            return;
+        }
+
+        synchronized (this) {
+            if (userTableReady) {
+                return;
+            }
+
+            try {
+                userMapper.addEmailColumn();
+                userMapper.addPhoneColumn();
+                userMapper.addCityColumn();
+                userMapper.addAvatarUrlColumn();
+                userMapper.addRoleColumn();
+                userMapper.addTotalRidingMinutesColumn();
+                userMapper.addAchievementsColumn();
+                userMapper.addCreatedAtColumn();
+                ensureDefaultManagerAccount();
+                userTableReady = true;
+            } catch (Exception ex) {
+                log.error("Failed to initialize user table compatibility columns", ex);
+            }
+        }
+    }
+
+    private void ensureDefaultManagerAccount() {
+        int updatedRows = userMapper.updateDefaultManagerAccount();
+        if (updatedRows == 0) {
+            userMapper.insertDefaultManagerAccountIfMissing();
         }
     }
 
@@ -179,6 +254,20 @@ public class UserService {
 
     private void invalidateResetTokensForUser(Integer userId) {
         passwordResetTokens.entrySet().removeIf(entry -> Objects.equals(entry.getValue().userId(), userId));
+    }
+
+    private boolean looksLikeBcryptHash(String passwordHash) {
+        return passwordHash.startsWith("$2a$")
+                || passwordHash.startsWith("$2b$")
+                || passwordHash.startsWith("$2y$");
+    }
+
+    public record PasswordResetRequestData(
+            Integer userId,
+            String email,
+            String phone,
+            String token,
+            LocalDateTime expiresAt) {
     }
 
     private record PasswordResetSession(Integer userId, String email, LocalDateTime expiresAt) {

@@ -37,7 +37,7 @@ export const login = (data) => {
  * 
  * API Endpoint: POST /auth/forgot-password
  * Request Body: { "email": "user@example.com" }
- * Response: { "code": 200, "message": "Success", "data": { resetToken, resetPath, email, expiresAt } }
+ * Response: { "code": 200, "message": "Success", "data": { email, expiresAt, emailSent, smsSent } }
  */
 export const forgotPassword = (data) => {
   return request.post('/auth/forgot-password', data)
@@ -86,7 +86,7 @@ export const logout = () => {
       url: '/pages/login'
     })
   } catch (e) {
-    console.error('Logout failed:', e)
+    globalThis.__APP_LOGGER__?.error('Logout failed:', e)
   }
 }
 
@@ -97,7 +97,7 @@ export const getUserInfo = () => {
   try {
     return uni.getStorageSync('userInfo') || null
   } catch (e) {
-    console.error('Failed to get user info:', e)
+    globalThis.__APP_LOGGER__?.error('Failed to get user info:', e)
     return null
   }
 }
@@ -109,7 +109,7 @@ export const setUserInfo = (userInfo) => {
   try {
     uni.setStorageSync('userInfo', userInfo)
   } catch (e) {
-    console.error('Failed to save user info:', e)
+    globalThis.__APP_LOGGER__?.error('Failed to save user info:', e)
   }
 }
 

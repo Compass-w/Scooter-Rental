@@ -1,8 +1,11 @@
 package com.scooterrental.backend.controller;
 
 import com.scooterrental.backend.common.Result;
+import com.scooterrental.backend.dto.auth.ForgotPasswordRequest;
 import com.scooterrental.backend.dto.auth.ResetPasswordRequest;
 import com.scooterrental.backend.entity.User;
+import com.scooterrental.backend.service.AuthSessionService;
+import com.scooterrental.backend.service.NotificationService;
 import com.scooterrental.backend.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -23,6 +26,12 @@ public class AuthController {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private AuthSessionService authSessionService;
+
+    @Autowired
+    private NotificationService notificationService;
+
     @PostMapping("/login")
     @Operation(summary = "User Login", description = "Returns token if success, HTTP 401 if failed")
     public ResponseEntity<Result<Map<String, Object>>> login(@RequestBody Map<String, String> loginData) {
@@ -39,11 +48,11 @@ public class AuthController {
 
         if (user != null) {
             Map<String, Object> data = new HashMap<>();
-            data.put("token", "fake-jwt-token-demo"); // In real project, generate JWT here
+            data.put("token", authSessionService.createSession(user));
             data.put("userId", user.getUserId());
             data.put("username", user.getUsername());
             data.put("email", user.getEmail());
-            data.put("role", user.getRole());
+            data.put("role", authSessionService.normalizeRole(user.getRole()));
 
             // Login Success -> 200 OK
             return ResponseEntity.ok(Result.success(data));
@@ -82,22 +91,43 @@ public class AuthController {
 
     @PostMapping("/forgot-password")
     @Operation(summary = "Create password reset token")
-    public ResponseEntity<Result<Map<String, Object>>> forgotPassword(@RequestBody Map<String, Object> request) {
-        String email = request == null || request.get("email") == null ? null : String.valueOf(request.get("email")).trim();
-        Integer userId = parseInteger(request == null ? null : request.get("userId"));
+    public ResponseEntity<Result<Map<String, Object>>> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+        String email = request == null || request.getEmail() == null ? null : request.getEmail().trim();
+        Integer userId = request == null ? null : request.getUserId();
 
         if ((email == null || email.isBlank()) && userId == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Result.error(400, "Email or user ID is required"));
         }
 
-        Map<String, Object> resetData = userService.createPasswordReset(email, userId);
-        if (resetData == null) {
+        UserService.PasswordResetRequestData resetRequest = userService.createPasswordReset(email, userId);
+        if (resetRequest == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Result.error(404, "No matching account found for this reset request"));
         }
 
-        return ResponseEntity.ok(Result.success(resetData));
+        String resetLink = notificationService.buildPasswordResetLink(resetRequest.token());
+        boolean emailSent = notificationService.sendPasswordResetEmail(
+                resetRequest.email(),
+                resetLink,
+                resetRequest.expiresAt());
+        if (!emailSent) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(Result.error(503, "Password reset email service is unavailable"));
+        }
+
+        boolean smsSent = notificationService.sendPasswordResetSms(
+                resetRequest.phone(),
+                resetRequest.email(),
+                resetLink,
+                resetRequest.expiresAt());
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("email", resetRequest.email());
+        payload.put("expiresAt", resetRequest.expiresAt());
+        payload.put("emailSent", true);
+        payload.put("smsSent", smsSent);
+        return ResponseEntity.ok(Result.success(payload));
     }
 
     @GetMapping("/verify-reset-token")
@@ -138,22 +168,6 @@ public class AuthController {
         }
 
         return ResponseEntity.ok(Result.success());
-    }
-
-    private Integer parseInteger(Object rawValue) {
-        if (rawValue == null) {
-            return null;
-        }
-
-        if (rawValue instanceof Number number) {
-            return number.intValue();
-        }
-
-        try {
-            return Integer.parseInt(String.valueOf(rawValue).trim());
-        } catch (NumberFormatException ignored) {
-            return null;
-        }
     }
 
     private String validatePasswordComplexity(String password) {
