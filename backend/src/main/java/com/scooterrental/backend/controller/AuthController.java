@@ -19,7 +19,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth") // Standard path for authentication
-@CrossOrigin(origins = "*")
 @Tag(name = "Authentication Module", description = "Handle Login and Registration")
 public class AuthController {
 

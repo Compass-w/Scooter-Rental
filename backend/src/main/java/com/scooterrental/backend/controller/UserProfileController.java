@@ -2,6 +2,8 @@ package com.scooterrental.backend.controller;
 
 import com.scooterrental.backend.common.Result;
 import com.scooterrental.backend.entity.User;
+import com.scooterrental.backend.security.AuthAccess;
+import com.scooterrental.backend.service.AuthSessionService;
 import com.scooterrental.backend.service.UserService;
 import com.scooterrental.backend.service.BookingService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -9,13 +11,13 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/users")
-@CrossOrigin(origins = "*")
 @Tag(name = "User Profile Module", description = "Manage user profile and settings")
 public class UserProfileController {
 
@@ -30,7 +32,10 @@ public class UserProfileController {
      */
     @GetMapping("/{id}")
     @Operation(summary = "Get User Profile", description = "Retrieve user details and auto-refresh medals")
-    public ResponseEntity<Result<User>> getUserProfile(@PathVariable Integer id) {
+    public ResponseEntity<Result<User>> getUserProfile(
+            @PathVariable Integer id,
+            @AuthenticationPrincipal AuthSessionService.AuthSession session) {
+        AuthAccess.requireSelfOrStaff(session, id);
         userService.checkAndAwardAchievements(id);
         User user = userService.getUserById(id);
 
@@ -49,11 +54,14 @@ public class UserProfileController {
      */
     @PutMapping("/update")
     @Operation(summary = "Update Profile", description = "Modify user email and phone number")
-    public Result<User> updateUserInfo(@RequestBody Map<String, Object> payload) {
+    public Result<User> updateUserInfo(
+            @RequestBody Map<String, Object> payload,
+            @AuthenticationPrincipal AuthSessionService.AuthSession session) {
         Integer userId = parseUserId(payload.get("userId"));
         if (userId == null) {
             return Result.error(400, "User ID is required");
         }
+        AuthAccess.requireSelfOrStaff(session, userId);
 
         User user = new User();
         user.setUserId(userId);
@@ -86,7 +94,10 @@ public class UserProfileController {
      */
     @GetMapping("/{id}/stats")
     @Operation(summary = "Get Usage Stats", description = "Get weekly riding minutes for charts")
-    public Result<List<Map<String, Object>>> getStats(@PathVariable Integer id) {
+    public Result<List<Map<String, Object>>> getStats(
+            @PathVariable Integer id,
+            @AuthenticationPrincipal AuthSessionService.AuthSession session) {
+        AuthAccess.requireSelfOrStaff(session, id);
         return Result.success(bookingService.getStats(id));
     }
 
@@ -95,7 +106,10 @@ public class UserProfileController {
      */
     @GetMapping("/{id}/settings")
     @Operation(summary = "Get User Settings", description = "Retrieve user notification and privacy settings")
-    public Result<Map<String, Object>> getSettings(@PathVariable Integer id) {
+    public Result<Map<String, Object>> getSettings(
+            @PathVariable Integer id,
+            @AuthenticationPrincipal AuthSessionService.AuthSession session) {
+        AuthAccess.requireSelfOrStaff(session, id);
         // 这里暂时返回模拟数据，实际开发中应从数据库读取
         Map<String, Object> settings = new java.util.HashMap<>();
         settings.put("notifications", true);

@@ -4,6 +4,7 @@ import com.scooterrental.backend.security.SessionAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -48,9 +49,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                        .requestMatchers("/api/scooters/available").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/scooters", "/api/scooters/available").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/scooters/add").hasAnyRole("ADMIN", "MANAGER")
                         .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "MANAGER")
-                        .anyRequest().permitAll());
+                        .anyRequest().authenticated());
         http.addFilterBefore(sessionAuthenticationFilter, AnonymousAuthenticationFilter.class);
 
         return http.build();

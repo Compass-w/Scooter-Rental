@@ -5,6 +5,7 @@ import com.scooterrental.backend.mapper.UserMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -26,6 +27,9 @@ public class UserService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Value("${app.bootstrap.default-manager.enabled:false}")
+    private boolean defaultManagerBootstrapEnabled;
 
     private final Map<String, PasswordResetSession> passwordResetTokens = new ConcurrentHashMap<>();
     private volatile boolean userTableReady = false;
@@ -219,7 +223,9 @@ public class UserService {
                 userMapper.addTotalRidingMinutesColumn();
                 userMapper.addAchievementsColumn();
                 userMapper.addCreatedAtColumn();
-                ensureDefaultManagerAccount();
+                if (defaultManagerBootstrapEnabled) {
+                    ensureDefaultManagerAccount();
+                }
                 userTableReady = true;
             } catch (Exception ex) {
                 log.error("Failed to initialize user table compatibility columns", ex);

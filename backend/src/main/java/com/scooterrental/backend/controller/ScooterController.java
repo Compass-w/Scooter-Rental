@@ -13,7 +13,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/scooters")
-@CrossOrigin(origins = "*")
 @Tag(name = "Scooter Module", description = "Manage scooter status and location")
 public class ScooterController {
 

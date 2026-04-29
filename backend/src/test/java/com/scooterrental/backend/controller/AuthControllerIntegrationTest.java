@@ -145,4 +145,39 @@ class AuthControllerIntegrationTest {
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isForbidden());
     }
+
+    @Test
+    void userProfileRequiresLogin() throws Exception {
+        mockMvc.perform(get("/api/users/1"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void customerCanReadOwnProfile() throws Exception {
+        User customer = new User();
+        customer.setUserId(1);
+        customer.setUsername("student1");
+        customer.setEmail("student1@leeds.ac.uk");
+        customer.setRole("customer");
+        String token = authSessionService.createSession(customer);
+
+        mockMvc.perform(get("/api/users/1")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.username").value("student1"));
+    }
+
+    @Test
+    void customerCannotReadAnotherUsersProfile() throws Exception {
+        User customer = new User();
+        customer.setUserId(1);
+        customer.setUsername("student1");
+        customer.setEmail("student1@leeds.ac.uk");
+        customer.setRole("customer");
+        String token = authSessionService.createSession(customer);
+
+        mockMvc.perform(get("/api/users/2")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden());
+    }
 }

@@ -106,6 +106,16 @@ public class BookingService {
         return bookingMapper.cancelBooking(bookingId, userId) > 0;
     }
 
+    public boolean isBookingOwnedBy(Integer bookingId, Integer userId) {
+        ensureOperationalTables();
+        if (bookingId == null || userId == null) {
+            return false;
+        }
+
+        Booking booking = bookingMapper.selectByBookingId(bookingId);
+        return booking != null && userId.equals(booking.getUserId());
+    }
+
     public List<Map<String, Object>> getStats(Integer userId) {
         ensureOperationalTables();
         return bookingMapper.getWeeklyStats(userId);

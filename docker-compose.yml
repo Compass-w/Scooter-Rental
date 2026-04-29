@@ -11,7 +11,8 @@ services:
       - "${DB_PORT:-5432}:5432"
     volumes:
       - scooter_db_data:/var/lib/postgresql/data
-      - ./database/init.sql:/docker-entrypoint-initdb.d/001-init.sql:ro
+      - ./database/migrations/001_production_schema.sql:/docker-entrypoint-initdb.d/001-production-schema.sql:ro
+      - ./database/seeds/dev_seed.sql:/docker-entrypoint-initdb.d/002-dev-seed.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-scooter_user} -d ${POSTGRES_DB:-scooter_rental}"]
       interval: 5s

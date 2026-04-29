@@ -18,7 +18,7 @@ records, and an admin dashboard for fleet operations.
 ```text
 backend/          Spring Boot API
 frontend/         uni-app frontend
-database/         PostgreSQL schema and seed data
+database/         PostgreSQL production schema migration and development seed data
 docker-compose.yml
 .env.example
 ```
@@ -40,6 +40,7 @@ DB_USERNAME=scooter_user
 DB_PASSWORD=scooter_password
 CORS_ALLOWED_ORIGIN_PATTERNS=http://localhost:3000,http://localhost:5173
 PASSWORD_RESET_URL_TEMPLATE=http://localhost:3000/#/pages/reset-password?token={token}
+BOOTSTRAP_DEFAULT_MANAGER_ENABLED=false
 EMAIL_NOTIFICATIONS_ENABLED=false
 EMAIL_FROM=no-reply@example.com
 MAIL_HOST=smtp.example.com
@@ -72,9 +73,11 @@ Then open:
 - Backend API: http://localhost:8080
 - Swagger UI: http://localhost:8080/swagger-ui/index.html
 
-The compose stack starts PostgreSQL, applies `database/init.sql` on the first
-database volume initialization, runs the backend, and serves the built frontend
-through Nginx.
+The compose stack starts PostgreSQL, applies
+`database/migrations/001_production_schema.sql`, then applies
+`database/seeds/dev_seed.sql` on the first database volume initialization. This
+keeps the clean production schema separate from the coursework demo accounts and
+sample scooter data.
 
 To reset the seeded database:
 
@@ -146,7 +149,6 @@ this branch include:
 Remaining hardening work before a public production release:
 
 - Replace the in-memory session token store with durable auth such as JWT or server-side session persistence.
-- Restrict non-admin user endpoints so users can only access their own records.
 - Replace the simulated payment gateway with a real provider integration.
-- Move destructive seed scripts away from production migrations and adopt Flyway or Liquibase.
+- Adopt Flyway or Liquibase if you want versioned database upgrades beyond the single production schema file.
 - Expand backend, frontend, and end-to-end test coverage.
