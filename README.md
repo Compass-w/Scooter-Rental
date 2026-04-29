@@ -26,7 +26,7 @@ docker-compose.yml
 ## Configuration
 
 Runtime secrets are read from environment variables. Do not commit real database
-credentials.
+credentials; `.env` is ignored by git.
 
 ```bash
 cp .env.example .env
@@ -37,25 +37,34 @@ Important variables:
 ```text
 DB_URL=jdbc:postgresql://localhost:5432/scooter_rental
 DB_USERNAME=scooter_user
-DB_PASSWORD=scooter_password
-CORS_ALLOWED_ORIGIN_PATTERNS=http://localhost:3000,http://localhost:5173
-PASSWORD_RESET_URL_TEMPLATE=http://localhost:3000/#/pages/reset-password?token={token}
+DB_PASSWORD=<long-random-password>
+CORS_ALLOWED_ORIGIN_PATTERNS=http://scootergo.top:3000,http://www.scootergo.top:3000,http://scootergo.top,https://scootergo.top,http://www.scootergo.top,https://www.scootergo.top,http://localhost:3000,http://localhost:5173
+PASSWORD_RESET_URL_TEMPLATE=http://scootergo.top:3000/#/pages/reset-password?token={token}
 BOOTSTRAP_DEFAULT_MANAGER_ENABLED=false
 EMAIL_NOTIFICATIONS_ENABLED=false
 EMAIL_FROM=no-reply@example.com
 MAIL_HOST=smtp.example.com
 MAIL_PORT=587
-MAIL_USERNAME=replace-me
-MAIL_PASSWORD=replace-me
+MAIL_USERNAME=
+MAIL_PASSWORD=
 SMS_NOTIFICATIONS_ENABLED=false
-TWILIO_ACCOUNT_SID=replace-me
-TWILIO_AUTH_TOKEN=replace-me
+TWILIO_ACCOUNT_SID=
+TWILIO_AUTH_TOKEN=
 TWILIO_FROM_NUMBER=+10000000000
 ```
 
 The backend also includes
 `backend/src/main/resources/application-example.properties` as a reference for
 deployment platforms that inject Spring properties directly.
+
+Before the domain is approved for ports 80/443, point `scootergo.top` at the
+host running Docker and open `http://scootergo.top:3000`. After approval, switch
+`FRONTEND_PORT` back to `80` and remove `:3000` from the public URLs. For phone
+testing on a local network, add the laptop's
+LAN origin back into `CORS_ALLOWED_ORIGIN_PATTERNS` and open that LAN URL on the
+phone. Keep
+`BOOTSTRAP_DEFAULT_MANAGER_ENABLED=false` unless you intentionally want the
+backend to create or overwrite the demo manager account at startup.
 
 Password reset now uses an email link flow. The API does not return reset tokens
 to the frontend anymore. When SMTP is configured, the backend sends the reset
@@ -69,7 +78,7 @@ docker compose up --build
 
 Then open:
 
-- Frontend: http://localhost:3000
+- Frontend: http://localhost:3000 or http://scootergo.top:3000
 - Backend API: http://localhost:8080
 - Swagger UI: http://localhost:8080/swagger-ui/index.html
 
@@ -93,7 +102,9 @@ Start PostgreSQL first, then export database variables:
 ```bash
 export DB_URL=jdbc:postgresql://localhost:5432/scooter_rental
 export DB_USERNAME=scooter_user
-export DB_PASSWORD=scooter_password
+export DB_PASSWORD=<long-random-password>
+export PASSWORD_RESET_URL_TEMPLATE=http://scootergo.top:3000/#/pages/reset-password?token={token}
+export BOOTSTRAP_DEFAULT_MANAGER_ENABLED=false
 ```
 
 Backend:

@@ -1,10 +1,13 @@
 package com.scooterrental.backend.controller;
 
+import com.scooterrental.backend.common.Result;
 import com.scooterrental.backend.entity.Scooter;
 import com.scooterrental.backend.service.ScooterService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -40,6 +43,17 @@ public class ScooterController {
         response.put("data", scooters);
         response.put("msg", "Success");
         return response;
+    }
+
+    @GetMapping("/{scooterId}")
+    @Operation(summary = "Get Scooter Detail", description = "Returns one scooter by ID")
+    public ResponseEntity<Result<Scooter>> getScooterById(@PathVariable Integer scooterId) {
+        Scooter scooter = scooterService.getById(scooterId);
+        if (scooter == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Result.error(404, "Scooter not found"));
+        }
+        return ResponseEntity.ok(Result.success(scooter));
     }
 
     @PostMapping("/add")

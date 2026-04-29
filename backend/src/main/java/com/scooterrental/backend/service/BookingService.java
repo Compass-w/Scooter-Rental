@@ -69,27 +69,6 @@ public class BookingService {
             if (operationalTablesReady) {
                 return;
             }
-            bookingMapper.addPlannedEndTimeColumn();
-            bookingMapper.addPlanTypeColumn();
-            bookingMapper.addPaymentStatusColumn();
-            bookingMapper.addUnlockStatusColumn();
-            bookingMapper.addUnlockReferenceColumn();
-            bookingMapper.addOvertimeFeeColumn();
-            bookingMapper.addOvertimeChargeTotalColumn();
-            bookingMapper.addDamageChargeTotalColumn();
-            bookingMapper.addElectricityChargeTotalColumn();
-            bookingMapper.addMarketCodeColumn();
-            bookingMapper.addServiceModeColumn();
-            bookingMapper.addBookingChannelColumn();
-            bookingMapper.addPickupStoreCodeColumn();
-            bookingMapper.addPickupStoreNameColumn();
-            bookingMapper.addReturnStoreCodeColumn();
-            bookingMapper.addReturnStoreNameColumn();
-            bookingMapper.addStartBatteryLevelColumn();
-            bookingMapper.addEstimatedReturnBatteryColumn();
-            bookingMapper.addReturnBatteryLevelColumn();
-            bookingMapper.addLiabilityAcceptedColumn();
-            bookingMapper.addLastReminderAtColumn();
             vehicleIntegrationService.ensureVehicleTables();
             paymentGatewayService.ensureGatewayTables();
             operationalTablesReady = true;

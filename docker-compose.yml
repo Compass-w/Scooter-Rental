@@ -6,7 +6,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-scooter_rental}
       POSTGRES_USER: ${POSTGRES_USER:-scooter_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-scooter_password}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
     ports:
       - "${DB_PORT:-5432}:5432"
     volumes:
@@ -27,10 +27,11 @@ services:
     environment:
       DB_URL: ${COMPOSE_DB_URL:-jdbc:postgresql://db:5432/scooter_rental}
       DB_USERNAME: ${DB_USERNAME:-scooter_user}
-      DB_PASSWORD: ${DB_PASSWORD:-scooter_password}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
       DB_DRIVER: ${DB_DRIVER:-org.postgresql.Driver}
-      CORS_ALLOWED_ORIGIN_PATTERNS: ${CORS_ALLOWED_ORIGIN_PATTERNS:-http://localhost:3000,http://127.0.0.1:3000}
-      PASSWORD_RESET_URL_TEMPLATE: ${PASSWORD_RESET_URL_TEMPLATE:-http://localhost:3000/#/pages/reset-password?token={token}}
+      CORS_ALLOWED_ORIGIN_PATTERNS: ${CORS_ALLOWED_ORIGIN_PATTERNS:-http://scootergo.top:3000,http://www.scootergo.top:3000,http://scootergo.top,https://scootergo.top,http://www.scootergo.top,https://www.scootergo.top,http://localhost:3000,http://127.0.0.1:3000}
+      PASSWORD_RESET_URL_TEMPLATE: ${PASSWORD_RESET_URL_TEMPLATE:?Set PASSWORD_RESET_URL_TEMPLATE in .env}
+      BOOTSTRAP_DEFAULT_MANAGER_ENABLED: ${BOOTSTRAP_DEFAULT_MANAGER_ENABLED:?Set BOOTSTRAP_DEFAULT_MANAGER_ENABLED=false in .env unless intentionally bootstrapping a manager}
       EMAIL_NOTIFICATIONS_ENABLED: ${EMAIL_NOTIFICATIONS_ENABLED:-false}
       EMAIL_FROM: ${EMAIL_FROM:-}
       MAIL_HOST: ${MAIL_HOST:-}

@@ -49,7 +49,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/scooters", "/api/scooters/available").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/scooters", "/api/scooters/available", "/api/scooters/*").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/scooters/add").hasAnyRole("ADMIN", "MANAGER")
                         .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "MANAGER")
                         .anyRequest().authenticated());

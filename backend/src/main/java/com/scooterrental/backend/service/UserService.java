@@ -32,10 +32,10 @@ public class UserService {
     private boolean defaultManagerBootstrapEnabled;
 
     private final Map<String, PasswordResetSession> passwordResetTokens = new ConcurrentHashMap<>();
-    private volatile boolean userTableReady = false;
+    private volatile boolean bootstrapChecked = false;
 
     public User login(String username, String password) {
-        ensureUserTableCompatibility();
+        ensureBootstrapState();
 
         User user = userMapper.findByUsername(username);
         if (user == null || password == null) {
@@ -67,7 +67,7 @@ public class UserService {
     }
 
     public boolean register(User user) {
-        ensureUserTableCompatibility();
+        ensureBootstrapState();
 
         if (userMapper.findByUsername(user.getUsername()) != null) {
             return false;
@@ -82,12 +82,12 @@ public class UserService {
     }
 
     public User getUserById(Integer userId) {
-        ensureUserTableCompatibility();
+        ensureBootstrapState();
         return userMapper.selectById(userId);
     }
 
     public boolean emailBelongsToAnotherUser(Integer userId, String email) {
-        ensureUserTableCompatibility();
+        ensureBootstrapState();
 
         if (email == null || email.isBlank()) {
             return false;
@@ -97,7 +97,7 @@ public class UserService {
     }
 
     public PasswordResetRequestData createPasswordReset(String email, Integer preferredUserId) {
-        ensureUserTableCompatibility();
+        ensureBootstrapState();
 
         if ((email == null || email.isBlank()) && preferredUserId == null) {
             return null;
@@ -143,7 +143,7 @@ public class UserService {
     }
 
     public boolean resetPassword(String token, String newPassword) {
-        ensureUserTableCompatibility();
+        ensureBootstrapState();
 
         PasswordResetSession session = getValidResetSession(token);
         if (session == null || newPassword == null || newPassword.isBlank()) {
@@ -166,7 +166,7 @@ public class UserService {
      * @return true if update was successful.
      */
     public boolean updateUser(User user) {
-        ensureUserTableCompatibility();
+        ensureBootstrapState();
 
         if (user == null || user.getUserId() == null) {
             return false;
@@ -183,7 +183,7 @@ public class UserService {
      * Gamification logic: check and award achievements [ID: 22].
      */
     public void checkAndAwardAchievements(Integer userId) {
-        ensureUserTableCompatibility();
+        ensureBootstrapState();
 
         User user = userMapper.selectById(userId);
         if (user == null)
@@ -204,31 +204,23 @@ public class UserService {
         }
     }
 
-    private void ensureUserTableCompatibility() {
-        if (userTableReady) {
+    private void ensureBootstrapState() {
+        if (bootstrapChecked) {
             return;
         }
 
         synchronized (this) {
-            if (userTableReady) {
+            if (bootstrapChecked) {
                 return;
             }
 
             try {
-                userMapper.addEmailColumn();
-                userMapper.addPhoneColumn();
-                userMapper.addCityColumn();
-                userMapper.addAvatarUrlColumn();
-                userMapper.addRoleColumn();
-                userMapper.addTotalRidingMinutesColumn();
-                userMapper.addAchievementsColumn();
-                userMapper.addCreatedAtColumn();
                 if (defaultManagerBootstrapEnabled) {
                     ensureDefaultManagerAccount();
                 }
-                userTableReady = true;
+                bootstrapChecked = true;
             } catch (Exception ex) {
-                log.error("Failed to initialize user table compatibility columns", ex);
+                log.error("Failed to initialize optional bootstrap data", ex);
             }
         }
     }

@@ -44,7 +44,7 @@ public class NotificationService {
     @Value("${app.notifications.twilio.from-number:}")
     private String twilioFromNumber;
 
-    @Value("${app.password-reset-url-template:http://localhost:3000/#/pages/reset-password?token={token}}")
+    @Value("${app.password-reset-url-template}")
     private String passwordResetUrlTemplate;
 
     public NotificationService(

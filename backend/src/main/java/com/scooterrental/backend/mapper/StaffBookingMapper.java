@@ -44,42 +44,6 @@ public interface StaffBookingMapper {
             """)
     void createTableIfNotExists();
 
-    @Update("ALTER TABLE staff_bookings ADD COLUMN IF NOT EXISTS booking_channel VARCHAR(32) NOT NULL DEFAULT 'WALK_IN_COUNTER'")
-    void addBookingChannelColumn();
-
-    @Update("ALTER TABLE staff_bookings ADD COLUMN IF NOT EXISTS pickup_store_code VARCHAR(64)")
-    void addPickupStoreCodeColumn();
-
-    @Update("ALTER TABLE staff_bookings ADD COLUMN IF NOT EXISTS pickup_store_name VARCHAR(120)")
-    void addPickupStoreNameColumn();
-
-    @Update("ALTER TABLE staff_bookings ADD COLUMN IF NOT EXISTS return_store_code VARCHAR(64)")
-    void addReturnStoreCodeColumn();
-
-    @Update("ALTER TABLE staff_bookings ADD COLUMN IF NOT EXISTS return_store_name VARCHAR(120)")
-    void addReturnStoreNameColumn();
-
-    @Update("ALTER TABLE staff_bookings ADD COLUMN IF NOT EXISTS pickup_battery_level INTEGER")
-    void addPickupBatteryLevelColumn();
-
-    @Update("ALTER TABLE staff_bookings ADD COLUMN IF NOT EXISTS expected_return_battery_level INTEGER")
-    void addExpectedReturnBatteryLevelColumn();
-
-    @Update("ALTER TABLE staff_bookings ADD COLUMN IF NOT EXISTS electricity_delta DECIMAL(10, 2) NOT NULL DEFAULT 0")
-    void addElectricityDeltaColumn();
-
-    @Update("ALTER TABLE staff_bookings ADD COLUMN IF NOT EXISTS card_holder_name VARCHAR(120)")
-    void addCardHolderNameColumn();
-
-    @Update("ALTER TABLE staff_bookings ADD COLUMN IF NOT EXISTS card_number_masked VARCHAR(20)")
-    void addCardNumberMaskedColumn();
-
-    @Update("ALTER TABLE staff_bookings ADD COLUMN IF NOT EXISTS card_expiry VARCHAR(8)")
-    void addCardExpiryColumn();
-
-    @Update("ALTER TABLE staff_bookings ADD COLUMN IF NOT EXISTS payment_status VARCHAR(24) NOT NULL DEFAULT 'CARD_BOUND'")
-    void addPaymentStatusColumn();
-
     @Insert("""
             INSERT INTO staff_bookings (
                 guest_name,

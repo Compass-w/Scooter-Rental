@@ -9,69 +9,6 @@ import java.util.Map;
 @Mapper
 public interface BookingMapper {
 
-    @Update("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS planned_end_time TIMESTAMP")
-    void addPlannedEndTimeColumn();
-
-    @Update("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS plan_type VARCHAR(24)")
-    void addPlanTypeColumn();
-
-    @Update("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS payment_status VARCHAR(24) NOT NULL DEFAULT 'PENDING'")
-    void addPaymentStatusColumn();
-
-    @Update("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS unlock_status VARCHAR(24) NOT NULL DEFAULT 'PENDING'")
-    void addUnlockStatusColumn();
-
-    @Update("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS unlock_reference VARCHAR(64)")
-    void addUnlockReferenceColumn();
-
-    @Update("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS overtime_fee_per_15_minutes DECIMAL(10, 2) NOT NULL DEFAULT 0")
-    void addOvertimeFeeColumn();
-
-    @Update("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS overtime_charge_total DECIMAL(10, 2) NOT NULL DEFAULT 0")
-    void addOvertimeChargeTotalColumn();
-
-    @Update("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS damage_charge_total DECIMAL(10, 2) NOT NULL DEFAULT 0")
-    void addDamageChargeTotalColumn();
-
-    @Update("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS electricity_charge_total DECIMAL(10, 2) NOT NULL DEFAULT 0")
-    void addElectricityChargeTotalColumn();
-
-    @Update("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS market_code VARCHAR(8) NOT NULL DEFAULT 'CN'")
-    void addMarketCodeColumn();
-
-    @Update("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS service_mode VARCHAR(24) NOT NULL DEFAULT 'SHARING'")
-    void addServiceModeColumn();
-
-    @Update("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS booking_channel VARCHAR(32)")
-    void addBookingChannelColumn();
-
-    @Update("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS pickup_store_code VARCHAR(64)")
-    void addPickupStoreCodeColumn();
-
-    @Update("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS pickup_store_name VARCHAR(120)")
-    void addPickupStoreNameColumn();
-
-    @Update("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS return_store_code VARCHAR(64)")
-    void addReturnStoreCodeColumn();
-
-    @Update("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS return_store_name VARCHAR(120)")
-    void addReturnStoreNameColumn();
-
-    @Update("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS start_battery_level INTEGER")
-    void addStartBatteryLevelColumn();
-
-    @Update("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS estimated_return_battery INTEGER")
-    void addEstimatedReturnBatteryColumn();
-
-    @Update("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS return_battery_level INTEGER")
-    void addReturnBatteryLevelColumn();
-
-    @Update("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS liability_accepted BOOLEAN NOT NULL DEFAULT FALSE")
-    void addLiabilityAcceptedColumn();
-
-    @Update("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS last_reminder_at TIMESTAMP")
-    void addLastReminderAtColumn();
-
     // Get booking history for a specific user [ID: 8]
     @Select("SELECT b.booking_id AS bookingId, b.user_id AS userId, b.scooter_id AS scooterId, " +
             "b.start_time AS startTime, b.end_time AS endTime, b.total_cost AS totalCost, " +

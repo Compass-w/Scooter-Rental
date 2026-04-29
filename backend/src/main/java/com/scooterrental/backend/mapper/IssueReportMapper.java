@@ -37,39 +37,6 @@ public interface IssueReportMapper {
             """)
     void createTableIfNotExists();
 
-    @Update("ALTER TABLE issue_reports ADD COLUMN IF NOT EXISTS priority VARCHAR(16) NOT NULL DEFAULT 'MEDIUM'")
-    void ensurePriorityColumn();
-
-    @Update("ALTER TABLE issue_reports ADD COLUMN IF NOT EXISTS workflow_status VARCHAR(24) NOT NULL DEFAULT 'REPORTED'")
-    void ensureWorkflowStatusColumn();
-
-    @Update("ALTER TABLE issue_reports ADD COLUMN IF NOT EXISTS assigned_staff VARCHAR(80)")
-    void ensureAssignedStaffColumn();
-
-    @Update("ALTER TABLE issue_reports ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP")
-    void ensureUpdatedAtColumn();
-
-    @Update("ALTER TABLE issue_reports ADD COLUMN IF NOT EXISTS safety_action TEXT")
-    void ensureSafetyActionColumn();
-
-    @Update("ALTER TABLE issue_reports ADD COLUMN IF NOT EXISTS insurance_case_status VARCHAR(40) NOT NULL DEFAULT 'NOT_REQUIRED'")
-    void ensureInsuranceCaseStatusColumn();
-
-    @Update("ALTER TABLE issue_reports ADD COLUMN IF NOT EXISTS customer_charge_policy TEXT")
-    void ensureCustomerChargePolicyColumn();
-
-    @Update("ALTER TABLE issue_reports ADD COLUMN IF NOT EXISTS repair_charge_estimate DECIMAL(10, 2) NOT NULL DEFAULT 0")
-    void ensureRepairChargeEstimateColumn();
-
-    @Update("ALTER TABLE issue_reports ADD COLUMN IF NOT EXISTS rider_injured BOOLEAN NOT NULL DEFAULT FALSE")
-    void ensureRiderInjuredColumn();
-
-    @Update("ALTER TABLE issue_reports ADD COLUMN IF NOT EXISTS third_party_involved BOOLEAN NOT NULL DEFAULT FALSE")
-    void ensureThirdPartyInvolvedColumn();
-
-    @Update("ALTER TABLE issue_reports ADD COLUMN IF NOT EXISTS emergency_services_contacted BOOLEAN NOT NULL DEFAULT FALSE")
-    void ensureEmergencyServicesContactedColumn();
-
     @Insert("""
             INSERT INTO issue_reports (
                 user_id,

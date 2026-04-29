@@ -6,30 +6,6 @@ import org.apache.ibatis.annotations.*;
 @Mapper
 public interface UserMapper {
 
-        @Update("ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(100)")
-        void addEmailColumn();
-
-        @Update("ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20)")
-        void addPhoneColumn();
-
-        @Update("ALTER TABLE users ADD COLUMN IF NOT EXISTS city VARCHAR(100)")
-        void addCityColumn();
-
-        @Update("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT")
-        void addAvatarUrlColumn();
-
-        @Update("ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'customer'")
-        void addRoleColumn();
-
-        @Update("ALTER TABLE users ADD COLUMN IF NOT EXISTS total_riding_minutes INT DEFAULT 0")
-        void addTotalRidingMinutesColumn();
-
-        @Update("ALTER TABLE users ADD COLUMN IF NOT EXISTS achievements TEXT DEFAULT ''")
-        void addAchievementsColumn();
-
-        @Update("ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
-        void addCreatedAtColumn();
-
         @Update("""
                         UPDATE users
                         SET email = COALESCE(email, 'manager1@leeds.ac.uk'),

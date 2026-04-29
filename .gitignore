@@ -1,2 +1,5 @@
 
 Scooter-Rental/
+.env
+.env.local
+*.log

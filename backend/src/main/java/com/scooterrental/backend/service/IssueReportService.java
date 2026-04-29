@@ -86,17 +86,6 @@ public class IssueReportService {
 
     private void ensureAdminColumns() {
         issueReportMapper.createTableIfNotExists();
-        issueReportMapper.ensurePriorityColumn();
-        issueReportMapper.ensureWorkflowStatusColumn();
-        issueReportMapper.ensureAssignedStaffColumn();
-        issueReportMapper.ensureUpdatedAtColumn();
-        issueReportMapper.ensureSafetyActionColumn();
-        issueReportMapper.ensureInsuranceCaseStatusColumn();
-        issueReportMapper.ensureCustomerChargePolicyColumn();
-        issueReportMapper.ensureRepairChargeEstimateColumn();
-        issueReportMapper.ensureRiderInjuredColumn();
-        issueReportMapper.ensureThirdPartyInvolvedColumn();
-        issueReportMapper.ensureEmergencyServicesContactedColumn();
     }
 
     private String normalizeCategory(String category) {

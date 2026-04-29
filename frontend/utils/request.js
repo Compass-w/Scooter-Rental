@@ -88,11 +88,11 @@ const request = (options) => {
         if (code === 200) {
           resolve(data)
         } 
-        // 401/403 means unauthorized, expired session, or insufficient privileges
-        else if (code === 401 || statusCode === 401 || code === 403 || statusCode === 403) {
+        // 401 means the session is missing/expired: clear auth and ask the user to log in again.
+        else if (code === 401 || statusCode === 401) {
           clearToken()
           uni.showToast({
-            title: message || error || (statusCode === 403 || code === 403 ? 'Access denied' : 'Please login again'),
+            title: message || error || 'Please login again',
             icon: 'none'
           })
           // Redirect to login page
@@ -101,7 +101,17 @@ const request = (options) => {
               url: '/pages/login'
             })
           }, 1500)
-          reject(new Error(message || error || (statusCode === 403 || code === 403 ? 'Access denied' : 'Authentication failed')))
+          reject(new Error(message || error || 'Authentication failed'))
+        }
+        // 403 means the current user is authenticated but not allowed to perform this action.
+        // Keep the token intact so one denied background request does not log out managers/admins.
+        else if (code === 403 || statusCode === 403) {
+          const errorMsg = message || error || 'Access denied'
+          uni.showToast({
+            title: errorMsg,
+            icon: 'none'
+          })
+          reject(new Error(errorMsg))
         }
         // Other errors
         else {

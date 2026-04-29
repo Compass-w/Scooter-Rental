@@ -420,18 +420,6 @@ public class AdminService {
             rideAutomationService.ensureAutomationTables();
             maintenanceLogMapper.createTableIfNotExists();
             staffBookingMapper.createTableIfNotExists();
-            staffBookingMapper.addBookingChannelColumn();
-            staffBookingMapper.addPickupStoreCodeColumn();
-            staffBookingMapper.addPickupStoreNameColumn();
-            staffBookingMapper.addReturnStoreCodeColumn();
-            staffBookingMapper.addReturnStoreNameColumn();
-            staffBookingMapper.addPickupBatteryLevelColumn();
-            staffBookingMapper.addExpectedReturnBatteryLevelColumn();
-            staffBookingMapper.addElectricityDeltaColumn();
-            staffBookingMapper.addCardHolderNameColumn();
-            staffBookingMapper.addCardNumberMaskedColumn();
-            staffBookingMapper.addCardExpiryColumn();
-            staffBookingMapper.addPaymentStatusColumn();
             opsAssignmentMapper.createTableIfNotExists();
             seedOpsAssignmentsIfEmpty();
             adminTablesReady = true;
