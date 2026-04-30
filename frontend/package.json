@@ -5,7 +5,7 @@
   "main": "main.js",
   "scripts": {
     "dev:h5": "cross-env NODE_ENV=development UNI_PLATFORM=h5 UNI_INPUT_DIR=. uni",
-    "build:h5": "cross-env NODE_ENV=production UNI_PLATFORM=h5 UNI_INPUT_DIR=. uni build",
+    "build:h5": "cross-env NODE_ENV=production UNI_PLATFORM=h5 UNI_INPUT_DIR=. uni build && node scripts/copy-static-to-h5.mjs",
     "dev:mp-weixin": "cross-env NODE_ENV=development UNI_PLATFORM=mp-weixin UNI_INPUT_DIR=. uni",
     "build:mp-weixin": "cross-env NODE_ENV=production UNI_PLATFORM=mp-weixin UNI_INPUT_DIR=. uni build"
   },
