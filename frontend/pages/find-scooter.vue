@@ -35,7 +35,7 @@
         />
 
         <!-- Search Bar -->
-        <view v-show="!mapPopupActive" class="search-bar-wrapper">
+        <view v-show="!mapControlsHidden" class="search-bar-wrapper">
           <view class="search-bar">
             <view class="search-icon" @tap="onSearch">
               <uni-icons type="search" size="20" color="#2563EB"></uni-icons>
@@ -54,13 +54,13 @@
         </view>
 
         <!-- Stats Badge -->
-        <view v-show="!mapPopupActive" class="stats-badge">
+        <view v-show="!mapControlsHidden" class="stats-badge">
           <view class="stats-dot"></view>
           <text class="stats-text">{{ availableCount }} available nearby</text>
         </view>
 
         <!-- Map Controls -->
-        <view v-show="!mapPopupActive" class="map-controls">
+        <view v-show="!mapControlsHidden" class="map-controls">
           <view class="control-btn refresh-btn" :class="refreshing ? 'control-btn-loading' : ''" @tap="handleManualRefresh">
             <uni-icons :type="refreshing ? 'spinner-cycle' : 'refreshempty'" size="18" color="#0F172A"></uni-icons>
             <text class="control-btn-text">{{ refreshing ? 'Refreshing' : 'Refresh' }}</text>
@@ -413,6 +413,10 @@ const availableCount = computed(() =>
 
 const mapPopupActive = computed(() =>
   Boolean(selectedScooter.value) && selectedScooterSource.value === 'map'
+)
+
+const mapControlsHidden = computed(() =>
+  mapPopupActive.value || bookingOptionsVisible.value
 )
 
 const showScooterPopup = computed(() =>

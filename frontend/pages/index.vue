@@ -66,33 +66,48 @@
         <view class="hero-scooter-graphic" aria-label="ScooterGo illustration">
           <view class="scooter-glow"></view>
           <view class="hero-illustration-card">
-            <view class="hero-illustration-sun"></view>
-            <view class="hero-illustration-road"></view>
-            <svg class="hero-scooter-illustration" viewBox="0 0 520 360" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <ellipse cx="162" cy="292" rx="54" ry="18" fill="#0F172A" fill-opacity="0.08"/>
-              <ellipse cx="380" cy="292" rx="54" ry="18" fill="#0F172A" fill-opacity="0.08"/>
-              <path d="M159 247H275C287 247 298 239 302 227C315 187 346 158 388 150" stroke="#2563EB" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M329 75H390C407 75 421 87 424 104L448 249" stroke="#111827" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M386 76H456" stroke="#111827" stroke-width="28" stroke-linecap="round"/>
-              <path d="M140 247H275" stroke="#38BDF8" stroke-width="22" stroke-linecap="round"/>
-              <circle cx="132" cy="261" r="58" fill="#111827"/>
-              <circle cx="132" cy="261" r="31" fill="#FFFFFF"/>
-              <circle cx="132" cy="261" r="15" fill="#38BDF8"/>
-              <circle cx="410" cy="261" r="58" fill="#111827"/>
-              <circle cx="410" cy="261" r="31" fill="#FFFFFF"/>
-              <circle cx="410" cy="261" r="15" fill="#38BDF8"/>
-              <path d="M209 223H280C294 223 306 213 309 199L316 168H219C202 168 188 180 185 196C182 211 193 223 209 223Z" fill="#DBEAFE"/>
-              <path d="M225 168H316L329 120" stroke="#111827" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M103 228C122 212 150 212 168 228" stroke="#2563EB" stroke-width="12" stroke-linecap="round"/>
-              <path d="M382 149C405 146 429 154 446 172" stroke="#38BDF8" stroke-width="12" stroke-linecap="round"/>
-              <rect x="244" y="133" width="73" height="28" rx="14" fill="#22C55E"/>
-              <path d="M95 111C129 83 174 71 218 79" stroke="#BFDBFE" stroke-width="16" stroke-linecap="round"/>
-              <path d="M74 154H154" stroke="#93C5FD" stroke-width="12" stroke-linecap="round"/>
-              <path d="M365 116H414" stroke="#93C5FD" stroke-width="12" stroke-linecap="round"/>
+            <view class="hero-map-ribbon hero-map-ribbon-a"></view>
+            <view class="hero-map-ribbon hero-map-ribbon-b"></view>
+            <view class="hero-map-ribbon hero-map-ribbon-c"></view>
+            <view class="hero-live-chip">
+              <view class="hero-live-dot"></view>
+              <text class="hero-live-text">Live fleet</text>
+            </view>
+            <svg class="hero-scooter-illustration" viewBox="0 0 560 390" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M46 112H222C250 112 267 91 294 91H514" stroke="#D7E3F4" stroke-width="26" stroke-linecap="round"/>
+              <path d="M67 267H202C227 267 242 246 266 246H514" stroke="#D7E3F4" stroke-width="24" stroke-linecap="round"/>
+              <path d="M358 48V340" stroke="#D7E3F4" stroke-width="24" stroke-linecap="round"/>
+              <path d="M122 46L398 342" stroke="#E6EEF9" stroke-width="18" stroke-linecap="round"/>
+              <path d="M79 315C132 241 208 195 307 177C373 165 424 137 470 83" stroke="#60A5FA" stroke-width="14" stroke-linecap="round" stroke-dasharray="2 26"/>
+              <path d="M176 282H378" stroke="#0F172A" stroke-width="18" stroke-linecap="round"/>
+              <path d="M240 274C259 230 293 197 342 177" stroke="#2563EB" stroke-width="18" stroke-linecap="round"/>
+              <path d="M346 178L382 282" stroke="#0F172A" stroke-width="16" stroke-linecap="round"/>
+              <path d="M334 147H394C411 147 424 160 424 177V184" stroke="#0F172A" stroke-width="16" stroke-linecap="round"/>
+              <path d="M396 147H462" stroke="#0F172A" stroke-width="16" stroke-linecap="round"/>
+              <path d="M222 266H344" stroke="#38BDF8" stroke-width="16" stroke-linecap="round"/>
+              <rect x="252" y="218" width="94" height="36" rx="18" fill="#DBEAFE" stroke="#FFFFFF" stroke-width="5"/>
+              <rect x="280" y="187" width="72" height="26" rx="13" fill="#22C55E"/>
+              <circle cx="176" cy="284" r="42" fill="#111827"/>
+              <circle cx="176" cy="284" r="25" fill="#F8FAFC"/>
+              <circle cx="176" cy="284" r="10" fill="#38BDF8"/>
+              <circle cx="382" cy="284" r="42" fill="#111827"/>
+              <circle cx="382" cy="284" r="25" fill="#F8FAFC"/>
+              <circle cx="382" cy="284" r="10" fill="#38BDF8"/>
+              <path d="M150 227C168 211 196 211 214 226" stroke="#2563EB" stroke-width="9" stroke-linecap="round"/>
+              <path d="M349 184C374 181 398 190 414 209" stroke="#38BDF8" stroke-width="9" stroke-linecap="round"/>
+              <path d="M115 93L143 121L115 149L87 121L115 93Z" fill="#2563EB"/>
+              <circle cx="115" cy="121" r="11" fill="#FFFFFF"/>
+              <path d="M459 240L481 262L459 284L437 262L459 240Z" fill="#22C55E"/>
+              <circle cx="459" cy="262" r="9" fill="#FFFFFF"/>
             </svg>
             <view class="hero-illustration-badge">
-              <text class="hero-illustration-badge-title">ScooterGo</text>
-              <text class="hero-illustration-badge-copy">Eco-friendly city rides</text>
+              <view class="hero-illustration-badge-main">
+                <text class="hero-illustration-badge-title">Scooter #28</text>
+                <text class="hero-illustration-badge-copy">120m away</text>
+              </view>
+              <view class="hero-illustration-badge-meter">
+                <text class="hero-illustration-badge-meter-value">98%</text>
+              </view>
             </view>
           </view>
         </view>
@@ -1281,7 +1296,7 @@ onUnmounted(() => {
 
 .hero-scooter-graphic {
   position: relative;
-  width: 560rpx;
+  width: 620rpx;
   height: 560rpx;
   display: flex;
   align-items: center;
@@ -1290,115 +1305,160 @@ onUnmounted(() => {
 
 .scooter-glow {
   position: absolute;
-  width: 460rpx;
-  height: 460rpx;
-  background: radial-gradient(circle, rgba(37, 99, 235, 0.20) 0%, transparent 70%);
-  border-radius: 50%;
+  left: 74rpx;
+  right: 42rpx;
+  bottom: 30rpx;
+  height: 120rpx;
+  background: linear-gradient(90deg, rgba(37, 99, 235, 0), rgba(37, 99, 235, 0.16), rgba(34, 197, 94, 0.12), rgba(37, 99, 235, 0));
+  border-radius: 999rpx;
+  filter: blur(18rpx);
 }
 
 .hero-illustration-card {
   position: relative;
-  width: 500rpx;
+  width: 560rpx;
   height: 500rpx;
   z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  border-radius: 56rpx;
+  border-radius: 42rpx;
   background:
-    radial-gradient(circle at 24% 22%, rgba(255, 255, 255, 0.96) 0 12%, transparent 13%),
-    linear-gradient(145deg, rgba(239, 246, 255, 0.96) 0%, rgba(219, 234, 254, 0.95) 48%, rgba(240, 253, 250, 0.96) 100%);
-  border: 1rpx solid rgba(147, 197, 253, 0.56);
-  box-shadow: 0 30rpx 76rpx rgba(37, 99, 235, 0.18);
+    linear-gradient(90deg, rgba(255, 255, 255, 0.58) 1rpx, transparent 1rpx),
+    linear-gradient(0deg, rgba(255, 255, 255, 0.58) 1rpx, transparent 1rpx),
+    linear-gradient(145deg, #F8FBFF 0%, #EAF3FF 50%, #F2FFF8 100%);
+  background-size: 58rpx 58rpx, 58rpx 58rpx, auto;
+  border: 1rpx solid rgba(147, 197, 253, 0.48);
+  box-shadow: 0 34rpx 86rpx rgba(37, 99, 235, 0.18), inset 0 1rpx 0 rgba(255, 255, 255, 0.92);
   animation: scooter-float 3.5s ease-in-out infinite;
 }
 
-.hero-illustration-card::before,
-.hero-illustration-card::after {
-  content: '';
+.hero-map-ribbon {
   position: absolute;
   border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.64);
+  border: 1rpx solid rgba(191, 219, 254, 0.58);
   pointer-events: none;
 }
 
-.hero-illustration-card::before {
-  width: 220rpx;
-  height: 220rpx;
-  right: -64rpx;
-  top: -54rpx;
-  background: rgba(56, 189, 248, 0.20);
-}
-
-.hero-illustration-card::after {
+.hero-map-ribbon-a {
   width: 340rpx;
-  height: 72rpx;
-  left: 78rpx;
-  bottom: 82rpx;
-  background: rgba(15, 23, 42, 0.08);
-  filter: blur(12rpx);
+  height: 34rpx;
+  left: -76rpx;
+  top: 126rpx;
+  transform: rotate(-36deg);
 }
 
-.hero-illustration-sun {
-  position: absolute;
-  top: 54rpx;
-  left: 62rpx;
-  width: 82rpx;
-  height: 82rpx;
-  border-radius: 50%;
-  background: #FFFFFF;
-  box-shadow: 0 12rpx 30rpx rgba(37, 99, 235, 0.12);
+.hero-map-ribbon-b {
+  width: 430rpx;
+  height: 38rpx;
+  right: -80rpx;
+  top: 238rpx;
+  transform: rotate(-28deg);
 }
 
-.hero-illustration-road {
+.hero-map-ribbon-c {
+  width: 300rpx;
+  height: 30rpx;
+  left: 206rpx;
+  bottom: 112rpx;
+  transform: rotate(42deg);
+}
+
+.hero-live-chip {
   position: absolute;
-  left: 54rpx;
-  right: 54rpx;
-  bottom: 104rpx;
-  height: 18rpx;
+  top: 34rpx;
+  left: 34rpx;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 10rpx;
+  padding: 12rpx 18rpx;
   border-radius: 999rpx;
-  background: linear-gradient(90deg, rgba(37, 99, 235, 0.08), rgba(34, 197, 94, 0.18), rgba(37, 99, 235, 0.08));
+  background: rgba(255, 255, 255, 0.86);
+  border: 1rpx solid rgba(191, 219, 254, 0.72);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 12rpx 28rpx rgba(15, 23, 42, 0.08);
+}
+
+.hero-live-dot {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 50%;
+  background: #22C55E;
+  box-shadow: 0 0 0 8rpx rgba(34, 197, 94, 0.12);
+}
+
+.hero-live-text {
+  font-size: 22rpx;
+  font-weight: 800;
+  color: #0F172A;
 }
 
 .hero-scooter-illustration {
   position: relative;
   z-index: 2;
-  width: 470rpx;
-  height: 326rpx;
-  margin-top: 6rpx;
-  filter: drop-shadow(0 18rpx 18rpx rgba(15, 23, 42, 0.12));
+  width: 540rpx;
+  height: 376rpx;
+  margin-top: 18rpx;
+  filter: drop-shadow(0 20rpx 18rpx rgba(15, 23, 42, 0.12));
 }
 
 .hero-illustration-badge {
   position: absolute;
-  left: 34rpx;
-  right: 34rpx;
-  bottom: 30rpx;
+  left: 32rpx;
+  right: 32rpx;
+  bottom: 28rpx;
   z-index: 3;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 20rpx;
-  padding: 18rpx 22rpx;
-  border-radius: 26rpx;
-  background: rgba(255, 255, 255, 0.82);
+  padding: 18rpx 20rpx;
+  border-radius: 24rpx;
+  background: rgba(255, 255, 255, 0.88);
   border: 1rpx solid rgba(191, 219, 254, 0.72);
   backdrop-filter: blur(18px);
   box-shadow: 0 14rpx 30rpx rgba(15, 23, 42, 0.08);
 }
 
+.hero-illustration-badge-main {
+  min-width: 0;
+}
+
 .hero-illustration-badge-title {
   display: block;
-  font-size: 30rpx;
+  font-size: 28rpx;
   font-weight: 800;
   color: #111827;
 }
 
 .hero-illustration-badge-copy {
   display: block;
+  margin-top: 4rpx;
   font-size: 22rpx;
   font-weight: 700;
   color: #2563EB;
+}
+
+.hero-illustration-badge-meter {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 86rpx;
+  height: 58rpx;
+  padding: 0 14rpx;
+  border-radius: 18rpx;
+  background: #ECFDF5;
+  border: 1rpx solid #A7F3D0;
+}
+
+.hero-illustration-badge-meter-value {
+  font-size: 24rpx;
+  font-weight: 900;
+  color: #047857;
 }
 
 @keyframes scooter-float {

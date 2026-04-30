@@ -847,7 +847,7 @@ const handleConfirm = async () => {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  z-index: 1600;
+  z-index: 4200;
   padding: calc(env(safe-area-inset-top) + 24rpx) 24rpx calc(env(safe-area-inset-bottom) + 24rpx);
   box-sizing: border-box;
 }
@@ -1510,7 +1510,7 @@ const handleConfirm = async () => {
   position: fixed;
   inset: 0;
   background: rgba(15, 23, 42, 0.72);
-  z-index: 1700;
+  z-index: 4300;
   display: flex;
   align-items: center;
   justify-content: center;
