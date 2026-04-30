@@ -1,34 +1,26 @@
-const LOCAL_SCOOTER_POSTERS = Object.freeze({
-  sf: '/static/scooters/homepage/sf-scooter-poster.svg',
-  tier: '/static/scooters/homepage/tier-scooter-poster.svg',
-  electric: '/static/scooters/homepage/electric-scooter-poster.svg'
-})
-
-const localGallery = (...posterKeys) =>
-  posterKeys
-    .map(key => LOCAL_SCOOTER_POSTERS[key])
-    .filter(Boolean)
+const commonsFilePath = (fileName) =>
+  `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(fileName).replace(/%20/g, '%20')}`
 
 const MODEL_ASSET_LIBRARY = Object.freeze({
   'ninebot-max-g2': {
     modelUrl: '/static/models/homepage/sf_scooter_2.glb',
-    posterUrl: LOCAL_SCOOTER_POSTERS.sf
+    posterUrl: commonsFilePath('Electric scooter (51950182293).jpg')
   },
   'xiaomi-pro-2': {
     modelUrl: '/static/models/homepage/tier-scooter_1.glb',
-    posterUrl: LOCAL_SCOOTER_POSTERS.tier
+    posterUrl: commonsFilePath('Bolt electric scooter.jpg')
   },
   'niu-kqi3': {
     modelUrl: '/static/models/homepage/electric_scooter_3.glb?v=quantized',
-    posterUrl: LOCAL_SCOOTER_POSTERS.electric
+    posterUrl: commonsFilePath('Gogoro Smart Electric Scooter (23849136874).jpg')
   },
   'pure-advance': {
     modelUrl: '/static/models/homepage/tier-scooter_1.glb',
-    posterUrl: LOCAL_SCOOTER_POSTERS.tier
+    posterUrl: commonsFilePath('BeRider Electric scooter.jpg')
   },
   'yadea-elite': {
     modelUrl: '/static/models/homepage/electric_scooter_3.glb?v=quantized',
-    posterUrl: LOCAL_SCOOTER_POSTERS.electric
+    posterUrl: commonsFilePath('OLA Electric scooter.jpg')
   }
 })
 
@@ -39,9 +31,13 @@ const PROFILE_LIBRARY = [
     displayName: 'Ninebot Max G2',
     category: 'Long-range sharing',
     rateMultiplier: 1.12,
-    imageUrl: LOCAL_SCOOTER_POSTERS.sf,
-    gallery: localGallery('sf', 'tier', 'electric'),
-    photoCredit: 'ScooterGo local fleet artwork',
+    imageUrl: commonsFilePath('Electric scooter (51950182293).jpg'),
+    gallery: [
+      commonsFilePath('Electric scooter (51950182293).jpg'),
+      commonsFilePath('Bolt electric scooter.jpg'),
+      commonsFilePath('BeRider Electric scooter.jpg')
+    ],
+    photoCredit: 'Wikimedia Commons / Phil Whitehouse',
     specs: {
       topSpeedKph: 35,
       rangeKm: 70,
@@ -59,9 +55,12 @@ const PROFILE_LIBRARY = [
     displayName: 'Xiaomi Pro 2',
     category: 'Compact city ride',
     rateMultiplier: 1,
-    imageUrl: LOCAL_SCOOTER_POSTERS.tier,
-    gallery: localGallery('tier', 'sf'),
-    photoCredit: 'ScooterGo local fleet artwork',
+    imageUrl: commonsFilePath('Bolt electric scooter.jpg'),
+    gallery: [
+      commonsFilePath('Bolt electric scooter.jpg'),
+      commonsFilePath('Electric scooter (51950182293).jpg')
+    ],
+    photoCredit: 'Wikimedia Commons / RickRichards',
     specs: {
       topSpeedKph: 25,
       rangeKm: 45,
@@ -79,9 +78,12 @@ const PROFILE_LIBRARY = [
     displayName: 'NIU KQi3 Max',
     category: 'Premium fleet',
     rateMultiplier: 1.08,
-    imageUrl: LOCAL_SCOOTER_POSTERS.electric,
-    gallery: localGallery('electric', 'sf'),
-    photoCredit: 'ScooterGo local fleet artwork',
+    imageUrl: commonsFilePath('Gogoro Smart Electric Scooter (23849136874).jpg'),
+    gallery: [
+      commonsFilePath('Gogoro Smart Electric Scooter (23849136874).jpg'),
+      commonsFilePath('Gogoro Smart Electric Scooter (24109562589).jpg')
+    ],
+    photoCredit: 'Wikimedia Commons / Maurizio Pesce',
     specs: {
       topSpeedKph: 32,
       rangeKm: 60,
@@ -99,9 +101,12 @@ const PROFILE_LIBRARY = [
     displayName: 'Pure Advance Flex',
     category: 'Touring commuter',
     rateMultiplier: 1.14,
-    imageUrl: LOCAL_SCOOTER_POSTERS.tier,
-    gallery: localGallery('tier', 'electric'),
-    photoCredit: 'ScooterGo local fleet artwork',
+    imageUrl: commonsFilePath('BeRider Electric scooter.jpg'),
+    gallery: [
+      commonsFilePath('BeRider Electric scooter.jpg'),
+      commonsFilePath('Electric scooter (Ekoskoter Elektro1).jpg')
+    ],
+    photoCredit: 'Wikimedia Commons / BeRider',
     specs: {
       topSpeedKph: 25,
       rangeKm: 50,
@@ -119,9 +124,12 @@ const PROFILE_LIBRARY = [
     displayName: 'Yadea Elite S',
     category: 'Store-ready moped style',
     rateMultiplier: 1.2,
-    imageUrl: LOCAL_SCOOTER_POSTERS.electric,
-    gallery: localGallery('electric', 'tier'),
-    photoCredit: 'ScooterGo local fleet artwork',
+    imageUrl: commonsFilePath('OLA Electric scooter.jpg'),
+    gallery: [
+      commonsFilePath('OLA Electric scooter.jpg'),
+      commonsFilePath('Electric scooter (Ekoskoter Elektro1).jpg')
+    ],
+    photoCredit: 'Wikimedia Commons / Gnoeee',
     specs: {
       topSpeedKph: 45,
       rangeKm: 80,

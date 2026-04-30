@@ -113,7 +113,6 @@
 
 <script setup>
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
-import { configureModelViewerAssetPaths } from '@/utils/modelViewerConfig'
 
 const props = defineProps({
   visible: {
@@ -201,7 +200,6 @@ const clearLoadingTimer = () => {
 
 const ensureModelViewer = async () => {
   if (!isBrowser) return false
-  configureModelViewerAssetPaths()
   if (customElements.get('model-viewer')) {
     viewerReady.value = true
     return true
@@ -212,7 +210,6 @@ const ensureModelViewer = async () => {
   }
 
   await modelViewerLoaderPromise
-  configureModelViewerAssetPaths()
   viewerReady.value = Boolean(customElements.get('model-viewer'))
   return viewerReady.value
 }

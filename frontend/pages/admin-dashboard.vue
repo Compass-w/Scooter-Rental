@@ -1069,7 +1069,6 @@ import {
   detectCurrencyCode,
   formatCurrency as formatCurrencyUtil
 } from '@/utils/currency.js'
-import { configureModelViewerAssetPaths } from '@/utils/modelViewerConfig'
 
 const createEmptySnapshot = () => ({
   generatedAt: '',
@@ -1745,7 +1744,6 @@ const toggleHighPriorityOnly = () => {
 
 const ensureAdminModelViewer = async () => {
   if (typeof window === 'undefined' || typeof customElements === 'undefined') return
-  configureModelViewerAssetPaths()
   if (customElements.get('model-viewer')) {
     adminModelViewerReady.value = true
     return
@@ -1753,7 +1751,6 @@ const ensureAdminModelViewer = async () => {
 
   try {
     await import('@google/model-viewer')
-    configureModelViewerAssetPaths()
     adminModelViewerReady.value = Boolean(customElements.get('model-viewer'))
   } catch (error) {
     globalThis.__APP_LOGGER__?.error('Failed to initialize admin 3D preview:', error)
