@@ -66,44 +66,168 @@
         <view class="hero-scooter-graphic" aria-label="ScooterGo illustration">
           <view class="scooter-glow"></view>
           <view class="hero-illustration-card">
-            <view class="hero-map-ribbon hero-map-ribbon-a"></view>
-            <view class="hero-map-ribbon hero-map-ribbon-b"></view>
-            <view class="hero-map-ribbon hero-map-ribbon-c"></view>
+            <!-- ===== Mini-map background with route ===== -->
+            <svg class="hero-map-bg-svg" viewBox="0 0 560 500" fill="none" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <pattern id="heroDotPattern" x="0" y="0" width="34" height="34" patternUnits="userSpaceOnUse">
+                  <circle cx="2" cy="2" r="1.4" fill="#94A3B8" fill-opacity="0.22"/>
+                </pattern>
+                <linearGradient id="heroRouteGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#2563EB"/>
+                  <stop offset="55%" stop-color="#3B82F6"/>
+                  <stop offset="100%" stop-color="#22C55E"/>
+                </linearGradient>
+                <radialGradient id="heroBgGlow" cx="50%" cy="60%" r="55%">
+                  <stop offset="0%" stop-color="#DBEAFE" stop-opacity="0.85"/>
+                  <stop offset="100%" stop-color="#DBEAFE" stop-opacity="0"/>
+                </radialGradient>
+              </defs>
+
+              <!-- Soft dot grid -->
+              <rect width="560" height="500" fill="url(#heroDotPattern)"/>
+              <!-- Center glow behind scooter -->
+              <rect width="560" height="500" fill="url(#heroBgGlow)"/>
+
+              <!-- Background ghost roads (very faint) -->
+              <path d="M-30 120 C 110 100, 230 140, 360 130 S 540 110, 600 95" stroke="#E0E7EF" stroke-width="22" stroke-linecap="round" opacity="0.55"/>
+              <path d="M-30 380 C 80 372, 200 360, 310 330 S 460 270, 600 230" stroke="#E0E7EF" stroke-width="18" stroke-linecap="round" opacity="0.5"/>
+              <path d="M150 -30 C 160 90, 200 200, 280 240 S 360 350, 380 540" stroke="#E0E7EF" stroke-width="14" stroke-linecap="round" opacity="0.4"/>
+
+              <!-- Active dashed route -->
+              <path class="hero-route-path" d="M75 420 C 160 390, 220 350, 280 305 S 420 200, 495 110" stroke="url(#heroRouteGrad)" stroke-width="5" stroke-linecap="round" stroke-dasharray="2 14"/>
+
+              <!-- Origin pin (you are here) -->
+              <circle cx="75" cy="420" r="22" fill="#2563EB" fill-opacity="0.12"/>
+              <circle cx="75" cy="420" r="13" fill="#2563EB" fill-opacity="0.22"/>
+              <circle cx="75" cy="420" r="8" fill="#2563EB"/>
+              <circle cx="75" cy="420" r="3" fill="#FFFFFF"/>
+
+              <!-- Destination pin (scooter location) -->
+              <g transform="translate(495, 100)">
+                <ellipse cx="0" cy="22" rx="14" ry="3" fill="#0F172A" fill-opacity="0.12"/>
+                <path d="M0 -22 C 11 -22, 19 -14, 19 -3 C 19 12, 0 30, 0 30 C 0 30, -19 12, -19 -3 C -19 -14, -11 -22, 0 -22Z" fill="#22C55E"/>
+                <circle cx="0" cy="-3" r="6" fill="#FFFFFF"/>
+              </g>
+            </svg>
+
+            <!-- Live chip -->
             <view class="hero-live-chip">
               <view class="hero-live-dot"></view>
               <text class="hero-live-text">Live fleet</text>
             </view>
-            <svg class="hero-scooter-illustration" viewBox="0 0 560 390" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M46 112H222C250 112 267 91 294 91H514" stroke="#D7E3F4" stroke-width="26" stroke-linecap="round"/>
-              <path d="M67 267H202C227 267 242 246 266 246H514" stroke="#D7E3F4" stroke-width="24" stroke-linecap="round"/>
-              <path d="M358 48V340" stroke="#D7E3F4" stroke-width="24" stroke-linecap="round"/>
-              <path d="M122 46L398 342" stroke="#E6EEF9" stroke-width="18" stroke-linecap="round"/>
-              <path d="M79 315C132 241 208 195 307 177C373 165 424 137 470 83" stroke="#60A5FA" stroke-width="14" stroke-linecap="round" stroke-dasharray="2 26"/>
-              <path d="M176 282H378" stroke="#0F172A" stroke-width="18" stroke-linecap="round"/>
-              <path d="M240 274C259 230 293 197 342 177" stroke="#2563EB" stroke-width="18" stroke-linecap="round"/>
-              <path d="M346 178L382 282" stroke="#0F172A" stroke-width="16" stroke-linecap="round"/>
-              <path d="M334 147H394C411 147 424 160 424 177V184" stroke="#0F172A" stroke-width="16" stroke-linecap="round"/>
-              <path d="M396 147H462" stroke="#0F172A" stroke-width="16" stroke-linecap="round"/>
-              <path d="M222 266H344" stroke="#38BDF8" stroke-width="16" stroke-linecap="round"/>
-              <rect x="252" y="218" width="94" height="36" rx="18" fill="#DBEAFE" stroke="#FFFFFF" stroke-width="5"/>
-              <rect x="280" y="187" width="72" height="26" rx="13" fill="#22C55E"/>
-              <circle cx="176" cy="284" r="42" fill="#111827"/>
-              <circle cx="176" cy="284" r="25" fill="#F8FAFC"/>
-              <circle cx="176" cy="284" r="10" fill="#38BDF8"/>
-              <circle cx="382" cy="284" r="42" fill="#111827"/>
-              <circle cx="382" cy="284" r="25" fill="#F8FAFC"/>
-              <circle cx="382" cy="284" r="10" fill="#38BDF8"/>
-              <path d="M150 227C168 211 196 211 214 226" stroke="#2563EB" stroke-width="9" stroke-linecap="round"/>
-              <path d="M349 184C374 181 398 190 414 209" stroke="#38BDF8" stroke-width="9" stroke-linecap="round"/>
-              <path d="M115 93L143 121L115 149L87 121L115 93Z" fill="#2563EB"/>
-              <circle cx="115" cy="121" r="11" fill="#FFFFFF"/>
-              <path d="M459 240L481 262L459 284L437 262L459 240Z" fill="#22C55E"/>
-              <circle cx="459" cy="262" r="9" fill="#FFFFFF"/>
+
+            <!-- ===== Refined e-scooter illustration ===== -->
+            <svg class="hero-scooter-illustration" viewBox="0 0 460 260" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="heroDeckGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#2563EB"/>
+                  <stop offset="100%" stop-color="#22C55E"/>
+                </linearGradient>
+                <linearGradient id="heroBodyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stop-color="#1E293B"/>
+                  <stop offset="100%" stop-color="#0F172A"/>
+                </linearGradient>
+                <radialGradient id="heroHeadlight" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stop-color="#FEF3C7"/>
+                  <stop offset="100%" stop-color="#FBBF24"/>
+                </radialGradient>
+              </defs>
+
+              <!-- Ground shadow -->
+              <ellipse cx="224" cy="248" rx="160" ry="9" fill="#0F172A" fill-opacity="0.12"/>
+
+              <!-- Rear wheel -->
+              <circle cx="84" cy="210" r="40" fill="#0F172A"/>
+              <circle cx="84" cy="210" r="32" fill="#1E293B"/>
+              <circle cx="84" cy="210" r="22" fill="#2D3A4A"/>
+              <line x1="84" y1="190" x2="84" y2="230" stroke="#475569" stroke-width="2.5"/>
+              <line x1="64" y1="210" x2="104" y2="210" stroke="#475569" stroke-width="2.5"/>
+              <line x1="69.9" y1="195.9" x2="98.1" y2="224.1" stroke="#475569" stroke-width="2.5"/>
+              <line x1="98.1" y1="195.9" x2="69.9" y2="224.1" stroke="#475569" stroke-width="2.5"/>
+              <circle cx="84" cy="210" r="7" fill="#0F172A"/>
+              <circle cx="84" cy="210" r="3" fill="#94A3B8"/>
+
+              <!-- Front wheel -->
+              <circle cx="370" cy="210" r="40" fill="#0F172A"/>
+              <circle cx="370" cy="210" r="32" fill="#1E293B"/>
+              <circle cx="370" cy="210" r="22" fill="#2D3A4A"/>
+              <line x1="370" y1="190" x2="370" y2="230" stroke="#475569" stroke-width="2.5"/>
+              <line x1="350" y1="210" x2="390" y2="210" stroke="#475569" stroke-width="2.5"/>
+              <line x1="355.9" y1="195.9" x2="384.1" y2="224.1" stroke="#475569" stroke-width="2.5"/>
+              <line x1="384.1" y1="195.9" x2="355.9" y2="224.1" stroke="#475569" stroke-width="2.5"/>
+              <circle cx="370" cy="210" r="7" fill="#0F172A"/>
+              <circle cx="370" cy="210" r="3" fill="#94A3B8"/>
+
+              <!-- Rear fender -->
+              <path d="M 44 218 Q 32 188 54 165 Q 76 146 100 158 L 122 200" stroke="url(#heroBodyGrad)" stroke-width="13" stroke-linecap="round"/>
+
+              <!-- Deck (footboard) with brand gradient -->
+              <rect x="64" y="198" width="304" height="18" rx="9" fill="url(#heroDeckGrad)"/>
+              <!-- Deck shimmer -->
+              <rect x="74" y="200" width="220" height="6" rx="3" fill="#FFFFFF" fill-opacity="0.35"/>
+              <!-- Eco logo on deck -->
+              <circle cx="220" cy="207" r="6" fill="#FFFFFF" fill-opacity="0.92"/>
+              <path d="M 216 209 Q 220 203 224 209" stroke="#22C55E" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+
+              <!-- Battery / motor block -->
+              <rect x="98" y="214" width="220" height="22" rx="6" fill="#0F172A"/>
+              <line x1="138" y1="216" x2="138" y2="234" stroke="#2D3A4A" stroke-width="1.5"/>
+              <line x1="178" y1="216" x2="178" y2="234" stroke="#2D3A4A" stroke-width="1.5"/>
+              <line x1="218" y1="216" x2="218" y2="234" stroke="#2D3A4A" stroke-width="1.5"/>
+              <line x1="258" y1="216" x2="258" y2="234" stroke="#2D3A4A" stroke-width="1.5"/>
+              <line x1="298" y1="216" x2="298" y2="234" stroke="#2D3A4A" stroke-width="1.5"/>
+              <!-- Battery LED -->
+              <circle cx="108" cy="225" r="2.5" fill="#22C55E"/>
+
+              <!-- Steering stem -->
+              <path d="M 354 200 L 312 52" stroke="url(#heroBodyGrad)" stroke-width="18" stroke-linecap="round"/>
+              <path d="M 352 200 L 310 52" stroke="#2D3A4A" stroke-width="6" stroke-linecap="round" opacity="0.6"/>
+
+              <!-- Front fork -->
+              <path d="M 354 200 Q 362 207 370 210" stroke="#0F172A" stroke-width="14" stroke-linecap="round"/>
+
+              <!-- Head tube clamp -->
+              <rect x="343" y="190" width="20" height="22" rx="6" fill="#0F172A"/>
+              <rect x="346" y="193" width="14" height="16" rx="3" fill="#1E293B"/>
+
+              <!-- Handlebar -->
+              <rect x="262" y="42" width="100" height="11" rx="5.5" fill="url(#heroBodyGrad)"/>
+              <!-- Left grip -->
+              <rect x="252" y="40" width="18" height="15" rx="4" fill="#0F172A"/>
+              <rect x="254" y="42" width="14" height="11" rx="3" fill="#2D3A4A"/>
+              <!-- Right grip -->
+              <rect x="354" y="40" width="18" height="15" rx="4" fill="#0F172A"/>
+              <rect x="356" y="42" width="14" height="11" rx="3" fill="#2D3A4A"/>
+              <!-- Brake lever -->
+              <path d="M 372 50 L 392 56" stroke="#475569" stroke-width="3" stroke-linecap="round"/>
+
+              <!-- Display screen -->
+              <rect x="298" y="58" width="36" height="22" rx="4" fill="#0F172A"/>
+              <rect x="301" y="61" width="30" height="16" rx="2" fill="#0EA5E9" fill-opacity="0.85"/>
+              <rect x="304" y="64" width="14" height="2.5" rx="1" fill="#FFFFFF" fill-opacity="0.9"/>
+              <rect x="304" y="69" width="22" height="3" rx="1" fill="#FFFFFF"/>
+              <rect x="304" y="73" width="10" height="2" rx="1" fill="#FFFFFF" fill-opacity="0.7"/>
+
+              <!-- Headlight -->
+              <ellipse cx="306" cy="48" rx="6" ry="5" fill="url(#heroHeadlight)"/>
+              <ellipse cx="306" cy="48" rx="3" ry="2.5" fill="#FEF3C7"/>
+              <path d="M 312 48 L 332 38 L 332 58 Z" fill="#FBBF24" fill-opacity="0.18"/>
+
+              <!-- Kickstand -->
+              <line x1="135" y1="234" x2="125" y2="248" stroke="#0F172A" stroke-width="3" stroke-linecap="round"/>
             </svg>
+
+            <!-- Info badge -->
             <view class="hero-illustration-badge">
+              <view class="hero-illustration-badge-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z"/>
+                  <circle cx="12" cy="10" r="3"/>
+                </svg>
+              </view>
               <view class="hero-illustration-badge-main">
                 <text class="hero-illustration-badge-title">Scooter #28</text>
-                <text class="hero-illustration-badge-copy">120m away</text>
+                <text class="hero-illustration-badge-copy">120m away · 2 min walk</text>
               </view>
               <view class="hero-illustration-badge-meter">
                 <text class="hero-illustration-badge-meter-value">98%</text>
@@ -1323,63 +1447,53 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  border-radius: 42rpx;
+  border-radius: 44rpx;
   background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.58) 1rpx, transparent 1rpx),
-    linear-gradient(0deg, rgba(255, 255, 255, 0.58) 1rpx, transparent 1rpx),
-    linear-gradient(145deg, #F8FBFF 0%, #EAF3FF 50%, #F2FFF8 100%);
-  background-size: 58rpx 58rpx, 58rpx 58rpx, auto;
-  border: 1rpx solid rgba(147, 197, 253, 0.48);
-  box-shadow: 0 34rpx 86rpx rgba(37, 99, 235, 0.18), inset 0 1rpx 0 rgba(255, 255, 255, 0.92);
-  animation: scooter-float 3.5s ease-in-out infinite;
+    radial-gradient(120% 90% at 50% 110%, rgba(34, 197, 94, 0.10) 0%, transparent 60%),
+    linear-gradient(155deg, #F4F8FF 0%, #EAF2FE 45%, #F0FBF4 100%);
+  border: 1rpx solid rgba(191, 219, 254, 0.55);
+  box-shadow:
+    0 40rpx 80rpx -20rpx rgba(37, 99, 235, 0.28),
+    0 16rpx 36rpx -12rpx rgba(34, 197, 94, 0.16),
+    inset 0 1rpx 0 rgba(255, 255, 255, 0.95);
+  animation: scooter-float 4s ease-in-out infinite;
 }
 
-.hero-map-ribbon {
+.hero-map-bg-svg {
   position: absolute;
-  border-radius: 999rpx;
-  background: rgba(255, 255, 255, 0.64);
-  border: 1rpx solid rgba(191, 219, 254, 0.58);
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
   pointer-events: none;
 }
 
-.hero-map-ribbon-a {
-  width: 340rpx;
-  height: 34rpx;
-  left: -76rpx;
-  top: 126rpx;
-  transform: rotate(-36deg);
+.hero-route-path {
+  animation: route-flow 1.6s linear infinite;
 }
 
-.hero-map-ribbon-b {
-  width: 430rpx;
-  height: 38rpx;
-  right: -80rpx;
-  top: 238rpx;
-  transform: rotate(-28deg);
-}
-
-.hero-map-ribbon-c {
-  width: 300rpx;
-  height: 30rpx;
-  left: 206rpx;
-  bottom: 112rpx;
-  transform: rotate(42deg);
+@keyframes route-flow {
+  to {
+    stroke-dashoffset: -32;
+  }
 }
 
 .hero-live-chip {
   position: absolute;
-  top: 34rpx;
-  left: 34rpx;
-  z-index: 3;
+  top: 28rpx;
+  left: 28rpx;
+  z-index: 4;
   display: inline-flex;
   align-items: center;
   gap: 10rpx;
-  padding: 12rpx 18rpx;
+  padding: 12rpx 22rpx;
   border-radius: 999rpx;
-  background: rgba(255, 255, 255, 0.86);
-  border: 1rpx solid rgba(191, 219, 254, 0.72);
-  backdrop-filter: blur(18px);
-  box-shadow: 0 12rpx 28rpx rgba(15, 23, 42, 0.08);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1rpx solid rgba(191, 219, 254, 0.7);
+  backdrop-filter: blur(20px);
+  box-shadow:
+    0 14rpx 32rpx rgba(15, 23, 42, 0.10),
+    inset 0 1rpx 0 rgba(255, 255, 255, 1);
 }
 
 .hero-live-dot {
@@ -1387,43 +1501,65 @@ onUnmounted(() => {
   height: 12rpx;
   border-radius: 50%;
   background: #22C55E;
-  box-shadow: 0 0 0 8rpx rgba(34, 197, 94, 0.12);
+  box-shadow: 0 0 0 6rpx rgba(34, 197, 94, 0.20);
+  animation: live-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes live-pulse {
+  0%, 100% { box-shadow: 0 0 0 6rpx rgba(34, 197, 94, 0.20); }
+  50%      { box-shadow: 0 0 0 12rpx rgba(34, 197, 94, 0.05); }
 }
 
 .hero-live-text {
   font-size: 22rpx;
   font-weight: 800;
   color: #0F172A;
+  letter-spacing: 0.3rpx;
 }
 
 .hero-scooter-illustration {
   position: relative;
-  z-index: 2;
-  width: 540rpx;
-  height: 376rpx;
-  margin-top: 18rpx;
-  filter: drop-shadow(0 20rpx 18rpx rgba(15, 23, 42, 0.12));
+  z-index: 3;
+  width: 500rpx;
+  height: 282rpx;
+  margin-top: 4rpx;
+  filter: drop-shadow(0 24rpx 24rpx rgba(15, 23, 42, 0.16));
 }
 
 .hero-illustration-badge {
   position: absolute;
-  left: 32rpx;
-  right: 32rpx;
-  bottom: 28rpx;
-  z-index: 3;
+  left: 28rpx;
+  right: 28rpx;
+  bottom: 26rpx;
+  z-index: 4;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 20rpx;
-  padding: 18rpx 20rpx;
-  border-radius: 24rpx;
-  background: rgba(255, 255, 255, 0.88);
-  border: 1rpx solid rgba(191, 219, 254, 0.72);
-  backdrop-filter: blur(18px);
-  box-shadow: 0 14rpx 30rpx rgba(15, 23, 42, 0.08);
+  gap: 16rpx;
+  padding: 18rpx 22rpx;
+  border-radius: 26rpx;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1rpx solid rgba(191, 219, 254, 0.7);
+  backdrop-filter: blur(20px);
+  box-shadow:
+    0 18rpx 36rpx rgba(15, 23, 42, 0.10),
+    inset 0 1rpx 0 rgba(255, 255, 255, 1);
+}
+
+.hero-illustration-badge-icon {
+  flex-shrink: 0;
+  width: 60rpx;
+  height: 60rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18rpx;
+  background: linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%);
+  border: 1rpx solid rgba(147, 197, 253, 0.6);
+  box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.9);
 }
 
 .hero-illustration-badge-main {
+  flex: 1;
   min-width: 0;
 }
 
@@ -1431,15 +1567,16 @@ onUnmounted(() => {
   display: block;
   font-size: 28rpx;
   font-weight: 800;
-  color: #111827;
+  color: #0F172A;
+  letter-spacing: 0.2rpx;
 }
 
 .hero-illustration-badge-copy {
   display: block;
   margin-top: 4rpx;
   font-size: 22rpx;
-  font-weight: 700;
-  color: #2563EB;
+  font-weight: 600;
+  color: #475569;
 }
 
 .hero-illustration-badge-meter {
@@ -1447,18 +1584,20 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 86rpx;
-  height: 58rpx;
-  padding: 0 14rpx;
+  min-width: 88rpx;
+  height: 60rpx;
+  padding: 0 16rpx;
   border-radius: 18rpx;
-  background: #ECFDF5;
-  border: 1rpx solid #A7F3D0;
+  background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%);
+  border: 1rpx solid #86EFAC;
+  box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.9);
 }
 
 .hero-illustration-badge-meter-value {
-  font-size: 24rpx;
+  font-size: 26rpx;
   font-weight: 900;
   color: #047857;
+  letter-spacing: -0.4rpx;
 }
 
 @keyframes scooter-float {
@@ -1466,7 +1605,7 @@ onUnmounted(() => {
     transform: translateY(0);
   }
   50% {
-    transform: translateY(-16rpx);
+    transform: translateY(-14rpx);
   }
 }
 
