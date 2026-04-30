@@ -7,11 +7,12 @@
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
   />
   <title>Scooter Map</title>
-  <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"
-  />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script>
+    window._AMapSecurityConfig = {
+      securityJsCode: "0c59d62b0abc528a3fca91b787cf7c66"
+    }
+  </script>
+  <script src="https://webapi.amap.com/loader.js"></script>
   <style>
     :root {
       --map-blue: #2563eb;
@@ -84,7 +85,25 @@
       width: 100%;
     }
 
-    .leaflet-popup-content-wrapper {
+    .amap-info-content {
+      background: transparent;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+      overflow: hidden;
+      padding: 0;
+    }
+
+    .amap-info-sharp {
+      display: none;
+    }
+
+    .amap-info-close {
+      color: #94a3b8;
+      right: 10px !important;
+      top: 8px !important;
+    }
+
+    .legacy-leaflet-popup-content-wrapper {
       border-radius: 16px;
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
       overflow: hidden;
@@ -93,17 +112,17 @@
       z-index: 99999;
     }
 
-    .leaflet-popup-pane,
-    .leaflet-popup {
+    .legacy-leaflet-popup-pane,
+    .legacy-leaflet-popup {
       z-index: 99998 !important;
     }
 
-    .leaflet-popup-content {
+    .legacy-leaflet-popup-content {
       margin: 0;
       width: 280px !important;
     }
 
-    .leaflet-popup-tip-container {
+    .legacy-leaflet-popup-tip-container {
       display: none;
     }
 
@@ -471,17 +490,13 @@
       }
     ])
 
-    const map = L.map("map", {
-      attributionControl: false,
-      center: MAP_DEFAULT_VIEW.center,
-      zoom: MAP_DEFAULT_VIEW.zoom,
-      zoomControl: false
-    })
-
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19
-    }).addTo(map)
-
+    const AMAP_KEY_NAME = "ScooterGo-Demo"
+    const AMAP_JSAPI_KEY = "7cd1345370762e933fbfceed024698e0"
+    let AMapRuntime = null
+    let map = null
+    let currentInfoWindow = null
+    let currentPopupData = null
+    let mapReady = false
     const markers = {}
     const storeMarkers = {}
     let currentFilter = "ALL"
@@ -527,6 +542,27 @@
       return [lat, lng]
     }
 
+    function toAmapPosition(coordinates) {
+      if (!Array.isArray(coordinates) || coordinates.length < 2) return null
+      const lat = Number(coordinates[0])
+      const lng = Number(coordinates[1])
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+      return [lng, lat]
+    }
+
+    function toLatLng(position) {
+      if (!position) return null
+      if (Array.isArray(position)) {
+        const lng = Number(position[0])
+        const lat = Number(position[1])
+        return Number.isFinite(lat) && Number.isFinite(lng) ? [lat, lng] : null
+      }
+
+      const lng = Number(typeof position.getLng === "function" ? position.getLng() : position.lng)
+      const lat = Number(typeof position.getLat === "function" ? position.getLat() : position.lat)
+      return Number.isFinite(lat) && Number.isFinite(lng) ? [lat, lng] : null
+    }
+
     function normalizeHexColor(value, fallback = "#2563EB") {
       const color = String(value || "").trim()
       return /^#[0-9A-Fa-f]{6}$/.test(color) ? color : fallback
@@ -551,13 +587,7 @@
     }
 
     function makeIcon(status) {
-      return L.divIcon({
-        className: "",
-        html: buildMarkerHtml(status),
-        iconAnchor: [16, 32],
-        iconSize: [32, 32],
-        popupAnchor: [0, -36]
-      })
+      return buildMarkerHtml(status)
     }
 
     function buildStoreMarkerHtml(store) {
@@ -572,13 +602,7 @@
     }
 
     function makeStoreIcon(store) {
-      return L.divIcon({
-        className: "",
-        html: buildStoreMarkerHtml(store),
-        iconAnchor: [21, 42],
-        iconSize: [42, 42],
-        popupAnchor: [0, -44]
-      })
+      return buildStoreMarkerHtml(store)
     }
 
     function buildStorePopup(store) {
@@ -639,51 +663,75 @@
       `
     }
 
+    function openInfoWindow(marker, content, payload, offset = [0, -36]) {
+      if (!map || !AMapRuntime || !marker) return
+
+      if (currentInfoWindow) {
+        currentInfoWindow.close()
+      }
+
+      currentPopupData = payload
+      currentInfoWindow = new AMapRuntime.InfoWindow({
+        content,
+        isCustom: false,
+        offset: new AMapRuntime.Pixel(offset[0], offset[1])
+      })
+      currentInfoWindow.on("close", () => {
+        if (currentPopupData) {
+          postToUniApp("popupClose", currentPopupData)
+        }
+        currentPopupData = null
+      })
+      currentInfoWindow.open(map, marker.getPosition())
+    }
+
     function renderScooters(scooters) {
+      if (!map || !AMapRuntime) return
       const nextIds = new Set((Array.isArray(scooters) ? scooters : []).map(scooter => Number(scooter?.id)))
 
       Object.keys(markers).forEach((markerId) => {
         if (!nextIds.has(Number(markerId))) {
-          map.removeLayer(markers[markerId])
+          markers[markerId].setMap(null)
           delete markers[markerId]
         }
       })
 
       ;(Array.isArray(scooters) ? scooters : []).forEach((scooter) => {
         const coordinates = getCoordinates(scooter)
-        if (!coordinates) return
+        const position = toAmapPosition(coordinates)
+        if (!position) return
 
         const shouldShow = currentFilter === "ALL" || scooter.status === "AVAILABLE"
         const existingMarker = markers[scooter.id]
 
         if (existingMarker) {
-          existingMarker.setLatLng(coordinates)
-          existingMarker.setIcon(makeIcon(scooter.status))
-          existingMarker.setPopupContent(buildPopup(scooter))
+          existingMarker.setPosition(position)
+          existingMarker.setContent(makeIcon(scooter.status))
           existingMarker._scooterData = scooter
           if (shouldShow) {
-            if (!map.hasLayer(existingMarker)) {
-              existingMarker.addTo(map)
+            if (!existingMarker.getMap()) {
+              existingMarker.setMap(map)
             }
           } else {
-            map.removeLayer(existingMarker)
+            existingMarker.setMap(null)
           }
           return
         }
 
-        const marker = L.marker(coordinates, { icon: makeIcon(scooter.status) })
-        marker._scooterData = scooter
-        marker.bindPopup(buildPopup(scooter), { maxWidth: 300 })
-        marker.on("click", () => {
-          marker.setPopupContent(buildPopup(marker._scooterData))
-          postToUniApp("markerTap", marker._scooterData)
+        const marker = new AMapRuntime.Marker({
+          position,
+          content: makeIcon(scooter.status),
+          offset: new AMapRuntime.Pixel(-16, -32),
+          zIndex: 100
         })
-        marker.on("popupclose", () => {
-          postToUniApp("popupClose", marker._scooterData)
+        marker._scooterData = scooter
+        marker.on("click", () => {
+          openInfoWindow(marker, buildPopup(marker._scooterData), marker._scooterData, [0, -36])
+          postToUniApp("markerTap", marker._scooterData)
         })
 
         if (shouldShow) {
-          marker.addTo(map)
+          marker.setMap(map)
         }
 
         markers[scooter.id] = marker
@@ -691,11 +739,12 @@
     }
 
     function renderStores(stores) {
+      if (!map || !AMapRuntime) return
       const nextIds = new Set((Array.isArray(stores) ? stores : []).map(store => String(store?.id || "")))
 
       Object.keys(storeMarkers).forEach((storeId) => {
         if (!nextIds.has(storeId)) {
-          map.removeLayer(storeMarkers[storeId])
+          storeMarkers[storeId].setMap(null)
           delete storeMarkers[storeId]
         }
       })
@@ -703,51 +752,56 @@
       ;(Array.isArray(stores) ? stores : []).forEach((store) => {
         const storeId = String(store?.id || "")
         const coordinates = getStoreCoordinates(store)
-        if (!storeId || !coordinates) return
+        const position = toAmapPosition(coordinates)
+        if (!storeId || !position) return
 
         const existingMarker = storeMarkers[storeId]
 
         if (existingMarker) {
-          existingMarker.setLatLng(coordinates)
-          existingMarker.setIcon(makeStoreIcon(store))
-          existingMarker.setPopupContent(buildStorePopup(store))
+          existingMarker.setPosition(position)
+          existingMarker.setContent(makeStoreIcon(store))
           existingMarker._storeData = store
-          if (!map.hasLayer(existingMarker)) {
-            existingMarker.addTo(map)
+          if (!existingMarker.getMap()) {
+            existingMarker.setMap(map)
           }
           return
         }
 
-        const marker = L.marker(coordinates, {
-          icon: makeStoreIcon(store),
-          zIndexOffset: 900
+        const marker = new AMapRuntime.Marker({
+          position,
+          content: makeStoreIcon(store),
+          offset: new AMapRuntime.Pixel(-21, -42),
+          zIndex: 900
         })
         marker._storeData = store
-        marker.bindPopup(buildStorePopup(store), { maxWidth: 280 })
-        marker.addTo(map)
+        marker.on("click", () => {
+          openInfoWindow(marker, buildStorePopup(marker._storeData), marker._storeData, [0, -44])
+        })
+        marker.setMap(map)
         storeMarkers[storeId] = marker
       })
     }
 
     function focusStore(payload) {
+      if (!map || !AMapRuntime) return
       const storeId = String(payload?.id || "")
       const marker = storeMarkers[storeId]
       const coordinates = marker
-        ? marker.getLatLng()
+        ? toLatLng(marker.getPosition())
         : getStoreCoordinates({ lat: payload?.lat, lng: payload?.lng })
 
       if (!coordinates) return
 
-      const center = Array.isArray(coordinates)
-        ? coordinates
-        : [coordinates.lat, coordinates.lng]
+      const center = toAmapPosition(coordinates)
+      if (!center) return
+
       const zoom = Number(payload?.zoom) || 15
 
-      map.flyTo(center, zoom, { duration: 0.85 })
+      map.setZoomAndCenter(zoom, center)
 
       if (marker) {
         window.setTimeout(() => {
-          marker.openPopup()
+          openInfoWindow(marker, buildStorePopup(marker._storeData), marker._storeData, [0, -44])
         }, 550)
       }
     }
@@ -771,37 +825,43 @@
     }
 
     function showUserLocation(lat, lng) {
-      const icon = L.divIcon({
-        className: "",
-        html: `
+      if (!map || !AMapRuntime) return
+      const position = toAmapPosition([lat, lng])
+      if (!position) return
+
+      const icon = `
           <div class="user-location-marker">
             <div class="user-pulse"></div>
             <div class="user-dot"></div>
           </div>
-        `,
-        iconAnchor: [8, 8],
-        iconSize: [16, 16]
-      })
+        `
 
       if (userMarker) {
-        userMarker.setLatLng([lat, lng])
+        userMarker.setPosition(position)
       } else {
-        userMarker = L.marker([lat, lng], { icon, zIndexOffset: 1200 }).addTo(map)
+        userMarker = new AMapRuntime.Marker({
+          position,
+          content: icon,
+          offset: new AMapRuntime.Pixel(-8, -8),
+          zIndex: 1200
+        })
+        userMarker.setMap(map)
       }
 
-      map.setView([lat, lng], 16)
+      map.setZoomAndCenter(16, position)
     }
 
     function applyFilter(filter) {
+      if (!map) return
       currentFilter = filter
       Object.values(markers).forEach((marker) => {
         const shouldShow = filter === "ALL" || marker._scooterData.status === "AVAILABLE"
         if (shouldShow) {
-          if (!map.hasLayer(marker)) {
-            marker.addTo(map)
+          if (!marker.getMap()) {
+            marker.setMap(map)
           }
         } else {
-          map.removeLayer(marker)
+          marker.setMap(null)
         }
       })
     }
@@ -842,14 +902,48 @@
       if (cmd === "focusStore" && data) focusStore(data)
       if (cmd === "locate" && data) showUserLocation(data.lat, data.lng)
       if (cmd === "filter" && data) applyFilter(data.filter)
-      if (cmd === "flyTo" && data) map.setView([data.lat, data.lng], data.zoom || 16)
-      if (cmd === "closePopup") map.closePopup()
+      if (cmd === "flyTo" && data && map) {
+        const position = toAmapPosition([data.lat, data.lng])
+        if (position) map.setZoomAndCenter(data.zoom || 16, position)
+      }
+      if (cmd === "closePopup" && currentInfoWindow) currentInfoWindow.close()
     })
 
+    async function initMap() {
+      try {
+        if (!window.AMapLoader) {
+          throw new Error("AMapLoader is unavailable")
+        }
+
+        AMapRuntime = await window.AMapLoader.load({
+          key: AMAP_JSAPI_KEY,
+          version: "2.0",
+          plugins: ["AMap.Scale", "AMap.ControlBar", "AMap.Geolocation"]
+        })
+
+        map = new AMapRuntime.Map("map", {
+          center: toAmapPosition(MAP_DEFAULT_VIEW.center),
+          zoom: MAP_DEFAULT_VIEW.zoom,
+          resizeEnable: true,
+          viewMode: "2D",
+          mapStyle: "amap://styles/normal"
+        })
+
+        map.addControl(new AMapRuntime.Scale())
+        mapReady = true
+        renderStores(DEFAULT_STORES)
+        focusStoreFromUrl()
+        postToUniApp("mapReady", {})
+      } catch (error) {
+        window.__APP_LOGGER__?.error?.("[scooter-map] Failed to initialize AMap", error)
+        postToUniApp("mapError", {
+          message: `Map failed to initialize. Please check the ${AMAP_KEY_NAME} AMap Web key and domain binding.`
+        })
+      }
+    }
+
     window.onload = () => {
-      renderStores(DEFAULT_STORES)
-      focusStoreFromUrl()
-      postToUniApp("mapReady", {})
+      initMap()
     }
   </script>
 </body>
