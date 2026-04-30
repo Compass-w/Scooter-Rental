@@ -1030,11 +1030,26 @@ const stopTimer = () => {
 
 const handleExtendRide = async () => {
   if (!activeRide.value?.bookingId || busyAction.value) return
+  const currentRide = activeRide.value
+  const extraMinutes = extensionMinutes.value
+  const currentDuration = Number(currentRide.durationMinutes || 0)
+  const nextDuration = currentDuration + extraMinutes
+  const currentEndTime = getRideEndTime(currentRide)
+  const nextEndTime = currentEndTime
+    ? new Date(currentEndTime.getTime() + (extraMinutes * 60 * 1000))
+    : null
   busyAction.value = 'extend'
   try {
-    const response = await extendRide(activeRide.value.bookingId, extensionMinutes.value)
-    updateActiveRideState({ ...activeRide.value, ...response, status: response?.bookingStatus || activeRide.value.status })
-    uni.showToast({ title: `Added ${extensionMinutes.value} min`, icon: 'success' })
+    const response = await extendRide(currentRide.bookingId, extraMinutes)
+    updateActiveRideState({
+      ...currentRide,
+      durationMinutes: nextDuration,
+      plannedEndTime: nextEndTime ? nextEndTime.toISOString() : currentRide.plannedEndTime,
+      ...response,
+      status: response?.bookingStatus || currentRide.status
+    })
+    nowTick.value = Date.now()
+    uni.showToast({ title: `Added ${extraMinutes} min`, icon: 'success' })
   } catch (error) {
     globalThis.__APP_LOGGER__?.error('Failed to extend ride:', error)
   } finally {

@@ -623,7 +623,7 @@ const mobileNavItems = computed(() => ([
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(20px);
   border-bottom: 1rpx solid rgba(37, 99, 235, 0.1);
-  z-index: 1000;
+  z-index: 3000;
 }
 
 .nav-container {
@@ -1460,7 +1460,7 @@ const mobileNavItems = computed(() => ([
     border: 1rpx solid rgba(219, 234, 254, 0.95);
     box-shadow: 0 20rpx 44rpx rgba(15, 23, 42, 0.14);
     backdrop-filter: blur(22px);
-    z-index: 920;
+    z-index: 3000;
   }
 
   .mobile-nav-item {

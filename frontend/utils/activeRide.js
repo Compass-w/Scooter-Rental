@@ -54,6 +54,7 @@ export const normalizeActiveRide = (ride = {}, fallback = {}) => {
   const bookingId = ride.bookingId ?? ride.id ?? fallback.bookingId ?? fallback.id ?? null
   const scooterId = ride.scooterId ?? fallback.scooterId ?? null
   const durationMinutes = toNumber(ride.durationMinutes ?? fallback.durationMinutes, 0)
+  const plannedEndTime = toIsoString(ride.plannedEndTime ?? fallback.plannedEndTime, '')
   const latitudeValue = toNullableNumber(ride.latitude ?? ride.lat ?? fallback.latitude ?? fallback.lat)
   const longitudeValue = toNullableNumber(ride.longitude ?? ride.lng ?? fallback.longitude ?? fallback.lng)
   const normalizedPricing = normalizeRidePricing({
@@ -104,6 +105,7 @@ export const normalizeActiveRide = (ride = {}, fallback = {}) => {
     scooterId,
     scooterModel: ride.scooterModel ?? ride.model ?? fallback.scooterModel ?? fallback.model ?? 'Scooter',
     startTime: toIsoString(ride.startTime ?? fallback.startTime, new Date().toISOString()),
+    plannedEndTime,
     durationMinutes,
     totalCost,
     basePrice: normalizedPricing.basePrice,
@@ -140,6 +142,11 @@ export const isRideActive = (ride) => normalizeStatus(ride?.status ?? ride?.book
 
 export const getRideEndTime = (ride) => {
   const normalized = normalizeActiveRide(ride)
+  if (normalized.plannedEndTime) {
+    const plannedEndAt = new Date(normalized.plannedEndTime).getTime()
+    if (!Number.isNaN(plannedEndAt)) return new Date(plannedEndAt)
+  }
+
   const startAt = new Date(normalized.startTime).getTime()
   if (Number.isNaN(startAt) || normalized.durationMinutes <= 0) return null
   return new Date(startAt + (normalized.durationMinutes * 60 * 1000))

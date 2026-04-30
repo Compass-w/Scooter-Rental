@@ -117,7 +117,8 @@ public interface BookingMapper {
             "WHERE booking_id = #{bookingId}")
     int completeBooking(Booking booking);
 
-    @Update("UPDATE bookings SET duration_minutes = #{durationMinutes}, total_cost = #{totalCost} " +
+    @Update("UPDATE bookings SET duration_minutes = #{durationMinutes}, total_cost = #{totalCost}, " +
+            "planned_end_time = #{plannedEndTime} " +
             "WHERE booking_id = #{bookingId} AND status = 'ACTIVE'")
     int extendActiveBooking(Booking booking);
 
