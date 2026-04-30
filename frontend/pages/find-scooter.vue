@@ -394,6 +394,8 @@ const mapSrc = ref(buildMapSrc())
 // Auto-refresh timer reference
 let refreshTimer = null
 let locateRequest = null
+let amapLocateRequest = null
+let amapLocateTimeout = 0
 let rideLocationTimer = null
 
 // Cached iframe contentWindow — populated on first message from the map
@@ -627,6 +629,32 @@ const getUniLocation = () => new Promise((resolve, reject) => {
   })
 })
 
+const getAmapLocationFromMap = () => new Promise((resolve, reject) => {
+  if (!mapReady.value) {
+    reject(new Error('AMAP_MAP_NOT_READY'))
+    return
+  }
+
+  if (amapLocateRequest) {
+    reject(new Error('AMAP_LOCATION_IN_PROGRESS'))
+    return
+  }
+
+  amapLocateRequest = { resolve, reject }
+  if (amapLocateTimeout) {
+    clearTimeout(amapLocateTimeout)
+  }
+  amapLocateTimeout = setTimeout(() => {
+    if (!amapLocateRequest) return
+    const pending = amapLocateRequest
+    amapLocateRequest = null
+    amapLocateTimeout = 0
+    pending.reject(new Error('AMAP_LOCATION_TIMEOUT'))
+  }, 14000)
+
+  sendToMap('requestAmapLocate', {})
+})
+
 const getDeviceLocation = async ({ allowFallback = false } = {}) => {
   const errors = []
 
@@ -652,6 +680,17 @@ const getDeviceLocation = async ({ allowFallback = false } = {}) => {
 
   try {
     const location = await getUniLocation()
+    realLocationUnavailable.value = false
+    return location
+  } catch (error) {
+    if (isLocationUnavailableError(error)) {
+      realLocationUnavailable.value = true
+    }
+    errors.push(error)
+  }
+
+  try {
+    const location = await getAmapLocationFromMap()
     realLocationUnavailable.value = false
     return location
   } catch (error) {
@@ -696,7 +735,11 @@ const getLocationFailureTitle = (error = {}) => {
 
 const isLocationUnavailableError = (error = {}) => {
   const message = String(error.errMsg || error.message || '').toLowerCase()
-  return error.code === 2 || message.includes('unavailable') || message.includes('kclerrorlocationunknown')
+  return error.code === 2 ||
+    message.includes('unavailable') ||
+    message.includes('kclerrorlocationunknown') ||
+    message.includes('amap_location_timeout') ||
+    message.includes('amap geolocation failed')
 }
 
 const stopRideLocationTracking = () => {
@@ -924,6 +967,36 @@ const _onWindowMessage = (e) => {
 
 // Shared logic for handling map payloads from either platform
 const _handleMapPayload = ({ type, data } = {}) => {
+  if (type === 'amapLocation') {
+    const pending = amapLocateRequest
+    if (amapLocateTimeout) {
+      clearTimeout(amapLocateTimeout)
+      amapLocateTimeout = 0
+    }
+    amapLocateRequest = null
+    if (pending) {
+      try {
+        pending.resolve(normalizeLocationResult(data))
+      } catch (error) {
+        pending.reject(error)
+      }
+    }
+    return
+  }
+
+  if (type === 'amapLocationError') {
+    const pending = amapLocateRequest
+    if (amapLocateTimeout) {
+      clearTimeout(amapLocateTimeout)
+      amapLocateTimeout = 0
+    }
+    amapLocateRequest = null
+    if (pending) {
+      pending.reject(new Error(data?.message || 'AMAP_LOCATION_FAILED'))
+    }
+    return
+  }
+
   if (type === 'mapReady') {
     mapReady.value = true
     sendToMap('updateStores', featuredStoreLocations)

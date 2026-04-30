@@ -496,6 +496,7 @@
     let map = null
     let currentInfoWindow = null
     let currentPopupData = null
+    let geolocationControl = null
     let mapReady = false
     const markers = {}
     const storeMarkers = {}
@@ -851,6 +852,38 @@
       map.setZoomAndCenter(16, position)
     }
 
+    function locateWithAmap() {
+      if (!map || !AMapRuntime || !geolocationControl) {
+        postToUniApp("amapLocationError", { message: "AMap geolocation is not ready" })
+        return
+      }
+
+      geolocationControl.getCurrentPosition((status, result) => {
+        if (status !== "complete" || !result?.position) {
+          postToUniApp("amapLocationError", {
+            message: result?.message || result?.info || "AMap geolocation failed"
+          })
+          return
+        }
+
+        const lat = Number(result.position.getLat())
+        const lng = Number(result.position.getLng())
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+          postToUniApp("amapLocationError", { message: "AMap returned invalid coordinates" })
+          return
+        }
+
+        const location = {
+          lat,
+          lng,
+          accuracy: Number(result.accuracy || 0),
+          provider: "amap"
+        }
+        showUserLocation(lat, lng)
+        postToUniApp("amapLocation", location)
+      })
+    }
+
     function applyFilter(filter) {
       if (!map) return
       currentFilter = filter
@@ -901,6 +934,7 @@
       if (cmd === "updateStores") renderStores(data)
       if (cmd === "focusStore" && data) focusStore(data)
       if (cmd === "locate" && data) showUserLocation(data.lat, data.lng)
+      if (cmd === "requestAmapLocate") locateWithAmap()
       if (cmd === "filter" && data) applyFilter(data.filter)
       if (cmd === "flyTo" && data && map) {
         const position = toAmapPosition([data.lat, data.lng])
@@ -930,6 +964,14 @@
         })
 
         map.addControl(new AMapRuntime.Scale())
+        geolocationControl = new AMapRuntime.Geolocation({
+          enableHighAccuracy: true,
+          timeout: 12000,
+          convert: true,
+          showButton: false,
+          showMarker: false,
+          showCircle: false
+        })
         mapReady = true
         renderStores(DEFAULT_STORES)
         focusStoreFromUrl()
