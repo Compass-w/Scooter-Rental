@@ -575,7 +575,42 @@ const syncRideScooterToLocation = (location) => {
 const isLocalHostname = (hostname = '') =>
   ['localhost', '127.0.0.1', '::1'].includes(hostname) || hostname.endsWith('.localhost')
 
-const normalizeLocationResult = (result = {}) => {
+const isInsideChina = (lat, lng) =>
+  lng >= 72.004 && lng <= 137.8347 && lat >= 0.8293 && lat <= 55.8271
+
+const transformLatitude = (x, y) => {
+  let ret = -100 + 2 * x + 3 * y + 0.2 * y * y + 0.1 * x * y + 0.2 * Math.sqrt(Math.abs(x))
+  ret += (20 * Math.sin(6 * x * Math.PI) + 20 * Math.sin(2 * x * Math.PI)) * 2 / 3
+  ret += (20 * Math.sin(y * Math.PI) + 40 * Math.sin(y / 3 * Math.PI)) * 2 / 3
+  ret += (160 * Math.sin(y / 12 * Math.PI) + 320 * Math.sin(y * Math.PI / 30)) * 2 / 3
+  return ret
+}
+
+const transformLongitude = (x, y) => {
+  let ret = 300 + x + 2 * y + 0.1 * x * x + 0.1 * x * y + 0.1 * Math.sqrt(Math.abs(x))
+  ret += (20 * Math.sin(6 * x * Math.PI) + 20 * Math.sin(2 * x * Math.PI)) * 2 / 3
+  ret += (20 * Math.sin(x * Math.PI) + 40 * Math.sin(x / 3 * Math.PI)) * 2 / 3
+  ret += (150 * Math.sin(x / 12 * Math.PI) + 300 * Math.sin(x / 30 * Math.PI)) * 2 / 3
+  return ret
+}
+
+const wgs84ToGcj02 = (lat, lng) => {
+  if (!isInsideChina(lat, lng)) return { lat, lng }
+
+  const earthRadius = 6378245.0
+  const eccentricity = 0.00669342162296594323
+  const dLat = transformLatitude(lng - 105.0, lat - 35.0)
+  const dLng = transformLongitude(lng - 105.0, lat - 35.0)
+  const radLat = lat / 180.0 * Math.PI
+  let magic = Math.sin(radLat)
+  magic = 1 - eccentricity * magic * magic
+  const sqrtMagic = Math.sqrt(magic)
+  const nextLat = lat + (dLat * 180.0) / ((earthRadius * (1 - eccentricity)) / (magic * sqrtMagic) * Math.PI)
+  const nextLng = lng + (dLng * 180.0) / (earthRadius / sqrtMagic * Math.cos(radLat) * Math.PI)
+  return { lat: nextLat, lng: nextLng }
+}
+
+const normalizeLocationResult = (result = {}, { coordSystem = 'wgs84', provider = '' } = {}) => {
   const lat = Number(result.latitude ?? result.coords?.latitude)
   const lng = Number(result.longitude ?? result.coords?.longitude)
 
@@ -583,7 +618,17 @@ const normalizeLocationResult = (result = {}) => {
     throw new Error('Invalid location coordinates')
   }
 
-  return { lat, lng }
+  const converted = coordSystem === 'wgs84' ? wgs84ToGcj02(lat, lng) : { lat, lng }
+  return {
+    lat: converted.lat,
+    lng: converted.lng,
+    rawLat: lat,
+    rawLng: lng,
+    coordSystem: coordSystem === 'wgs84' && isInsideChina(lat, lng) ? 'gcj02' : coordSystem,
+    sourceCoordSystem: coordSystem,
+    provider,
+    accuracy: Number(result.accuracy ?? result.coords?.accuracy ?? 0)
+  }
 }
 
 const getBrowserGeolocation = () => new Promise((resolve, reject) => {
@@ -600,7 +645,7 @@ const getBrowserGeolocation = () => new Promise((resolve, reject) => {
   navigator.geolocation.getCurrentPosition(
     position => {
       try {
-        resolve(normalizeLocationResult(position))
+        resolve(normalizeLocationResult(position, { coordSystem: 'wgs84', provider: 'browser' }))
       } catch (error) {
         reject(error)
       }
@@ -620,7 +665,7 @@ const getUniLocation = () => new Promise((resolve, reject) => {
     ...HIGH_ACCURACY_LOCATION_OPTIONS,
     success: (res) => {
       try {
-        resolve(normalizeLocationResult(res))
+        resolve(normalizeLocationResult(res, { coordSystem: 'wgs84', provider: 'uni' }))
       } catch (error) {
         reject(error)
       }
@@ -976,7 +1021,7 @@ const _handleMapPayload = ({ type, data } = {}) => {
     amapLocateRequest = null
     if (pending) {
       try {
-        pending.resolve(normalizeLocationResult(data))
+        pending.resolve(normalizeLocationResult(data, { coordSystem: 'gcj02', provider: 'amap' }))
       } catch (error) {
         pending.reject(error)
       }
