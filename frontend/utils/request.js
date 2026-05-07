@@ -91,6 +91,8 @@ const request = (options) => {
         // 401 means the session is missing/expired: clear auth and ask the user to log in again.
         else if (code === 401 || statusCode === 401) {
           clearToken()
+          uni.removeStorageSync('userInfo')
+          uni.$emit('user-logout')
           uni.showToast({
             title: message || error || 'Please login again',
             icon: 'none'

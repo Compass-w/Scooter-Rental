@@ -71,22 +71,27 @@ export const verifyResetToken = (token) => {
 }
 
 /**
- * User Logout (Client-side processing)
- * Clear locally stored token and user information
+ * User Logout
+ * Revoke the current backend session, then clear locally stored token and user information.
  */
 export const logout = () => {
-  try {
-    // Clear token
+  const finishLogout = () => {
     request.clearToken()
-    // Clear user info
     uni.removeStorageSync('userInfo')
     uni.$emit('user-logout')
-    // Navigate to login page
     uni.reLaunch({
       url: '/pages/login'
     })
+  }
+
+  try {
+    return request.post('/auth/logout')
+      .catch(() => {})
+      .finally(finishLogout)
   } catch (e) {
     globalThis.__APP_LOGGER__?.error('Logout failed:', e)
+    finishLogout()
+    return Promise.resolve()
   }
 }
 

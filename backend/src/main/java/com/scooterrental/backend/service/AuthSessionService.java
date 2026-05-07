@@ -13,16 +13,26 @@ import java.util.concurrent.ConcurrentHashMap;
 public class AuthSessionService {
 
     private final Map<String, AuthSession> sessions = new ConcurrentHashMap<>();
+    private final Map<Integer, String> latestSessionByUserId = new ConcurrentHashMap<>();
 
-    public String createSession(User user) {
+    public synchronized String createSession(User user) {
         String token = "session-" + UUID.randomUUID();
+        Integer userId = user == null ? null : user.getUserId();
         sessions.put(token, new AuthSession(
                 token,
-                user == null ? null : user.getUserId(),
+                userId,
                 user == null ? null : user.getUsername(),
                 user == null ? null : user.getEmail(),
                 normalizeRole(user == null ? null : user.getRole()),
                 LocalDateTime.now()));
+
+        if (userId != null) {
+            String previousToken = latestSessionByUserId.put(userId, token);
+            if (previousToken != null && !previousToken.equals(token)) {
+                sessions.remove(previousToken);
+            }
+        }
+
         return token;
     }
 
@@ -31,6 +41,18 @@ public class AuthSessionService {
             return null;
         }
         return sessions.get(token.trim());
+    }
+
+    public synchronized void revokeSession(String token) {
+        if (token == null || token.isBlank()) {
+            return;
+        }
+
+        String normalizedToken = token.trim();
+        AuthSession removed = sessions.remove(normalizedToken);
+        if (removed != null && removed.userId() != null) {
+            latestSessionByUserId.remove(removed.userId(), normalizedToken);
+        }
     }
 
     public String normalizeRole(String role) {

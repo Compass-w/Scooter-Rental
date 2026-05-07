@@ -40,9 +40,19 @@ public class SessionAuthenticationFilter extends OncePerRequestFilter {
                         List.of(new SimpleGrantedAuthority("ROLE_" + session.role())));
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+            } else if (session == null && !isPublicAuthRequest(request)) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType("application/json;charset=UTF-8");
+                response.getWriter().write("{\"code\":401,\"message\":\"Session expired. Please login again\",\"data\":null}");
+                return;
             }
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private boolean isPublicAuthRequest(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return path != null && path.startsWith("/api/auth/");
     }
 }

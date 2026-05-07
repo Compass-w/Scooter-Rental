@@ -62,6 +62,13 @@ public class AuthController {
         }
     }
 
+    @PostMapping("/logout")
+    @Operation(summary = "User Logout", description = "Revokes the current session token")
+    public ResponseEntity<Result<Void>> logout(@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+        authSessionService.revokeSession(extractBearerToken(authorizationHeader));
+        return ResponseEntity.ok(Result.success());
+    }
+
     @PostMapping("/register")
     @Operation(summary = "User Register")
     public ResponseEntity<Result<Map<String, Object>>> register(@RequestBody User user) {
@@ -184,5 +191,12 @@ public class AuthController {
         }
 
         return "Password must be at least 8 characters and include letters, numbers, and special characters";
+    }
+
+    private String extractBearerToken(String authorizationHeader) {
+        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+            return null;
+        }
+        return authorizationHeader.substring(7).trim();
     }
 }

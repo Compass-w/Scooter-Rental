@@ -4,6 +4,8 @@ import com.scooterrental.backend.entity.User;
 import com.scooterrental.backend.service.AuthSessionService;
 import com.scooterrental.backend.service.NotificationService;
 import com.scooterrental.backend.service.UserService;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
@@ -15,6 +17,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 import static org.hamcrest.Matchers.startsWith;
 import static org.mockito.Mockito.verify;
@@ -38,6 +41,9 @@ class AuthControllerIntegrationTest {
 
     @Autowired
     private AuthSessionService authSessionService;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @MockBean
     private NotificationService notificationService;
@@ -89,6 +95,48 @@ class AuthControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.token").value(startsWith("session-")))
                 .andExpect(jsonPath("$.data.username").value("manager1"))
                 .andExpect(jsonPath("$.data.role").value("MANAGER"));
+    }
+
+    @Test
+    void secondLoginInvalidatesPreviousSessionForSameAccount() throws Exception {
+        User user = new User();
+        user.setUsername("single-session-user");
+        user.setEmail("single-session-user@example.com");
+        user.setPasswordHash("LoginPass1!");
+        userService.register(user);
+
+        String firstToken = loginAndExtractToken("single-session-user", "LoginPass1!");
+        String secondToken = loginAndExtractToken("single-session-user", "LoginPass1!");
+
+        mockMvc.perform(get("/api/users/" + user.getUserId())
+                        .header("Authorization", "Bearer " + firstToken))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value(401));
+
+        mockMvc.perform(get("/api/users/" + user.getUserId())
+                        .header("Authorization", "Bearer " + secondToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.username").value("single-session-user"));
+    }
+
+    @Test
+    void logoutRevokesCurrentSessionToken() throws Exception {
+        User customer = new User();
+        customer.setUserId(1);
+        customer.setUsername("student1");
+        customer.setEmail("student1@leeds.ac.uk");
+        customer.setRole("customer");
+        String token = authSessionService.createSession(customer);
+
+        mockMvc.perform(post("/api/auth/logout")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+
+        mockMvc.perform(get("/api/users/1")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value(401));
     }
 
     @Test
@@ -179,5 +227,18 @@ class AuthControllerIntegrationTest {
         mockMvc.perform(get("/api/users/2")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isForbidden());
+    }
+
+    private String loginAndExtractToken(String username, String password) throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"%s","password":"%s"}
+                                """.formatted(username, password)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        JsonNode root = objectMapper.readTree(result.getResponse().getContentAsString());
+        return root.path("data").path("token").asText();
     }
 }
