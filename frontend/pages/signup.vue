@@ -31,7 +31,7 @@
                 type="text"
                 placeholder="Choose a unique username"
                 @blur="validateField('username')"
-                @input="clearError('username')"
+                @input="handleTextInput('username')"
               />
               <view class="icon-right" v-if="touched.username">
                 <uni-icons :type="errors.username ? 'closeempty' : 'checkmarkempty'" size="20" :color="errors.username ? '#EF4444' : '#10B981'"></uni-icons>
@@ -61,7 +61,7 @@
                 type="text"
                 placeholder="your.email@example.com"
                 @blur="validateField('email')"
-                @input="clearError('email')"
+                @input="handleTextInput('email')"
               />
               <view class="icon-right" v-if="touched.email">
                 <uni-icons :type="errors.email ? 'closeempty' : 'checkmarkempty'" size="20" :color="errors.email ? '#EF4444' : '#10B981'"></uni-icons>
@@ -159,7 +159,7 @@
                 type="text"
                 placeholder="Legal name"
                 @blur="validateField('legalName')"
-                @input="clearError('legalName')"
+                @input="handleTextInput('legalName')"
               />
             </view>
             <view class="input-wrapper" :class="fieldState('identityNumber')" style="margin-top: 16rpx;">
@@ -172,7 +172,7 @@
                 type="text"
                 placeholder="National ID or passport number"
                 @blur="validateField('identityNumber')"
-                @input="clearError('identityNumber')"
+                @input="handleTextInput('identityNumber')"
               />
             </view>
             <view class="hint-row" v-if="errors.legalName || errors.identityNumber">
@@ -194,7 +194,7 @@
                 type="text"
                 placeholder="Cardholder name"
                 @blur="validateField('registrationCardName')"
-                @input="clearError('registrationCardName')"
+                @input="handleTextInput('registrationCardName')"
               />
             </view>
             <view class="input-wrapper" :class="fieldState('registrationCardNumber')" style="margin-top: 16rpx;">
@@ -208,7 +208,7 @@
                 maxlength="16"
                 placeholder="4111111111111111"
                 @blur="validateField('registrationCardNumber')"
-                @input="clearError('registrationCardNumber')"
+                @input="handleTextInput('registrationCardNumber')"
               />
             </view>
             <view class="hint-row" v-if="errors.registrationCardName || errors.registrationCardNumber">
@@ -267,7 +267,7 @@
                 :type="showConfirmPwd ? 'text' : 'password'"
                 placeholder="Re-enter your password"
                 @blur="validateField('confirmPassword')"
-                @input="clearError('confirmPassword')"
+                @input="handleTextInput('confirmPassword')"
               />
               <view class="icon-right" @tap="toggleConfirmPassword">
                 <uni-icons :type="showConfirmPwd ? 'eye' : 'eye-slash'" size="24" color="#9CA3AF"></uni-icons>
@@ -427,10 +427,28 @@ const formattedPhone = computed(() => {
 })
 const validatePhone = (value) => {
   const localDigits = digitsOnly(value)
-  const countryDigits = digitsOnly(selectedCountry.value.code)
+  const countryCode = String(selectedCountry.value.code || '')
 
   if (localDigits.length < 6 || localDigits.length > 14) return false
-  return (localDigits.length + countryDigits.length) <= 15
+
+  switch (countryCode) {
+    case '+86':
+      return localDigits.length === 11 && /^1[3-9]\d{9}$/.test(localDigits)
+    case '+44':
+      return localDigits.length >= 9 && localDigits.length <= 10
+    case '+1':
+      return localDigits.length === 10
+    case '+61':
+      return localDigits.length >= 9 && localDigits.length <= 10
+    case '+65':
+      return localDigits.length === 8
+    case '+81':
+      return localDigits.length >= 9 && localDigits.length <= 10
+    case '+82':
+      return localDigits.length >= 9 && localDigits.length <= 10
+    default:
+      return (localDigits.length + digitsOnly(countryCode).length) <= 15
+  }
 }
 
 const fieldState = (field) => {
@@ -444,9 +462,42 @@ const iconColor = (field) => {
 
 const clearError = (field) => { errors[field] = '' }
 
+const handleTextInput = (field) => {
+  if (field === 'phone') {
+    handlePhoneInput()
+    return
+  }
+
+  if (field === 'username') {
+    username.value = String(username.value || '').trimStart()
+  }
+
+  if (field === 'email') {
+    email.value = String(email.value || '').trimStart()
+  }
+
+  if (field === 'legalName') {
+    legalName.value = String(legalName.value || '').trimStart()
+  }
+
+  if (field === 'identityNumber') {
+    identityNumber.value = String(identityNumber.value || '').trimStart()
+  }
+
+  if (field === 'registrationCardName') {
+    registrationCardName.value = String(registrationCardName.value || '').trimStart()
+  }
+
+  if (field === 'registrationCardNumber') {
+    registrationCardNumber.value = digitsOnly(registrationCardNumber.value)
+  }
+
+  validateField(field)
+}
+
 const handlePhoneInput = (event) => {
   phone.value = digitsOnly(event?.detail?.value ?? phone.value)
-  clearError('phone')
+  validateField('phone')
 }
 
 const handleCountryCodeChange = (event) => {
