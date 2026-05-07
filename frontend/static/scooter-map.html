@@ -451,7 +451,7 @@
       noLocation: "No location info",
       noValue: "--",
       packageHeadline: `Packages from ${formatCny(PACKAGE_PRICING.oneHour)} / hour`,
-      packageLine: `Day ${formatCny(PACKAGE_PRICING.oneDay)} | Week ${formatCny(PACKAGE_PRICING.oneWeek)} | Month ${formatCny(PACKAGE_PRICING.oneMonth)}`
+      packageLine: `4h ${formatCny(12)} | Day ${formatCny(PACKAGE_PRICING.oneDay)} | Week ${formatCny(PACKAGE_PRICING.oneWeek)} | Month ${formatCny(PACKAGE_PRICING.oneMonth)}`
     })
 
     const DEFAULT_STORES = Object.freeze([
@@ -491,7 +491,8 @@
     ])
 
     const AMAP_KEY_NAME = "ScooterGo-Demo"
-    const AMAP_JSAPI_KEY = "7cd1345370762e933fbfceed024698e0"
+    const MAP_RUNTIME_CONFIG = window.__SCOOTERGO_MAP_CONFIG__ || {}
+    const AMAP_JSAPI_KEY = String(MAP_RUNTIME_CONFIG.jsApiKey || "7cd1345370762e933fbfceed024698e0").trim()
     let AMapRuntime = null
     let map = null
     let currentInfoWindow = null

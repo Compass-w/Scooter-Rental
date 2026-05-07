@@ -91,6 +91,11 @@ public interface UserMapper {
         @Update("UPDATE users SET achievements = #{achievements} WHERE user_id = #{userId}")
         void updateAchievements(@Param("userId") Integer userId, @Param("achievements") String achievements);
 
+        @Update("UPDATE users SET total_riding_minutes = #{totalRidingMinutes} WHERE user_id = #{userId}")
+        int incrementTotalRidingMinutes(
+                        @Param("userId") Integer userId,
+                        @Param("totalRidingMinutes") Integer totalRidingMinutes);
+
         @Update("UPDATE users SET password_hash = #{passwordHash} WHERE user_id = #{userId}")
         int updatePasswordHash(@Param("userId") Integer userId, @Param("passwordHash") String passwordHash);
 }

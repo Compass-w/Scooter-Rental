@@ -1,6 +1,8 @@
 package com.scooterrental.backend.service;
 
 import com.scooterrental.backend.entity.StaffBooking;
+import com.scooterrental.backend.entity.Booking;
+import com.scooterrental.backend.entity.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
@@ -113,6 +115,34 @@ public class NotificationService {
                 defaultText(booking.getReturnStoreName(), "ScooterGo store"),
                 estimatedCost);
         return sendEmail(recipientEmail, "Your ScooterGo booking confirmation", body);
+    }
+
+    public boolean sendRideBookingConfirmationEmail(Booking booking, User user, String recipientEmail) {
+        if (booking == null || recipientEmail == null || recipientEmail.isBlank()) {
+            return false;
+        }
+
+        String body = String.format(
+                "Hi %s,%n%n"
+                        + "Your ScooterGo ride booking is confirmed.%n%n"
+                        + "Booking ID: %s%n"
+                        + "Scooter ID: %s%n"
+                        + "Plan: %s%n"
+                        + "Start time: %s%n"
+                        + "Estimated total: %s%n"
+                        + "Payment status: %s%n"
+                        + "Unlock status: %s%n%n"
+                        + "You can review the booking in the app at any time.",
+                defaultText(user == null ? null : user.getUsername(), "Customer"),
+                defaultText(booking.getBookingId(), "-"),
+                defaultText(booking.getScooterId(), "-"),
+                defaultText(booking.getPlanType(), "Standard"),
+                formatDateTime(booking.getStartTime()),
+                formatMoney(booking.getTotalCost()),
+                defaultText(booking.getPaymentStatus(), "PENDING"),
+                defaultText(booking.getUnlockStatus(), "PENDING"));
+
+        return sendEmail(recipientEmail, "Your ScooterGo ride booking is confirmed", body);
     }
 
     private boolean sendEmail(String recipientEmail, String subject, String body) {

@@ -3,6 +3,8 @@ package com.scooterrental.backend.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.scooterrental.backend.entity.Scooter;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Update;
 
 /**
  * Mapper interface for Scooter entity.
@@ -11,6 +13,23 @@ import org.apache.ibatis.annotations.Mapper;
  */
 @Mapper
 public interface ScooterMapper extends BaseMapper<Scooter> {
-    // No explicit SQL needed for basic operations.
-    // MyBatis-Plus automatically handles insert, update, delete, and select.
+    @Update("""
+            UPDATE scooters
+            SET status = #{nextStatus}
+            WHERE scooter_id = #{scooterId}
+              AND UPPER(status) = UPPER(#{expectedCurrentStatus})
+            """)
+    int updateStatusIfCurrent(
+            @Param("scooterId") Integer scooterId,
+            @Param("expectedCurrentStatus") String expectedCurrentStatus,
+            @Param("nextStatus") String nextStatus);
+
+    @Update("""
+            UPDATE scooters
+            SET status = #{nextStatus}
+            WHERE scooter_id = #{scooterId}
+            """)
+    int updateStatus(
+            @Param("scooterId") Integer scooterId,
+            @Param("nextStatus") String nextStatus);
 }

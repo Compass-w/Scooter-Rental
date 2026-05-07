@@ -3,11 +3,15 @@ package com.scooterrental.backend.service;
 import com.scooterrental.backend.dto.booking.EndRideResponse;
 import com.scooterrental.backend.dto.booking.StartRideRequest;
 import com.scooterrental.backend.dto.booking.StartRideResponse;
+import com.scooterrental.backend.entity.AutomationEvent;
 import com.scooterrental.backend.entity.Booking;
 import com.scooterrental.backend.entity.Scooter;
+import com.scooterrental.backend.entity.User;
 import com.scooterrental.backend.entity.VehicleUnlockSession;
+import com.scooterrental.backend.mapper.AutomationEventMapper;
 import com.scooterrental.backend.mapper.BookingMapper;
 import com.scooterrental.backend.mapper.ScooterMapper;
+import com.scooterrental.backend.mapper.UserMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,22 +47,36 @@ public class BookingService {
     private static final BigDecimal PRICE_ONE_DAY = BigDecimal.valueOf(30.00);
     private static final BigDecimal PRICE_ONE_WEEK = BigDecimal.valueOf(100.00);
     private static final BigDecimal PRICE_ONE_MONTH = BigDecimal.valueOf(280.00);
+    private static final BigDecimal STUDENT_DISCOUNT_RATE = BigDecimal.valueOf(0.15);
+    private static final BigDecimal SENIOR_DISCOUNT_RATE = BigDecimal.valueOf(0.20);
+    private static final BigDecimal FREQUENT_RIDER_DISCOUNT_RATE = BigDecimal.valueOf(0.10);
+    private static final int FREQUENT_RIDER_MINUTES_PER_WEEK = 8 * 60;
+    private static final String EVENT_BOOKING_CONFIRMATION = "BOOKING_CONFIRMATION";
 
     private final BookingMapper bookingMapper;
     private final ScooterMapper scooterMapper;
+    private final UserMapper userMapper;
     private final VehicleIntegrationService vehicleIntegrationService;
     private final PaymentGatewayService paymentGatewayService;
+    private final NotificationService notificationService;
+    private final AutomationEventMapper automationEventMapper;
     private volatile boolean operationalTablesReady = false;
 
     public BookingService(
             BookingMapper bookingMapper,
             ScooterMapper scooterMapper,
+            UserMapper userMapper,
             VehicleIntegrationService vehicleIntegrationService,
-            PaymentGatewayService paymentGatewayService) {
+            PaymentGatewayService paymentGatewayService,
+            NotificationService notificationService,
+            AutomationEventMapper automationEventMapper) {
         this.bookingMapper = bookingMapper;
         this.scooterMapper = scooterMapper;
+        this.userMapper = userMapper;
         this.vehicleIntegrationService = vehicleIntegrationService;
         this.paymentGatewayService = paymentGatewayService;
+        this.notificationService = notificationService;
+        this.automationEventMapper = automationEventMapper;
     }
 
     public void ensureOperationalTables() {
@@ -71,6 +89,7 @@ public class BookingService {
             }
             vehicleIntegrationService.ensureVehicleTables();
             paymentGatewayService.ensureGatewayTables();
+            automationEventMapper.createTableIfNotExists();
             operationalTablesReady = true;
         }
     }
@@ -80,9 +99,37 @@ public class BookingService {
         return bookingMapper.selectByUserId(userId);
     }
 
+    @Transactional
     public boolean cancel(Integer bookingId, Integer userId) {
         ensureOperationalTables();
-        return bookingMapper.cancelBooking(bookingId, userId) > 0;
+        if (bookingId == null || userId == null) {
+            return false;
+        }
+
+        Booking booking = bookingMapper.selectByBookingId(bookingId);
+        if (booking == null || booking.getUserId() == null || !booking.getUserId().equals(userId)) {
+            return false;
+        }
+        if (!isCancellable(booking.getStatus())) {
+            return false;
+        }
+
+        int updatedRows = bookingMapper.cancelBooking(bookingId, userId);
+        if (updatedRows <= 0) {
+            return false;
+        }
+
+        if (booking.getScooterId() != null) {
+            vehicleIntegrationService.completeRideSession(bookingId);
+            scooterMapper.updateStatus(booking.getScooterId(), SCOOTER_AVAILABLE);
+        }
+        recordBookingEvent(
+                bookingId,
+                "BOOKING_CANCELLED",
+                "COMPLETED",
+                BigDecimal.ZERO,
+                "Booking was cancelled and the scooter was released for other riders.");
+        return true;
     }
 
     public boolean isBookingOwnedBy(Integer bookingId, Integer userId) {
@@ -121,7 +168,10 @@ public class BookingService {
 
         String normalizedPlanType = normalizePlanType(request.getPlanType());
         Integer durationMinutes = resolveDurationMinutes(normalizedPlanType);
-        BigDecimal estimatedCost = calculateCost(scooter, normalizedPlanType, durationMinutes);
+        User user = userMapper.selectById(request.getUserId());
+        BigDecimal grossEstimatedCost = calculateCost(scooter, normalizedPlanType, durationMinutes);
+        DiscountOutcome discountOutcome = resolveDiscountOutcome(user, grossEstimatedCost, normalizedPlanType);
+        BigDecimal estimatedCost = discountOutcome.discountedAmount();
         BigDecimal electricityEstimate = normalizeMoney(request.getElectricityFeeEstimate());
         BigDecimal estimatedTotal = estimatedCost.add(electricityEstimate).setScale(2, RoundingMode.HALF_UP);
         LocalDateTime startTime = LocalDateTime.now();
@@ -156,35 +206,51 @@ public class BookingService {
         booking.setLastReminderAt(null);
 
         bookingMapper.insertBooking(booking);
+        boolean reserved = scooterMapper.updateStatusIfCurrent(scooter.getScooterId().intValue(), SCOOTER_AVAILABLE, SCOOTER_IN_USE) > 0;
+        if (!reserved) {
+            throw new IllegalStateException("Scooter is not available");
+        }
 
-        paymentGatewayService.authorizeStartRide(
-                booking,
-                estimatedTotal,
-                "Trip deposit authorised before unlock for " + normalizedPlanType + ".");
-        booking.setPaymentStatus("AUTHORIZED");
+        try {
+            paymentGatewayService.authorizeStartRide(
+                    booking,
+                    estimatedTotal,
+                    "Trip deposit authorised before unlock for " + normalizedPlanType + ".");
+            booking.setPaymentStatus("AUTHORIZED");
 
-        VehicleUnlockSession unlockSession = vehicleIntegrationService.dispatchUnlockCommand(booking, scooter, request.getScanToken());
-        booking.setUnlockStatus(unlockSession.getLockState());
-        booking.setUnlockReference("CMD-" + unlockSession.getCommandId());
-        bookingMapper.updateAutomationState(booking);
+            VehicleUnlockSession unlockSession = vehicleIntegrationService.dispatchUnlockCommand(booking, scooter, request.getScanToken());
+            booking.setUnlockStatus(unlockSession.getLockState());
+            booking.setUnlockReference("CMD-" + unlockSession.getCommandId());
+            bookingMapper.updateAutomationState(booking);
 
-        scooter.setStatus(SCOOTER_IN_USE);
-        scooterMapper.updateById(scooter);
+            scooter.setStatus(SCOOTER_IN_USE);
+            scooterMapper.updateById(scooter);
 
-        return new StartRideResponse(
-                booking.getBookingId(),
-                booking.getUserId(),
-                booking.getScooterId(),
-                normalizedPlanType,
-                durationMinutes,
-                booking.getTotalCost(),
-                booking.getStatus(),
-                booking.getPaymentStatus(),
-                booking.getUnlockStatus(),
-                booking.getUnlockReference(),
-                unlockSession.getDeviceMessage(),
-                scooter.getStatus(),
-                booking.getPlannedEndTime());
+            recordConfirmationAndAudit(booking, user, estimatedTotal, discountOutcome);
+            String responseDeviceMessage = unlockSession.getDeviceMessage();
+            if (discountOutcome.discountAmount().compareTo(BigDecimal.ZERO) > 0) {
+                responseDeviceMessage = (responseDeviceMessage == null ? "" : responseDeviceMessage + " ")
+                        + discountOutcome.label() + " discount applied.";
+            }
+
+            return new StartRideResponse(
+                    booking.getBookingId(),
+                    booking.getUserId(),
+                    booking.getScooterId(),
+                    normalizedPlanType,
+                    durationMinutes,
+                    booking.getTotalCost(),
+                    booking.getStatus(),
+                    booking.getPaymentStatus(),
+                    booking.getUnlockStatus(),
+                    booking.getUnlockReference(),
+                    responseDeviceMessage,
+                    scooter.getStatus(),
+                    booking.getPlannedEndTime());
+        } catch (RuntimeException ex) {
+            scooterMapper.updateStatus(booking.getScooterId(), SCOOTER_AVAILABLE);
+            throw ex;
+        }
     }
 
     @Transactional
@@ -214,7 +280,10 @@ public class BookingService {
         int billableMinutes = booking.getDurationMinutes() != null && booking.getDurationMinutes() > 0
                 ? booking.getDurationMinutes()
                 : actualMinutes;
-        BigDecimal baseCost = calculateCost(scooter, booking.getPlanType(), billableMinutes);
+        User user = userMapper.selectById(booking.getUserId());
+        BigDecimal grossBaseCost = calculateCost(scooter, booking.getPlanType(), billableMinutes);
+        DiscountOutcome discountOutcome = resolveDiscountOutcome(user, grossBaseCost, booking.getPlanType());
+        BigDecimal baseCost = discountOutcome.discountedAmount();
         BigDecimal overtimeCharge = normalizeMoney(booking.getOvertimeChargeTotal());
         BigDecimal damageCharge = normalizeMoney(booking.getDamageChargeTotal());
         Integer returnBatteryLevel = resolveBatteryLevel(
@@ -245,6 +314,11 @@ public class BookingService {
         booking.setPaymentStatus("CAPTURED");
         booking.setUnlockStatus("LOCKED");
         bookingMapper.completeBooking(booking);
+
+        if (user != null && user.getUserId() != null) {
+            int currentMinutes = user.getTotalRidingMinutes() == null ? 0 : user.getTotalRidingMinutes();
+            userMapper.incrementTotalRidingMinutes(user.getUserId(), currentMinutes + billableMinutes);
+        }
 
         vehicleIntegrationService.completeRideSession(bookingId);
 
@@ -293,7 +367,11 @@ public class BookingService {
 
         int currentDuration = booking.getDurationMinutes() != null ? booking.getDurationMinutes() : 0;
         int nextDuration = currentDuration + extraMinutes;
-        BigDecimal updatedBaseCost = calculateCost(scooter, booking.getPlanType(), nextDuration);
+        User user = userMapper.selectById(booking.getUserId());
+        BigDecimal updatedBaseCost = resolveDiscountOutcome(
+                user,
+                calculateCost(scooter, booking.getPlanType(), nextDuration),
+                booking.getPlanType()).discountedAmount();
         BigDecimal updatedCost = updatedBaseCost
                 .add(normalizeMoney(booking.getOvertimeChargeTotal()))
                 .add(normalizeMoney(booking.getDamageChargeTotal()))
@@ -535,6 +613,124 @@ public class BookingService {
         return value == null ? BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP) : value.setScale(2, RoundingMode.HALF_UP);
     }
 
+    private DiscountOutcome resolveDiscountOutcome(User user, BigDecimal grossAmount, String planType) {
+        BigDecimal normalizedGross = normalizeMoney(grossAmount);
+        if (normalizedGross.compareTo(BigDecimal.ZERO) <= 0) {
+            return new DiscountOutcome(normalizedGross, BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP), "No");
+        }
+
+        String email = user == null ? null : user.getEmail();
+        String achievements = user == null ? null : user.getAchievements();
+        int ridingMinutes = user == null || user.getTotalRidingMinutes() == null ? 0 : user.getTotalRidingMinutes();
+
+        BigDecimal discountRate = BigDecimal.ZERO;
+        String label = "No";
+
+        if (isSeniorRider(achievements, email, user)) {
+            discountRate = SENIOR_DISCOUNT_RATE;
+            label = "Senior";
+        }
+        if (isStudentRider(achievements, email, user)) {
+            discountRate = discountRate.max(STUDENT_DISCOUNT_RATE);
+            if (discountRate.compareTo(STUDENT_DISCOUNT_RATE) == 0) {
+                label = "Student";
+            }
+        }
+        if (ridingMinutes >= FREQUENT_RIDER_MINUTES_PER_WEEK) {
+            if (discountRate.compareTo(FREQUENT_RIDER_DISCOUNT_RATE) < 0) {
+                discountRate = FREQUENT_RIDER_DISCOUNT_RATE;
+                label = "Frequent rider";
+            }
+        }
+
+        BigDecimal discountAmount = normalizedGross.multiply(discountRate).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal discountedAmount = normalizedGross.subtract(discountAmount).setScale(2, RoundingMode.HALF_UP);
+        if (discountAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            label = "No";
+        }
+        return new DiscountOutcome(discountedAmount, discountAmount, label + (planType == null ? "" : " " + normalizePlanTypeForLabel(planType)));
+    }
+
+    private boolean isStudentRider(String achievements, String email, User user) {
+        String lowerEmail = email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
+        String lowerAchievements = achievements == null ? "" : achievements.toLowerCase(Locale.ROOT);
+        String username = user == null || user.getUsername() == null ? "" : user.getUsername().toLowerCase(Locale.ROOT);
+        return lowerEmail.endsWith(".edu")
+                || lowerEmail.endsWith(".ac.uk")
+                || lowerAchievements.contains("student")
+                || username.contains("student");
+    }
+
+    private boolean isSeniorRider(String achievements, String email, User user) {
+        String lowerAchievements = achievements == null ? "" : achievements.toLowerCase(Locale.ROOT);
+        String lowerEmail = email == null ? "" : email.toLowerCase(Locale.ROOT);
+        String username = user == null || user.getUsername() == null ? "" : user.getUsername().toLowerCase(Locale.ROOT);
+        return lowerAchievements.contains("senior")
+                || lowerEmail.contains("senior")
+                || username.contains("senior");
+    }
+
+    private String normalizePlanTypeForLabel(String planType) {
+        if (planType == null || planType.isBlank()) {
+            return "PAY AS YOU GO";
+        }
+        return planType.trim().replace('_', ' ').toLowerCase(Locale.ROOT);
+    }
+
+    private boolean isCancellable(String status) {
+        if (status == null) {
+            return false;
+        }
+        String normalized = status.trim().toUpperCase(Locale.ROOT);
+        return "PENDING".equals(normalized) || "ACTIVE".equals(normalized);
+    }
+
+    private void recordConfirmationAndAudit(
+            Booking booking,
+            User user,
+            BigDecimal estimatedTotal,
+            DiscountOutcome discountOutcome) {
+        String recipientEmail = user == null ? null : user.getEmail();
+        boolean emailSent = notificationService.sendRideBookingConfirmationEmail(booking, user, recipientEmail);
+        AutomationEvent event = new AutomationEvent();
+        event.setBookingId(booking.getBookingId());
+        event.setEventType(EVENT_BOOKING_CONFIRMATION);
+        event.setStatus(emailSent ? "COMPLETED" : "QUEUED");
+        event.setAmount(estimatedTotal);
+        event.setDetail(emailSent
+                ? "Booking confirmation email sent."
+                : "Booking confirmation stored and ready for manual resend.");
+        event.setDueAt(LocalDateTime.now());
+        event.setProcessedAt(emailSent ? LocalDateTime.now() : null);
+        automationEventMapper.insert(event);
+
+        if (discountOutcome.discountAmount().compareTo(BigDecimal.ZERO) > 0) {
+            recordBookingEvent(
+                    booking.getBookingId(),
+                    "BOOKING_DISCOUNT",
+                    "COMPLETED",
+                    discountOutcome.discountAmount(),
+                    discountOutcome.label() + " discount applied to the booking total.");
+        }
+    }
+
+    private void recordBookingEvent(
+            Integer bookingId,
+            String eventType,
+            String status,
+            BigDecimal amount,
+            String detail) {
+        AutomationEvent event = new AutomationEvent();
+        event.setBookingId(bookingId);
+        event.setEventType(eventType);
+        event.setStatus(status);
+        event.setAmount(normalizeMoney(amount));
+        event.setDetail(detail);
+        event.setDueAt(LocalDateTime.now());
+        event.setProcessedAt(LocalDateTime.now());
+        automationEventMapper.insert(event);
+    }
+
     private Integer parseInteger(Object value) {
         if (value == null) return null;
         if (value instanceof Number number) {
@@ -558,6 +754,8 @@ public class BookingService {
             return null;
         }
     }
+
+    private record DiscountOutcome(BigDecimal discountedAmount, BigDecimal discountAmount, String label) {}
 
     private record PackageTier(int durationMinutes, BigDecimal price) {}
 }

@@ -30,9 +30,41 @@ public interface BookingMapper {
             "WHERE b.user_id = #{userId} ORDER BY b.created_at DESC")
     List<Booking> selectByUserId(Integer userId);
 
-    // Cancel a booking if status is PENDING [ID: 12]
-    @Update("UPDATE bookings SET status = 'CANCELLED' WHERE booking_id = #{bookingId} AND user_id = #{userId} AND status = 'PENDING'")
+    // Cancel a pending/active booking and mark any simulated authorisation as void [ID: 12].
+    @Update("""
+            UPDATE bookings
+            SET status = 'CANCELLED',
+                payment_status = CASE
+                    WHEN payment_status IN ('PENDING', 'AUTHORIZED') THEN 'VOIDED'
+                    ELSE payment_status
+                END,
+                unlock_status = CASE
+                    WHEN unlock_status IS NULL OR unlock_status <> 'LOCKED' THEN 'LOCKED'
+                    ELSE unlock_status
+                END,
+                end_time = COALESCE(end_time, CURRENT_TIMESTAMP)
+            WHERE booking_id = #{bookingId}
+              AND user_id = #{userId}
+              AND status IN ('PENDING', 'ACTIVE')
+            """)
     int cancelBooking(@Param("bookingId") Integer bookingId, @Param("userId") Integer userId);
+
+    @Update("""
+            UPDATE bookings
+            SET status = 'CANCELLED',
+                payment_status = CASE
+                    WHEN payment_status IN ('PENDING', 'AUTHORIZED') THEN 'VOIDED'
+                    ELSE payment_status
+                END,
+                unlock_status = CASE
+                    WHEN unlock_status IS NULL OR unlock_status <> 'LOCKED' THEN 'LOCKED'
+                    ELSE unlock_status
+                END,
+                end_time = COALESCE(end_time, CURRENT_TIMESTAMP)
+            WHERE booking_id = #{bookingId}
+              AND status IN ('PENDING', 'ACTIVE')
+            """)
+    int cancelBookingById(@Param("bookingId") Integer bookingId);
 
     // Get weekly usage stats [ID: 22]
     @Select("SELECT TO_CHAR(created_at, 'YYYY-MM-DD') as day, SUM(duration_minutes) as minutes " +
