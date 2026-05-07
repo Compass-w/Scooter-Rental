@@ -40,7 +40,7 @@ export const login = (data) => {
  * Response: { "code": 200, "message": "Success", "data": { email, expiresAt, emailSent, smsSent } }
  */
 export const forgotPassword = (data) => {
-  return request.post('/auth/forgot-password', data)
+  return request.post('/auth/forgot-password', data, { timeout: 90000 })
 }
 
 /**

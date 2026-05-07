@@ -143,7 +143,7 @@ public class AuthController {
         if (!emailSent && !smsSent && manualResetLinkFallbackEnabled) {
             payload.put("resetLink", resetLink);
             payload.put("resetPath", "/pages/reset-password?token=" + resetRequest.token());
-            payload.put("deliveryMessage", "Email delivery is not configured. Use this secure reset link to continue.");
+            payload.put("deliveryMessage", "We tried to send the reset email, but SMTP delivery failed or timed out. Use this one-time secure reset link to continue.");
         }
 
         return ResponseEntity.ok(Result.success(payload));

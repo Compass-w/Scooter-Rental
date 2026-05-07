@@ -52,7 +52,7 @@
               <text class="fallback-title">Reset link ready</text>
             </view>
             <text class="fallback-text">
-              Email delivery is not configured on this server, so use this one-time secure link to reset your password.
+              {{ manualResetMessage }}
             </text>
             <text class="fallback-link">{{ manualResetLink }}</text>
             <view class="fallback-actions">
@@ -88,6 +88,7 @@ const email = ref('')
 const loading = ref(false)
 const manualResetLink = ref('')
 const manualResetPath = ref('')
+const manualResetMessage = ref('We tried to send the reset email, but delivery failed or timed out. Use this one-time secure link to reset your password.')
 
 onMounted(() => {
   try {
@@ -143,12 +144,14 @@ const handleReset = async () => {
   loading.value = true
   manualResetLink.value = ''
   manualResetPath.value = ''
+  manualResetMessage.value = 'We tried to send the reset email, but delivery failed or timed out. Use this one-time secure link to reset your password.'
   
   try {
     // Call forgot password API
     const result = await forgotPassword({ email: normalizedEmail })
     manualResetPath.value = result?.resetPath || deriveResetPath(result?.resetLink)
     manualResetLink.value = buildDisplayResetLink(manualResetPath.value, result?.resetLink)
+    manualResetMessage.value = result?.deliveryMessage || manualResetMessage.value
 
     if (result?.manualResetAvailable && manualResetLink.value) {
       uni.showToast({

@@ -48,9 +48,9 @@ MAIL_HOST=smtp.example.com
 MAIL_PORT=587
 MAIL_USERNAME=
 MAIL_PASSWORD=
-MAIL_SMTP_CONNECTION_TIMEOUT=5000
-MAIL_SMTP_TIMEOUT=5000
-MAIL_SMTP_WRITE_TIMEOUT=5000
+MAIL_SMTP_CONNECTION_TIMEOUT=15000
+MAIL_SMTP_TIMEOUT=30000
+MAIL_SMTP_WRITE_TIMEOUT=30000
 SMS_NOTIFICATIONS_ENABLED=false
 TWILIO_ACCOUNT_SID=
 TWILIO_AUTH_TOKEN=
@@ -70,14 +70,16 @@ phone. Keep
 `BOOTSTRAP_DEFAULT_MANAGER_ENABLED=false` unless you intentionally want the
 backend to create or overwrite the demo manager account at startup.
 
-Password reset uses an email link flow when SMTP is configured. In demo or
-coursework deployments without SMTP, keep
+Password reset uses an email link flow when SMTP is configured. The forgot-password
+request waits longer for real SMTP delivery before falling back to a manual reset
+link, so keep the frontend request timeout above the SMTP timeout window. In demo
+or coursework deployments without SMTP, keep
 `PASSWORD_RESET_MANUAL_LINK_FALLBACK_ENABLED=true`; the forgot-password page will
 show a one-time reset link so the flow still works end to end. Disable that
 fallback in production once real email delivery is configured. The backend can
-optionally send an SMS alert through Twilio. SMTP calls use short default
-timeouts so an unavailable mail server fails quickly and returns the fallback
-reset link instead of leaving the request hanging.
+optionally send an SMS alert through Twilio. SMTP calls use bounded default
+timeouts, so a slow or unavailable mail server eventually returns the fallback
+reset link instead of leaving the request hanging forever.
 
 ## Run Locally With Docker
 
