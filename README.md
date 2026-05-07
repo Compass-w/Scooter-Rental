@@ -48,6 +48,9 @@ MAIL_HOST=smtp.example.com
 MAIL_PORT=587
 MAIL_USERNAME=
 MAIL_PASSWORD=
+MAIL_SMTP_CONNECTION_TIMEOUT=5000
+MAIL_SMTP_TIMEOUT=5000
+MAIL_SMTP_WRITE_TIMEOUT=5000
 SMS_NOTIFICATIONS_ENABLED=false
 TWILIO_ACCOUNT_SID=
 TWILIO_AUTH_TOKEN=
@@ -72,7 +75,9 @@ coursework deployments without SMTP, keep
 `PASSWORD_RESET_MANUAL_LINK_FALLBACK_ENABLED=true`; the forgot-password page will
 show a one-time reset link so the flow still works end to end. Disable that
 fallback in production once real email delivery is configured. The backend can
-optionally send an SMS alert through Twilio.
+optionally send an SMS alert through Twilio. SMTP calls use short default
+timeouts so an unavailable mail server fails quickly and returns the fallback
+reset link instead of leaving the request hanging.
 
 ## Run Locally With Docker
 

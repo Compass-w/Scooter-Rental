@@ -34,6 +34,9 @@ public class NotificationService {
     @Value("${app.notifications.email.from:}")
     private String emailFrom;
 
+    @Value("${spring.mail.host:}")
+    private String mailHost;
+
     @Value("${app.notifications.sms.enabled:false}")
     private boolean smsEnabled;
 
@@ -152,6 +155,10 @@ public class NotificationService {
         }
         if (emailFrom == null || emailFrom.isBlank()) {
             log.warn("Email delivery skipped because app.notifications.email.from is empty");
+            return false;
+        }
+        if (mailHost == null || mailHost.isBlank()) {
+            log.warn("Email delivery skipped because spring.mail.host is empty");
             return false;
         }
 
