@@ -160,6 +160,32 @@ class AuthControllerIntegrationTest {
     }
 
     @Test
+    void forgotPasswordFallsBackToManualResetLinkWhenEmailDeliveryIsUnavailable() throws Exception {
+        when(notificationService.sendPasswordResetEmail(
+                ArgumentMatchers.anyString(),
+                ArgumentMatchers.anyString(),
+                ArgumentMatchers.any()))
+                .thenReturn(false);
+        when(notificationService.sendPasswordResetSms(
+                ArgumentMatchers.anyString(),
+                ArgumentMatchers.anyString(),
+                ArgumentMatchers.anyString(),
+                ArgumentMatchers.any()))
+                .thenReturn(false);
+
+        mockMvc.perform(post("/api/auth/forgot-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"student1@leeds.ac.uk"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.email").value("student1@leeds.ac.uk"))
+                .andExpect(jsonPath("$.data.manualResetAvailable").value(true))
+                .andExpect(jsonPath("$.data.resetLink").exists())
+                .andExpect(jsonPath("$.data.resetPath").exists());
+    }
+
+    @Test
     void resetPasswordAcceptsIssuedTokenAndAllowsLoginWithNewPassword() throws Exception {
         UserService.PasswordResetRequestData resetRequest = userService.createPasswordReset("student1@leeds.ac.uk", null);
 

@@ -116,17 +116,19 @@
               </view>
               <view class="dform-group">
                 <text class="dform-label">Email</text>
-                <view class="dform-input-wrap">
+                <view :class="['dform-input-wrap', editErrors.email ? 'dform-input-wrap-error' : '']">
                   <uni-icons type="email" size="17" color="#CBD5E1" class="dform-icon"></uni-icons>
-                  <input class="dform-input" v-model="editForm.email" placeholder="your@email.com"/>
+                  <input class="dform-input" v-model="editForm.email" placeholder="your@email.com" @input="handleEditFieldInput('email')"/>
                 </view>
+                <text v-if="editErrors.email" class="dform-error-text">{{ editErrors.email }}</text>
               </view>
               <view class="dform-group">
                 <text class="dform-label">Phone</text>
-                <view class="dform-input-wrap">
+                <view :class="['dform-input-wrap', editErrors.phone ? 'dform-input-wrap-error' : '']">
                   <uni-icons type="phone" size="17" color="#CBD5E1" class="dform-icon"></uni-icons>
-                  <input class="dform-input" v-model="editForm.phone" placeholder="e.g. +86 13800138000"/>
+                  <input class="dform-input" v-model="editForm.phone" placeholder="e.g. +86 13800138000" @input="handleEditFieldInput('phone')"/>
                 </view>
+                <text v-if="editErrors.phone" class="dform-error-text">{{ editErrors.phone }}</text>
               </view>
               <view class="dform-group">
                 <text class="dform-label">City</text>
@@ -1318,6 +1320,7 @@ const editingInfo = ref(false)
 const savingInfo  = ref(false)
 const savingAvatar = ref(false)
 const editForm    = ref({ name: '', email: '', phone: '', city: '' })
+const editErrors  = ref({ name: '', email: '', phone: '', city: '' })
 
 // Reactive state — drawer
 const drawerOpen  = ref(false)
@@ -1582,6 +1585,90 @@ const toNullableText = (value) => {
 }
 
 const validateEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim())
+const normalizePhoneValue = (value) => String(value || '').trim().replace(/[()\s-]/g, '')
+const digitsOnly = (value) => String(value || '').replace(/\D/g, '')
+const commonPhoneCountryCodes = ['+86', '+44', '+1', '+61', '+65', '+81', '+82']
+
+const extractPhoneCountryCode = (value) => {
+  const normalized = normalizePhoneValue(value)
+  if (!normalized.startsWith('+')) return ''
+  return commonPhoneCountryCodes.find(code => normalized.startsWith(code)) || ''
+}
+
+const validatePhone = (value) => {
+  const normalized = normalizePhoneValue(value)
+  if (!normalized) return false
+
+  const localDigits = digitsOnly(normalized)
+  if (!localDigits) return false
+
+  const countryCode = extractPhoneCountryCode(normalized)
+  if (countryCode) {
+    const localPart = localDigits.slice(digitsOnly(countryCode).length)
+    switch (countryCode) {
+      case '+86':
+        return localPart.length === 11 && /^1[3-9]\d{9}$/.test(localPart)
+      case '+44':
+      case '+61':
+      case '+81':
+      case '+82':
+        return localPart.length >= 9 && localPart.length <= 10
+      case '+1':
+        return localPart.length === 10
+      case '+65':
+        return localPart.length === 8
+      default:
+        return localPart.length >= 6 && localPart.length <= 14
+    }
+  }
+
+  if (localDigits.length === 11 && /^1[3-9]\d{9}$/.test(localDigits)) {
+    return true
+  }
+
+  return localDigits.length >= 6 && localDigits.length <= 14
+}
+
+const clearEditError = (field) => {
+  editErrors.value[field] = ''
+}
+
+const validateEditField = (field) => {
+  switch (field) {
+    case 'email':
+      if (!editForm.value.email.trim()) {
+        editErrors.value.email = 'Email is required'
+      } else if (!validateEmail(editForm.value.email)) {
+        editErrors.value.email = 'Please enter a valid email (e.g. name@example.com)'
+      } else {
+        editErrors.value.email = ''
+      }
+      break
+    case 'phone':
+      if (editForm.value.phone.trim() && !validatePhone(editForm.value.phone)) {
+        editErrors.value.phone = 'Enter 6 to 14 local digits, or a valid country-coded number such as +86 13800138000.'
+      } else {
+        editErrors.value.phone = ''
+      }
+      break
+    default:
+      editErrors.value[field] = ''
+      break
+  }
+}
+
+const validateEditForm = () => {
+  validateEditField('email')
+  validateEditField('phone')
+  return !editErrors.value.email && !editErrors.value.phone
+}
+
+const handleEditFieldInput = (field) => {
+  clearEditError(field)
+  if (field === 'email' || field === 'phone') {
+    validateEditField(field)
+  }
+}
 
 const readAsDataUrlWithFileReader = (filePath) => new Promise((resolve, reject) => {
   if (typeof fetch !== 'function' || typeof FileReader === 'undefined') {
@@ -1823,6 +1910,12 @@ const toggleEditInfo = () => {
       phone: userInfo.value.phone,
       city:  userInfo.value.city
     }
+    editErrors.value = {
+      name: '',
+      email: '',
+      phone: '',
+      city: ''
+    }
   }
   editingInfo.value = !editingInfo.value
 }
@@ -1832,6 +1925,12 @@ const toggleEditInfo = () => {
  */
 const cancelEditInfo = () => {
   editingInfo.value = false
+  editErrors.value = {
+    name: '',
+    email: '',
+    phone: '',
+    city: ''
+  }
 }
 
 /**
@@ -1839,13 +1938,8 @@ const cancelEditInfo = () => {
  * Validates email before submission
  */
 const saveInfo = async () => {
-  if (!editForm.value.email) {
-    uni.showToast({ title: 'Email is required', icon: 'none' })
-    return
-  }
-
-  if (!validateEmail(editForm.value.email)) {
-    uni.showToast({ title: 'Please enter a valid email', icon: 'none' })
+  if (!validateEditForm()) {
+    uni.showToast({ title: 'Please fix the highlighted fields', icon: 'none' })
     return
   }
 
@@ -2622,6 +2716,16 @@ const confirmLogout = () => {
   background: #EFF6FF;
 }
 
+.dform-input-wrap-error {
+  border-color: #EF4444;
+  background: #FFF1F2;
+}
+
+.dform-input-wrap-error:focus-within {
+  border-color: #EF4444;
+  background: #FFF1F2;
+}
+
 .dform-icon {
   flex-shrink: 0;
 }
@@ -2633,6 +2737,14 @@ const confirmLogout = () => {
   background: transparent;
   border: none;
   outline: none;
+}
+
+.dform-error-text {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  line-height: 1.4;
+  color: #EF4444;
 }
 
 .dform-input-alone {

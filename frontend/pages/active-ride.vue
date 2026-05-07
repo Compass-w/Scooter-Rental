@@ -32,11 +32,11 @@
 
         <!-- Big countdown timer display -->
         <view v-if="activeRide" class="trip-timer-section">
-          <text class="trip-timer-label">Time Remaining</text>
+          <text class="trip-timer-label">{{ timerLabel }}</text>
           <view class="trip-timer-display" :class="countdownExpired ? 'timer-expired' : ''">
             <text class="trip-timer-value">{{ countdownText }}</text>
           </view>
-          <text class="trip-timer-hint">Ends at {{ plannedEndTime }}</text>
+          <text class="trip-timer-hint">{{ timerHint }}</text>
           <text class="trip-timer-note">{{ countdownHint }}</text>
         </view>
         <view v-else class="trip-timer-section">
@@ -850,7 +850,11 @@ const heroChip = computed(() => {
   if (isBookingPage.value) return activeRide.value ? 'Booking is active' : 'Waiting for booking'
   return activeRide.value ? 'Ride in progress' : 'Ready when you are'
 })
-const durationLabel = computed(() => `${Number(activeRide.value?.durationMinutes || 0)} min reserved`)
+const durationLabel = computed(() => {
+  if (!activeRide.value) return '0 min reserved'
+  if (!hasRideEndTime.value) return 'Open-ended ride'
+  return `${Number(activeRide.value?.durationMinutes || 0)} min reserved`
+})
 const rideVehicle = computed(() => {
   if (!activeRide.value) return null
   return enrichScooter({
@@ -912,8 +916,18 @@ const formatDateTime = (value) => {
 const formatMoney = (value) =>
   formatCurrency(value, getCurrencyCodeForMarket(activeRide.value?.marketCode))
 
+const rideEndTime = computed(() => getRideEndTime(activeRide.value))
+const hasRideEndTime = computed(() => Boolean(rideEndTime.value))
+
+const formatTimerParts = (part) => {
+  const pad = (value) => String(value).padStart(2, '0')
+  return part.day > 0
+    ? `${pad(part.day)}d ${pad(part.hour)}:${pad(part.minute)}:${pad(part.second)}`
+    : `${pad(part.hour)}:${pad(part.minute)}:${pad(part.second)}`
+}
+
 const countdownParts = computed(() => {
-  const endTime = getRideEndTime(activeRide.value)
+  const endTime = rideEndTime.value
   if (!endTime) return { totalSeconds: 0, hour: 0, minute: 0, second: 0, day: 0 }
   const totalSeconds = Math.max(0, Math.floor((endTime.getTime() - nowTick.value) / 1000))
   return {
@@ -925,20 +939,37 @@ const countdownParts = computed(() => {
   }
 })
 
-const countdownExpired = computed(() => countdownReached.value || countdownParts.value.totalSeconds <= 0)
+const elapsedParts = computed(() => {
+  if (!activeRide.value?.startTime) return { totalSeconds: 0, hour: 0, minute: 0, second: 0, day: 0 }
+  const startAt = new Date(String(activeRide.value.startTime).replace(' ', 'T')).getTime()
+  if (Number.isNaN(startAt)) return { totalSeconds: 0, hour: 0, minute: 0, second: 0, day: 0 }
+  const totalSeconds = Math.max(0, Math.floor((nowTick.value - startAt) / 1000))
+  return {
+    totalSeconds,
+    day: Math.floor(totalSeconds / 86400),
+    hour: Math.floor((totalSeconds % 86400) / 3600),
+    minute: Math.floor((totalSeconds % 3600) / 60),
+    second: totalSeconds % 60
+  }
+})
+
+const countdownExpired = computed(() =>
+  hasRideEndTime.value && (countdownReached.value || countdownParts.value.totalSeconds <= 0)
+)
 const countdownText = computed(() => {
-  const part = countdownParts.value
-  const pad = (value) => String(value).padStart(2, '0')
-  return part.day > 0
-    ? `${pad(part.day)}d ${pad(part.hour)}:${pad(part.minute)}:${pad(part.second)}`
-    : `${pad(part.hour)}:${pad(part.minute)}:${pad(part.second)}`
+  return formatTimerParts(hasRideEndTime.value ? countdownParts.value : elapsedParts.value)
 })
 const plannedEndTime = computed(() => {
-  const endTime = getRideEndTime(activeRide.value)
-  return endTime ? formatDateTime(endTime) : 'Not available'
+  const endTime = rideEndTime.value
+  return endTime ? formatDateTime(endTime) : 'No fixed end time'
 })
+const timerLabel = computed(() => hasRideEndTime.value ? 'Time Remaining' : 'Ride Time')
+const timerHint = computed(() =>
+  hasRideEndTime.value ? `Ends at ${plannedEndTime.value}` : 'No fixed end time'
+)
 const projectedEndTime = computed(() => {
   if (!activeRide.value) return 'Not available'
+  if (!hasRideEndTime.value) return 'No fixed end time'
   const nextRide = normalizeActiveRide({
     ...activeRide.value,
     durationMinutes: Number(activeRide.value.durationMinutes || 0) + extensionMinutes.value
@@ -953,6 +984,9 @@ const projectedTotalCost = computed(() => {
 })
 const countdownHint = computed(() => {
   if (!activeRide.value) return ''
+  if (!hasRideEndTime.value) {
+    return `Scooter #${activeRide.value.scooterId} is active with an open-ended ride timer.`
+  }
   return `Scooter #${activeRide.value.scooterId} is active and scheduled to finish at ${plannedEndTime.value}.`
 })
 

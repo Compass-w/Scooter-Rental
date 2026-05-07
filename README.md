@@ -39,7 +39,8 @@ DB_URL=jdbc:postgresql://localhost:5432/scooter_rental
 DB_USERNAME=scooter_user
 DB_PASSWORD=<long-random-password>
 CORS_ALLOWED_ORIGIN_PATTERNS=http://scootergo.top:3000,http://www.scootergo.top:3000,http://scootergo.top,https://scootergo.top,http://www.scootergo.top,https://www.scootergo.top,http://localhost:3000,http://localhost:5173
-PASSWORD_RESET_URL_TEMPLATE=http://scootergo.top:3000/#/pages/reset-password?token={token}
+PASSWORD_RESET_URL_TEMPLATE=https://scootergo.top:3000/#/pages/reset-password?token={token}
+PASSWORD_RESET_MANUAL_LINK_FALLBACK_ENABLED=true
 BOOTSTRAP_DEFAULT_MANAGER_ENABLED=false
 EMAIL_NOTIFICATIONS_ENABLED=false
 EMAIL_FROM=no-reply@example.com
@@ -66,9 +67,12 @@ phone. Keep
 `BOOTSTRAP_DEFAULT_MANAGER_ENABLED=false` unless you intentionally want the
 backend to create or overwrite the demo manager account at startup.
 
-Password reset now uses an email link flow. The API does not return reset tokens
-to the frontend anymore. When SMTP is configured, the backend sends the reset
-email directly and can optionally send an SMS alert through Twilio.
+Password reset uses an email link flow when SMTP is configured. In demo or
+coursework deployments without SMTP, keep
+`PASSWORD_RESET_MANUAL_LINK_FALLBACK_ENABLED=true`; the forgot-password page will
+show a one-time reset link so the flow still works end to end. Disable that
+fallback in production once real email delivery is configured. The backend can
+optionally send an SMS alert through Twilio.
 
 ## Run Locally With Docker
 
@@ -103,7 +107,8 @@ Start PostgreSQL first, then export database variables:
 export DB_URL=jdbc:postgresql://localhost:5432/scooter_rental
 export DB_USERNAME=scooter_user
 export DB_PASSWORD=<long-random-password>
-export PASSWORD_RESET_URL_TEMPLATE=http://scootergo.top:3000/#/pages/reset-password?token={token}
+export PASSWORD_RESET_URL_TEMPLATE=https://scootergo.top:3000/#/pages/reset-password?token={token}
+export PASSWORD_RESET_MANUAL_LINK_FALLBACK_ENABLED=true
 export BOOTSTRAP_DEFAULT_MANAGER_ENABLED=false
 ```
 

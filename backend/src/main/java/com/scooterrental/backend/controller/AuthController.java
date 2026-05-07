@@ -10,6 +10,7 @@ import com.scooterrental.backend.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -30,6 +31,9 @@ public class AuthController {
 
     @Autowired
     private NotificationService notificationService;
+
+    @Value("${app.password-reset.manual-link-fallback-enabled:true}")
+    private boolean manualResetLinkFallbackEnabled;
 
     @PostMapping("/login")
     @Operation(summary = "User Login", description = "Returns token if success, HTTP 401 if failed")
@@ -117,10 +121,6 @@ public class AuthController {
                 resetRequest.email(),
                 resetLink,
                 resetRequest.expiresAt());
-        if (!emailSent) {
-            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                    .body(Result.error(503, "Password reset email service is unavailable"));
-        }
 
         boolean smsSent = notificationService.sendPasswordResetSms(
                 resetRequest.phone(),
@@ -128,11 +128,24 @@ public class AuthController {
                 resetLink,
                 resetRequest.expiresAt());
 
+        if (!emailSent && !smsSent && !manualResetLinkFallbackEnabled) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(Result.error(503, "Password reset delivery is unavailable"));
+        }
+
         Map<String, Object> payload = new HashMap<>();
         payload.put("email", resetRequest.email());
         payload.put("expiresAt", resetRequest.expiresAt());
-        payload.put("emailSent", true);
+        payload.put("emailSent", emailSent);
         payload.put("smsSent", smsSent);
+        payload.put("manualResetAvailable", !emailSent && !smsSent && manualResetLinkFallbackEnabled);
+
+        if (!emailSent && !smsSent && manualResetLinkFallbackEnabled) {
+            payload.put("resetLink", resetLink);
+            payload.put("resetPath", "/pages/reset-password?token=" + resetRequest.token());
+            payload.put("deliveryMessage", "Email delivery is not configured. Use this secure reset link to continue.");
+        }
+
         return ResponseEntity.ok(Result.success(payload));
     }
 

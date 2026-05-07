@@ -46,6 +46,21 @@
             </text>
           </view>
 
+          <view v-if="manualResetLink" class="fallback-box">
+            <view class="fallback-head">
+              <uni-icons type="info" size="20" color="#92400E"></uni-icons>
+              <text class="fallback-title">Reset link ready</text>
+            </view>
+            <text class="fallback-text">
+              Email delivery is not configured on this server, so use this one-time secure link to reset your password.
+            </text>
+            <text class="fallback-link">{{ manualResetLink }}</text>
+            <view class="fallback-actions">
+              <button class="btn-secondary-pill" @tap="openManualResetLink">Open Reset Page</button>
+              <button class="btn-ghost-pill" @tap="copyManualResetLink">Copy Link</button>
+            </view>
+          </view>
+
           <view class="login-text">
             <text>Remember your password? </text>
             <text class="link" @tap="goToLogin">Back to Sign In</text>
@@ -71,6 +86,8 @@ import BaseLayout from '@/pages/BaseLayout.vue'
 // Reactive state variables
 const email = ref('')
 const loading = ref(false)
+const manualResetLink = ref('')
+const manualResetPath = ref('')
 
 onMounted(() => {
   try {
@@ -124,10 +141,24 @@ const handleReset = async () => {
   
   // Start loading state
   loading.value = true
+  manualResetLink.value = ''
+  manualResetPath.value = ''
   
   try {
     // Call forgot password API
     const result = await forgotPassword({ email: normalizedEmail })
+    manualResetPath.value = result?.resetPath || deriveResetPath(result?.resetLink)
+    manualResetLink.value = buildDisplayResetLink(manualResetPath.value, result?.resetLink)
+
+    if (result?.manualResetAvailable && manualResetLink.value) {
+      uni.showToast({
+        title: 'Reset link is ready below',
+        icon: 'none',
+        duration: 2200
+      })
+      return
+    }
+
     const deliveryNote = result?.smsSent
       ? 'We also sent a backup notification to your verified phone number.'
       : 'If you do not see it soon, check your spam folder.'
@@ -148,6 +179,46 @@ const handleReset = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const deriveResetPath = (resetLink) => {
+  const link = String(resetLink || '')
+  const marker = '/pages/reset-password'
+  const markerIndex = link.indexOf(marker)
+  if (markerIndex === -1) return ''
+  return link.slice(markerIndex)
+}
+
+const buildDisplayResetLink = (resetPath, resetLink) => {
+  const path = String(resetPath || '')
+  if (path && typeof window !== 'undefined' && window.location?.origin) {
+    return `${window.location.origin}/#${path}`
+  }
+
+  return String(resetLink || '')
+}
+
+const openManualResetLink = () => {
+  if (!manualResetPath.value) {
+    uni.showToast({ title: 'Reset link is unavailable', icon: 'none' })
+    return
+  }
+
+  uni.navigateTo({ url: manualResetPath.value })
+}
+
+const copyManualResetLink = () => {
+  if (!manualResetLink.value) {
+    uni.showToast({ title: 'Reset link is unavailable', icon: 'none' })
+    return
+  }
+
+  uni.setClipboardData({
+    data: manualResetLink.value,
+    success: () => {
+      uni.showToast({ title: 'Reset link copied', icon: 'success' })
+    }
+  })
 }
 
 /**
@@ -324,6 +395,80 @@ const goToLogin = () => {
   color: #4B5563;
   line-height: 1.6;
   flex: 1;
+}
+
+.fallback-box {
+  padding: 30rpx;
+  background: #FFFBEB;
+  border: 1rpx solid #FCD34D;
+  border-radius: 24rpx;
+  margin-bottom: 40rpx;
+}
+
+.fallback-head {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: 16rpx;
+}
+
+.fallback-title {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #92400E;
+}
+
+.fallback-text {
+  display: block;
+  font-size: 26rpx;
+  color: #78350F;
+  line-height: 1.6;
+  margin-bottom: 18rpx;
+}
+
+.fallback-link {
+  display: block;
+  padding: 18rpx 20rpx;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1rpx solid rgba(146, 64, 14, 0.22);
+  border-radius: 18rpx;
+  font-size: 22rpx;
+  color: #1F2937;
+  line-height: 1.5;
+  word-break: break-all;
+  margin-bottom: 22rpx;
+}
+
+.fallback-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16rpx;
+}
+
+.btn-secondary-pill,
+.btn-ghost-pill {
+  height: 84rpx;
+  line-height: 84rpx;
+  border-radius: 42rpx;
+  font-size: 26rpx;
+  font-weight: 700;
+  border: none;
+}
+
+.btn-secondary-pill {
+  color: #FFFFFF;
+  background: #92400E;
+}
+
+.btn-ghost-pill {
+  color: #92400E;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1rpx solid rgba(146, 64, 14, 0.24);
+}
+
+.btn-secondary-pill::after,
+.btn-ghost-pill::after {
+  border: none;
 }
 
 .login-text {

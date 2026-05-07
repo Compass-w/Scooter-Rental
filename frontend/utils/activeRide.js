@@ -28,13 +28,62 @@ const toNullableNumber = (value) => {
   return Number.isFinite(next) ? next : null
 }
 
-const toIsoString = (value, fallback = '') => {
+const normalizeDateText = (value) => String(value || '').trim().replace(' ', 'T')
+
+const hasExplicitTimezone = (value) =>
+  /(?:Z|[+-]\d{2}:?\d{2})$/i.test(normalizeDateText(value))
+
+const isTimezoneLessDateTime = (value) => {
+  const normalized = normalizeDateText(value)
+  return Boolean(normalized) && normalized.includes('T') && !hasExplicitTimezone(normalized)
+}
+
+const parseDate = (value) => {
+  if (!value) return null
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value
+
+  const parsed = new Date(normalizeDateText(value))
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+const parseTimezoneLessAsUtc = (value) => {
+  if (!isTimezoneLessDateTime(value)) return null
+
+  const parsed = new Date(`${normalizeDateText(value)}Z`)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+const shouldTreatTimezoneLessRideTimesAsUtc = (rawStartTime, rawPlannedEndTime, durationMinutes) => {
+  const hasAmbiguousTime = isTimezoneLessDateTime(rawStartTime) || isTimezoneLessDateTime(rawPlannedEndTime)
+  if (!hasAmbiguousTime) return false
+
+  const startLocal = parseDate(rawStartTime)
+  const startUtc = parseTimezoneLessAsUtc(rawStartTime)
+  const plannedEndLocal = parseDate(rawPlannedEndTime)
+  const plannedEndUtc = parseTimezoneLessAsUtc(rawPlannedEndTime)
+  const durationMs = Number(durationMinutes || 0) > 0 ? Number(durationMinutes) * 60 * 1000 : 0
+  const localEndAt = plannedEndLocal?.getTime() ?? (startLocal && durationMs ? startLocal.getTime() + durationMs : null)
+  const utcEndAt = plannedEndUtc?.getTime() ?? (startUtc && durationMs ? startUtc.getTime() + durationMs : null)
+
+  if (!localEndAt || !utcEndAt) return false
+
+  const now = Date.now()
+  const clockSkewToleranceMs = 2 * 60 * 1000
+  const utcStartAt = startUtc?.getTime()
+
+  return localEndAt <= now
+    && utcEndAt > now
+    && (!utcStartAt || utcStartAt <= now + clockSkewToleranceMs)
+}
+
+const toIsoString = (value, fallback = '', options = {}) => {
   if (!value) return fallback
   if (value instanceof Date) return value.toISOString()
 
-  const normalized = String(value).trim().replace(' ', 'T')
-  const parsed = new Date(normalized)
-  return Number.isNaN(parsed.getTime()) ? fallback : parsed.toISOString()
+  const parsed = options.treatTimezoneLessAsUtc
+    ? parseTimezoneLessAsUtc(value) || parseDate(value)
+    : parseDate(value)
+  return parsed ? parsed.toISOString() : fallback
 }
 
 const normalizeStatus = (status) => String(status || '').trim().toUpperCase()
@@ -54,7 +103,10 @@ export const normalizeActiveRide = (ride = {}, fallback = {}) => {
   const bookingId = ride.bookingId ?? ride.id ?? fallback.bookingId ?? fallback.id ?? null
   const scooterId = ride.scooterId ?? fallback.scooterId ?? null
   const durationMinutes = toNumber(ride.durationMinutes ?? fallback.durationMinutes, 0)
-  const plannedEndTime = toIsoString(ride.plannedEndTime ?? fallback.plannedEndTime, '')
+  const rawStartTime = ride.startTime ?? fallback.startTime ?? new Date().toISOString()
+  const rawPlannedEndTime = ride.plannedEndTime ?? fallback.plannedEndTime ?? ''
+  const treatTimezoneLessAsUtc = shouldTreatTimezoneLessRideTimesAsUtc(rawStartTime, rawPlannedEndTime, durationMinutes)
+  const plannedEndTime = toIsoString(rawPlannedEndTime, '', { treatTimezoneLessAsUtc })
   const latitudeValue = toNullableNumber(ride.latitude ?? ride.lat ?? fallback.latitude ?? fallback.lat)
   const longitudeValue = toNullableNumber(ride.longitude ?? ride.lng ?? fallback.longitude ?? fallback.lng)
   const normalizedPricing = normalizeRidePricing({
@@ -104,7 +156,7 @@ export const normalizeActiveRide = (ride = {}, fallback = {}) => {
     userId: ride.userId ?? fallback.userId ?? (getStoredUserId() || null),
     scooterId,
     scooterModel: ride.scooterModel ?? ride.model ?? fallback.scooterModel ?? fallback.model ?? 'Scooter',
-    startTime: toIsoString(ride.startTime ?? fallback.startTime, new Date().toISOString()),
+    startTime: toIsoString(rawStartTime, new Date().toISOString(), { treatTimezoneLessAsUtc }),
     plannedEndTime,
     durationMinutes,
     totalCost,
