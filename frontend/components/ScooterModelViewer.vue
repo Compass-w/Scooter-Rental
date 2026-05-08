@@ -313,7 +313,8 @@ onBeforeUnmount(() => {
 .viewer-overlay {
   position: fixed;
   inset: 0;
-  z-index: 2200;
+  z-index: 5200;
+  z-index: var(--z-modal);
   display: flex;
   align-items: center;
   justify-content: center;

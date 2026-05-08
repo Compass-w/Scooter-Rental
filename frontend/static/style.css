@@ -15,6 +15,10 @@ page {
   --border-light: #E5E7EB;
   --card-radius: 40rpx;
   --input-radius: 20rpx;
+  --z-nav: 3000;
+  --z-modal: 5200;
+  --z-modal-raised: 5400;
+  --z-modal-nested: 5600;
 }
 
 /* Utility Classes */

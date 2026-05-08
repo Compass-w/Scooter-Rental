@@ -624,6 +624,7 @@ const mobileNavItems = computed(() => ([
   backdrop-filter: blur(20px);
   border-bottom: 1rpx solid rgba(37, 99, 235, 0.1);
   z-index: 3000;
+  z-index: var(--z-nav);
 }
 
 .nav-container {
@@ -951,7 +952,8 @@ const mobileNavItems = computed(() => ([
 .legal-overlay {
   position: fixed;
   inset: 0;
-  z-index: 1400;
+  z-index: 5200;
+  z-index: var(--z-modal);
   background: rgba(15, 23, 42, 0.58);
   backdrop-filter: blur(8px);
   display: flex;
@@ -1461,6 +1463,7 @@ const mobileNavItems = computed(() => ([
     box-shadow: 0 20rpx 44rpx rgba(15, 23, 42, 0.14);
     backdrop-filter: blur(22px);
     z-index: 3000;
+    z-index: var(--z-nav);
   }
 
   .mobile-nav-item {

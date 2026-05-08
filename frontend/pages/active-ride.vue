@@ -801,7 +801,7 @@ const ui = Object.freeze({
     position: 'fixed',
     inset: '0',
     background: 'rgba(15, 23, 42, 0.48)',
-    zIndex: '1200',
+    zIndex: '5200',
     display: 'flex',
     alignItems: 'flex-end'
   },
@@ -1214,7 +1214,7 @@ onUnload(() => {
 /* ═══════════════════════════════════════════════
    SHARED — Issue sheet (used by both pages)
 ═══════════════════════════════════════════════ */
-.overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.52); z-index: 1200; display: flex; align-items: flex-end; }
+.overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.52); z-index: 5200; z-index: var(--z-modal); display: flex; align-items: flex-end; }
 .sheet { width: 100%; padding: 32rpx 28rpx calc(env(safe-area-inset-bottom) + 32rpx); border-radius: 40rpx 40rpx 0 0; background: #fff; box-shadow: 0 -16rpx 48rpx rgba(15,23,42,0.18); }
 .card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16rpx; margin-bottom: 22rpx; }
 .card-title { display: block; font-size: 34rpx; font-weight: 800; color: #0F172A; }

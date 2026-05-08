@@ -1916,7 +1916,8 @@ onUnmounted(() => {
   border-radius: 32rpx;
   padding: 8rpx 36rpx 36rpx;
   box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.15);
-  z-index: 980;
+  z-index: 5200;
+  z-index: var(--z-modal);
   animation: slideUp 0.3s ease;
   height: 30vh;
   max-height: 34vh;
@@ -2203,7 +2204,8 @@ onUnmounted(() => {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.3);
-  z-index: 970;
+  z-index: 5200;
+  z-index: var(--z-modal);
 }
 
 .bottom-drawer {
@@ -2213,7 +2215,8 @@ onUnmounted(() => {
   bottom: 0;
   background: #fff;
   border-radius: 40rpx 40rpx 0 0;
-  z-index: 980;
+  z-index: 5400;
+  z-index: var(--z-modal-raised);
   transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
   max-height: 80vh;
   overflow: hidden;

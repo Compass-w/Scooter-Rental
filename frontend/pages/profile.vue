@@ -2466,7 +2466,8 @@ const confirmLogout = () => {
   position: fixed;
   inset: 0;
   background: rgba(15, 23, 42, 0.40);
-  z-index: 200;
+  z-index: 5200;
+  z-index: var(--z-modal);
   backdrop-filter: blur(3px);
 }
 
@@ -2477,7 +2478,8 @@ const confirmLogout = () => {
   bottom: 0;
   width: 660rpx;
   background: #F8FAFC;
-  z-index: 300;
+  z-index: 5400;
+  z-index: var(--z-modal-raised);
   box-shadow: -8rpx 0 48rpx rgba(15, 23, 42, 0.14);
   transform: translateX(100%);
   transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
@@ -2838,7 +2840,8 @@ const confirmLogout = () => {
   position: fixed;
   inset: 0;
   background: rgba(15, 23, 42, 0.50);
-  z-index: 400;
+  z-index: 5600;
+  z-index: var(--z-modal-nested);
   display: flex;
   align-items: flex-end;
   justify-content: center;
