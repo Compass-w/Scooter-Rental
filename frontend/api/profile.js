@@ -102,6 +102,16 @@ const formatDateLabel = (value) => {
   })
 }
 
+const formatTimeLabel = (value) => {
+  const date = toDate(value)
+  if (!date) return 'Not set'
+
+  return date.toLocaleTimeString('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
 const extractLast4 = (value) => {
   const digits = String(value || '').replace(/\D/g, '')
   return digits.slice(-4) || '0000'
@@ -140,6 +150,8 @@ const mapBookingToTrip = (booking) => {
   const duration = toNumber(booking?.durationMinutes, 0)
   const totalCost = toNumber(booking?.totalCost, 0).toFixed(2)
   const status = normalizeStatus(booking?.status)
+  const pickup = booking?.pickupStoreName || booking?.pickupStoreCode || 'Scooter pickup'
+  const dropOff = booking?.returnStoreName || booking?.returnStoreCode || pickup || 'Scooter return'
 
   return {
     id: bookingId,
@@ -149,6 +161,9 @@ const mapBookingToTrip = (booking) => {
     scooterLabel: `#${scooterId} ${scooterModel}`.trim(),
     date: formatDateLabel(booking?.startTime),
     dateLabel: formatDateLabel(booking?.endTime || booking?.startTime),
+    time: formatTimeLabel(booking?.startTime),
+    from: pickup,
+    to: dropOff,
     duration,
     cost: totalCost,
     status,

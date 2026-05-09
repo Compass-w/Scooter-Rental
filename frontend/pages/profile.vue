@@ -475,7 +475,11 @@
             </view>
             <view class="cancel-actions">
               <button class="btn-ghost" @tap="closeCancelModal">Keep Booking</button>
-              <button class="btn-danger-pill" @tap="confirmCancelBooking(cancelModal.booking)">
+              <button
+                class="btn-danger-pill"
+                :disabled="cancelModal.loading"
+                @tap="confirmCancelBooking(cancelModal.booking)"
+              >
                 <text>{{ cancelModal.loading ? 'Cancelling…' : 'Cancel Booking' }}</text>
               </button>
             </view>
@@ -1174,6 +1178,84 @@
 
         </view>
 
+        <!-- Bookings List -->
+        <view class="pc-card">
+          <view class="pc-section-head">
+            <view class="pc-section-icon" style="background:linear-gradient(135deg,#8B5CF6,#6366F1);">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+            </view>
+            <text class="pc-section-title">Bookings</text>
+            <view class="pc-seg-tabs">
+              <text
+                :class="['pc-seg-tab', bookingTab === 'upcoming' ? 'pc-seg-active' : '']"
+                @tap="bookingTab = 'upcoming'"
+              >Active</text>
+              <text
+                :class="['pc-seg-tab', bookingTab === 'past' ? 'pc-seg-active' : '']"
+                @tap="bookingTab = 'past'"
+              >History</text>
+            </view>
+          </view>
+
+          <view v-if="bookingTab === 'upcoming'">
+            <view
+              v-for="booking in upcomingBookings"
+              :key="booking.id"
+              class="pc-booking-row"
+              @tap="viewTripDetail(booking)"
+            >
+              <view class="pc-booking-dot upcoming-dot"></view>
+              <view class="pc-booking-info">
+                <text class="pc-booking-route">{{ booking.scooterLabel }}</text>
+                <text class="pc-booking-meta">{{ booking.date }} · {{ booking.duration }} min · {{ booking.statusLabel }}</text>
+              </view>
+              <view class="pc-booking-right">
+                <text class="pc-booking-cost">{{ formatCny(booking.cost) }}</text>
+                <button class="pc-cancel-btn" @tap.stop="openCancelModal(booking)">
+                  <text class="pc-cancel-text">Cancel</text>
+                </button>
+              </view>
+            </view>
+
+            <view v-if="upcomingBookings.length === 0" class="pc-empty">
+              <text class="pc-empty-text">No active bookings right now.</text>
+              <view class="pc-empty-btn" @tap="goToFindScooter">
+                <text class="pc-empty-btn-text">Find a Scooter</text>
+              </view>
+            </view>
+          </view>
+
+          <view v-else>
+            <view
+              v-for="booking in pastBookings"
+              :key="booking.id"
+              class="pc-booking-row"
+              @tap="viewTripDetail(booking)"
+            >
+              <view class="pc-booking-dot past-dot"></view>
+              <view class="pc-booking-info">
+                <text class="pc-booking-route">{{ booking.scooterLabel }}</text>
+                <text class="pc-booking-meta">{{ booking.date }} · {{ booking.duration }} min · {{ booking.statusLabel }}</text>
+              </view>
+              <view class="pc-booking-right">
+                <text class="pc-booking-cost">{{ formatCny(booking.cost) }}</text>
+                <view class="pc-receipt-btn" @tap.stop="openReceiptModal(booking)">
+                  <text class="pc-receipt-text">Receipt</text>
+                </view>
+              </view>
+            </view>
+
+            <view v-if="pastBookings.length === 0" class="pc-empty">
+              <text class="pc-empty-text">Completed and cancelled bookings will appear here.</text>
+            </view>
+          </view>
+        </view>
+
         <!-- Recent Trips List -->
         <view class="pc-card" v-if="recentTrips.length > 0">
         <view class="pc-section-head">
@@ -1240,6 +1322,7 @@ import {
 import { reportIssue } from '@/api/issue.js'
 import { logout as apiLogout } from '@/api/user.js'
 import { formatCny } from '@/utils/pricing.js'
+import { clearStoredActiveRide } from '@/utils/activeRide.js'
 
 const PROFILE_REFRESH_TTL_MS = 30 * 1000
 const FEEDBACK_HISTORY_STORAGE_KEY = 'profileFeedbackHistory'
@@ -2107,11 +2190,20 @@ const closeCancelModal = () => { cancelModal.value.open = false }
  * @param {Object} booking - Booking object to cancel
  */
 const confirmCancelBooking = async (booking) => {
+  if (!booking || cancelModal.value.loading) return
+
   cancelModal.value.loading = true
   try {
     await cancelBooking(booking.bookingId ?? booking.id)
     upcomingBookings.value = upcomingBookings.value.filter(b => b.id !== booking.id)
     cancelModal.value.open = false
+    clearStoredActiveRide()
+    await Promise.all([
+      loadStats(activePeriod.value),
+      loadRecentTrips(),
+      loadBookings('upcoming'),
+      loadBookings('past')
+    ])
     lastProfileRefreshAt.value = Date.now()
     profileNeedsRefresh.value = false
     uni.showToast({ title: 'Booking cancelled', icon: 'success' })
