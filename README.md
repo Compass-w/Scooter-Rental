@@ -5,6 +5,17 @@ database, and uni-app/Vue frontend. It includes user signup and login, scooter
 discovery, ride start/end flows, profile pages, issue reporting, payment-method
 records, and an admin dashboard for fleet operations.
 
+## Live Demo
+
+The current deployed coursework demo can be opened directly at:
+
+- https://scootergo.top:3000
+
+Demo accounts:
+
+- Customer: `student1` / `123456`
+- Manager/Admin dashboard: `manager1` / `Tyz114031!`
+
 ## Tech Stack
 
 - Backend: Java 17, Spring Boot 3, Spring Security, MyBatis Plus
@@ -61,6 +72,10 @@ The backend also includes
 `backend/src/main/resources/application-example.properties` as a reference for
 deployment platforms that inject Spring properties directly.
 
+For coursework marking, this repository also includes `.env.coursework`, a safe
+local demo configuration with non-production passwords and disabled real email/SMS
+delivery. Markers can run `cp .env.coursework .env` before `docker compose up`.
+
 Before the domain is approved for ports 80/443, point `scootergo.top` at the
 host running Docker and open `http://scootergo.top:3000`. After approval, switch
 `FRONTEND_PORT` back to `80` and remove `:3000` from the public URLs. For phone
@@ -89,7 +104,7 @@ docker compose up --build
 
 Then open:
 
-- Frontend: http://localhost:3000 or http://scootergo.top:3000
+- Frontend: http://localhost:3000, http://scootergo.top:3000, or https://scootergo.top:3000
 - Backend API: http://localhost:8080
 - Swagger UI: http://localhost:8080/swagger-ui/index.html
 
@@ -156,6 +171,13 @@ Frontend build:
 cd frontend
 npm run build:h5
 ```
+
+## Coursework Submission
+
+For the CW2 final submission, see
+`COURSEWORK_SUBMISSION_README.md`. It contains the marker-focused installation
+steps, database file notes, demo accounts, verification commands, and a mapping
+from the marking-scheme backlog IDs to the implemented code/UI areas.
 
 ## Release Notes
 
